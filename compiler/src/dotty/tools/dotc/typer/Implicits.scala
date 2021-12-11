@@ -1176,6 +1176,11 @@ trait Implicits:
             typingCtx.typerState.gc()
             result
 
+    def compareAlternatives(alt1: RefAndLevel, alt2: RefAndLevel): Int =
+      if alt1.ref eq alt2.ref then 0
+      else if alt1.level != alt2.level then alt1.level - alt2.level
+      else explore(compare(alt1.ref, alt2.ref))(using nestedContext())
+    
     /** Search a list of eligible implicit references */
     private def searchImplicit(eligible: List[Candidate], contextual: Boolean): SearchResult =
 
@@ -1185,10 +1190,6 @@ trait Implicits:
        *           a number < 0   if `alt2` is preferred over `alt1`
        *           0              if neither alternative is preferred over the other
        */
-      def compareAlternatives(alt1: RefAndLevel, alt2: RefAndLevel): Int =
-        if alt1.ref eq alt2.ref then 0
-        else if alt1.level != alt2.level then alt1.level - alt2.level
-        else explore(compare(alt1.ref, alt2.ref))(using nestedContext())
 
       /** If `alt1` is also a search success, try to disambiguate as follows:
        *    - If alt2 is preferred over alt1, pick alt2, otherwise return an
@@ -1498,12 +1499,12 @@ trait Implicits:
     def implicitScope(tp: Type): OfTypeImplicits = ctx.run.implicitScope(tp)
 
     /** All available implicits, without ranking */
-    def allImplicits: Set[TermRef] = {
+    def allImplicits: Set[SearchSuccess] = {
       val contextuals = ctx.implicits.eligible(wildProto).map(tryImplicit(_, contextual = true))
       val inscope = implicitScope(wildProto).eligible.map(tryImplicit(_, contextual = false))
-      (contextuals.toSet ++ inscope).collect {
-        case success: SearchSuccess => success.ref
-      }
+      (contextuals ++ inscope).collect {
+        case success: SearchSuccess => success
+      }.toSet
     }
 
     /** Fields needed for divergence checking */

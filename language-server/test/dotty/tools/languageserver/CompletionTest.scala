@@ -976,4 +976,14 @@ class CompletionTest {
               ("main", Module, "main")
             )
           )
+
+  @Test def singleConversionInstancePerMethod : Unit =
+    code"""val a = Array(1,2).fil${m1}"""
+          .withSource
+          .completion(m1,
+            Set(
+              ("filterNot", Method, "(p: Int => Boolean): Array[Int]"),
+              ("filter", Method, "(p: Int => Boolean): Array[Int]")
+            )
+          )
 }

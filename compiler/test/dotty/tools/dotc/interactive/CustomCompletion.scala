@@ -37,7 +37,7 @@ object CustomCompletion {
     var extra = List.empty[Completion]
 
     val completions = path match {
-      case Select(qual, _) :: _                              => completer.selectionCompletions(qual)
+      case (sel : Select) :: _                                 => completer.selectionCompletions(sel)
       case Import(Ident(name), _) :: _ if name.decode.toString == "$ivy" && dependencyCompleteOpt.nonEmpty =>
         val complete = dependencyCompleteOpt.get
         val (pos, completions) = complete(prefix)

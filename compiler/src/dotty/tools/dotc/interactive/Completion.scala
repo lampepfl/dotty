@@ -13,6 +13,7 @@ import dotty.tools.dotc.core.Flags._
 import dotty.tools.dotc.core.Names.{Name, TermName}
 import dotty.tools.dotc.core.NameKinds.SimpleNameKind
 import dotty.tools.dotc.core.NameOps._
+import dotty.tools.dotc.core.Signature
 import dotty.tools.dotc.core.Symbols.{NoSymbol, Symbol, TermSymbol, defn, newSymbol}
 import dotty.tools.dotc.core.Scopes.Scope
 import dotty.tools.dotc.core.StdNames.{nme, tpnme}
@@ -21,6 +22,8 @@ import dotty.tools.dotc.core.TypeComparer
 import dotty.tools.dotc.core.TypeError
 import dotty.tools.dotc.core.Types.{ExprType, MethodOrPoly, NameFilter, NamedType, NoType, PolyType, TermRef, Type}
 import dotty.tools.dotc.printing.Texts._
+import dotty.tools.dotc.typer.Implicits
+import dotty.tools.dotc.typer.Implicits.SearchSuccess
 import dotty.tools.dotc.util.{NameTransformer, NoSourcePosition, SourcePosition}
 
 import scala.collection.mutable
@@ -115,7 +118,7 @@ object Completion {
         // Ignore synthetic select from `This` because in code it was `Ident`
         // See example in dotty.tools.languageserver.CompletionTest.syntheticThis
         case Select(qual @ This(_), _) :: _ if qual.span.isSynthetic  => completer.scopeCompletions
-        case Select(qual, _) :: _           if qual.tpe.hasSimpleKind => completer.selectionCompletions(qual)
+        case (sel @ Select(qual, _)) :: _   if qual.tpe.hasSimpleKind => completer.selectionCompletions(sel)
         case Select(qual, _) :: _                                     => Map.empty
         case Import(expr, _) :: _                                     => completer.directMemberCompletions(expr)
         case (_: untpd.ImportSelector) :: Import(expr, _) :: _        => completer.directMemberCompletions(expr)
@@ -230,10 +233,10 @@ object Completion {
      *  Direct members take priority over members from extensions
      *  and so do members from extensions over members from implicit conversions
      */
-    def selectionCompletions(qual: Tree)(using Context): CompletionMap =
-      implicitConversionMemberCompletions(qual) ++
-        extensionCompletions(qual) ++
-        directMemberCompletions(qual)
+    def selectionCompletions(sel: Select)(using Context): CompletionMap =
+      implicitConversionMemberCompletions(sel) ++
+        extensionCompletions(sel.qualifier) ++
+        directMemberCompletions(sel.qualifier)
 
     /** Completions for members of `qual`'s type.
      *  These include inherited definitions but not members added by extensions or implicit conversions
@@ -285,13 +288,36 @@ object Completion {
     }
 
     /** Completions from implicit conversions including old style extensions using implicit classes */
-    private def implicitConversionMemberCompletions(qual: Tree)(using Context): CompletionMap =
+    private def implicitConversionMemberCompletions(sel: Select)(using Context): CompletionMap =
+      val qual = sel.qualifier
       if qual.tpe.widenDealias.isExactlyNothing || qual.tpe.isNullType then
         Map.empty
       else
+        // Take all possible conversions for `qual`
+        val typer = ctx.typer
+        val searchContext = ctx.fresh.setExploreTyperState()
+        val search = new typer.ImplicitSearch(defn.AnyType, qual, pos.span)(using searchContext)
         val membersFromConversion =
-          implicitConversionTargets(qual)(using ctx.fresh.setExploreTyperState()).flatMap(accessibleMembers)
-        membersFromConversion.toSeq.groupByName
+          search.allImplicits.flatMap(r => accessibleMembers(r.ref.widen.finalResultType).map(_ -> r))
+
+        // There might be more that one conversions that have members with the same name and signature
+        // In order to avoid duplicate completions a kind of ranking (per Name + ParameterSig) is performed
+        type Key = (Name, List[Signature.ParamSig]) 
+        val init = Map.empty[Key, (SingleDenotation, SearchSuccess)]
+        membersFromConversion.foldLeft(init) { case (acc, (rawDenot, found)) =>
+          val denot = rawDenot.asSeenFrom(found.tree.tpe)
+          val sig = denot.info.signature
+          val key = (denot.name, sig.paramsSig)
+          acc.get(key) match {
+            case None => acc.updated(key, (denot, found))
+            case Some((_, owner)) if search.compareAlternatives(found, owner) > 0 => 
+              acc.updated(key, (denot, found))
+            case Some(_) =>
+              acc
+          }
+        }.map {case (_, (denot, _)) => denot}
+        .toSeq
+        .groupByName
 
     /** Completions from extension methods */
     private def extensionCompletions(qual: Tree)(using Context): CompletionMap =
@@ -392,21 +418,6 @@ object Completion {
         case mbr if include(mbr, mbr.name)
                     && mbr.symbol.isAccessibleFrom(site) => mbr
       }
-    }
-
-    /**
-     * Given `qual` of type T, finds all the types S such that there exists an implicit conversion
-     * from T to S.
-     *
-     * @param qual The argument to which the implicit conversion should be applied.
-     * @return The set of types that `qual` can be converted to.
-     */
-    private def implicitConversionTargets(qual: Tree)(using Context): Set[Type] = {
-      val typer = ctx.typer
-      val conversions = new typer.ImplicitSearch(defn.AnyType, qual, pos.span).allImplicits
-      val targets = conversions.map(_.widen.finalResultType)
-      interactiv.println(i"implicit conversion targets considered: ${targets.toList}%, %")
-      targets
     }
 
     /** Filter for names that should appear when looking for completions. */
