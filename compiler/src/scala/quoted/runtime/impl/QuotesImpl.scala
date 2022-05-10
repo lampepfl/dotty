@@ -1809,6 +1809,7 @@ class QuotesImpl private (using val ctx: Context) extends Quotes, QuoteUnpickler
         def termSymbol: Symbol = self.termSymbol
         def isSingleton: Boolean = self.isSingleton
         def memberType(member: Symbol): TypeRepr =
+          assert(self.derivesFrom(member.owner), s"$member is not a member of ${self.show}")
           member.info.asSeenFrom(self, member.owner)
         def baseClasses: List[Symbol] = self.baseClasses
         def baseType(cls: Symbol): TypeRepr = self.baseType(cls)
