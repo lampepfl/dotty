@@ -182,6 +182,9 @@ class SyntheticMembers(thisPhase: DenotTransformer) {
      *  ```
      */
     def productElementBody(arity: Int, index: Tree)(using Context): Tree = {
+      ref(defn.ScalaCaseClassMethodsModule_caseProductElement).appliedTo(This(clazz), index)
+
+      /*
       // case N => _${N + 1}
       val cases = 0.until(arity).map { i =>
         val sel = This(clazz).select(nme.selectorName(i), _.info.isParameterless)
@@ -189,6 +192,7 @@ class SyntheticMembers(thisPhase: DenotTransformer) {
       }
 
       Match(index, (cases :+ generateIOBECase(index)).toList)
+      */
     }
 
     /** The class
@@ -244,7 +248,7 @@ class SyntheticMembers(thisPhase: DenotTransformer) {
      *  def equals(that: Any): Boolean =
      *    (this eq that) || {
      *      that match {
-     *        case x$0 @ (_: C @unchecked) => this.x == this$0.x && this.y == x$0.y && that.canEqual(this)
+     *        case that$0 @ (_: C @unchecked) => this.x == that$0.x && this.y == that$0.y && that$0.canEqual(this)
      *        case _ => false
      *     }
      *  ```
@@ -276,8 +280,9 @@ class SyntheticMembers(thisPhase: DenotTransformer) {
       val matchExpr = Match(that, List(matchingCase, defaultCase))
       if (isDerivedValueClass(clazz)) matchExpr
       else {
-        val eqCompare = This(clazz).select(defn.Object_eq).appliedTo(that.cast(defn.ObjectType))
-        eqCompare or matchExpr
+        ref(defn.ScalaCaseClassMethodsModule_caseEquals).appliedTo(This(clazz), that)
+       // val eqCompare = This(clazz).select(defn.Object_eq).appliedTo(that.cast(defn.ObjectType))
+       // eqCompare or matchExpr
       }
     }
 
@@ -328,7 +333,7 @@ class SyntheticMembers(thisPhase: DenotTransformer) {
       if (clazz.is(ModuleClass))
         Literal(Constant(clazz.name.stripModuleClassSuffix.toString.hashCode))
       else if (accessors.exists(_.info.finalResultType.classSymbol.isPrimitiveValueClass))
-        caseHashCodeBody
+        ref(defn.ScalaCaseClassMethodsModule_caseHashCode).appliedTo(This(clazz)) // caseHashCodeBody
       else
         ref(defn.ScalaRuntime__hashCode).appliedTo(This(clazz))
 
