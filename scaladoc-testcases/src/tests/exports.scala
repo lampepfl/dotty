@@ -1,5 +1,5 @@
 package tests
-package exports1
+package exports
 
 class A: //unexpected
   def aDefInt: Int
@@ -43,3 +43,11 @@ object X: //unexpected
    = 1
   var xVar1: 1
    = 1
+
+class B: //unexpected
+  val a: A
+   = new A
+  export a.{Object => Obj, _}
+  export X._
+  def obj: Obj.type
+   = Obj
