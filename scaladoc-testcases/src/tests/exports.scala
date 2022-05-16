@@ -21,7 +21,7 @@ class A: //unexpected
    = ???
   def fn[T, U]: T => U
    = ???
-  object Object //expected: val Obj: Object.type
+  object Object //expected: final val Obj: Object.type
   val x: HKT[List, Int] //expected: val x: A.this.HKT[List, Int]
    = ???
   class Class(val a: Int, val b: Int) extends Serializable //expected: final type Class = a.Class

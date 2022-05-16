@@ -178,10 +178,10 @@ trait ClassLikeSupport:
           case rhs => rhs
         }.map(_.tpe.termSymbol).filter(_.exists).map(_.tree).map {
           case v: ValDef if v.symbol.flags.is(Flags.Module) && !v.symbol.flags.is(Flags.Synthetic) =>
-            v.symbol.owner -> Symbol.newVal(c.symbol, dd.name, v.tpt.tpe, Flags.Final, Symbol.noSymbol).tree
+            v.symbol.owner -> Symbol.newVal(v.symbol.owner, dd.name, v.tpt.tpe, Flags.Final, Symbol.noSymbol).tree
           case other => other.symbol.owner -> other
         }.flatMap { (originalOwner, tree) =>
-          parseMember(c)(tree)
+          parseMember(originalOwner.tree.asInstanceOf[ClassDef])(tree)
             .map { m => m
               .withDRI(dd.symbol.dri)
               .withName(dd.symbol.normalizedName)
@@ -324,7 +324,7 @@ trait ClassLikeSupport:
 
     val enumVals = companion.membersToDocument.collect {
       case vd: ValDef if !isSyntheticField(vd.symbol) && vd.symbol.flags.is(Flags.Enum) && vd.symbol.flags.is(Flags.Case) => vd
-    }.toList.map(parseValDef(classDef, _))
+    }.toList.map(parseValDef(companion, _))
 
     val enumTypes = companion.membersToDocument.collect {
       case td: TypeDef if !td.symbol.flags.is(Flags.Synthetic) && td.symbol.flags.is(Flags.Enum) && td.symbol.flags.is(Flags.Case) => td
