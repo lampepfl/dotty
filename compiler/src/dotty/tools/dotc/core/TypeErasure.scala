@@ -689,7 +689,7 @@ class TypeErasure(sourceLanguage: SourceLanguage, semiEraseVCs: Boolean, isConst
   }
 
   private def erasePair(tp: Type)(using Context): Type = {
-    val arity = tp.tupleArity
+    val arity = tp.tupleArity(underErasure = true)
     if (arity < 0) defn.ProductClass.typeRef
     else if (arity <= Definitions.MaxTupleArity) defn.TupleType(arity).nn
     else defn.TupleXXLClass.typeRef

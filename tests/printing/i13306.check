@@ -8,7 +8,7 @@ package example {
   final module class Exports() extends Object() { this: example.Exports.type =>
     val instance: example.MembersContainer = new example.MembersContainer()
     export example.Exports.instance.*
-    final type MyType[T <: example.MyClass] = Comparable[T]
+    final type MyType[T <: example.MyClass] = example.Exports.instance.MyType[T]
   }
 }
 

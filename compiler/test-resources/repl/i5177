@@ -1,0 +1,12 @@
+scala> class A[T]
+// defined class A
+scala> type B[T] = A[T]
+// defined alias type B[T] = A[T]
+scala> def b: B[String] = ??? 
+def b: B[String]
+scala> class C
+// defined class C
+scala> type D = C
+// defined alias type D = C
+scala> def d: D = ??? 
+def d: D

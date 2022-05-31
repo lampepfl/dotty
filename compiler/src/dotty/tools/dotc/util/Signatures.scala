@@ -105,18 +105,20 @@ object Signatures {
     ctx.definitions.isTupleClass(tree.symbol.owner.companionClass)
 
   private def extractParamTypess(resultType: Type)(using Context): List[List[Type]] =
-    resultType match {
+    resultType.dealias match {
       // Reference to a type which is not a type class
       case ref: TypeRef if !ref.symbol.isPrimitiveValueClass =>
         getExtractorMembers(ref)
       // Option or Some applied type. There is special syntax for multiple returned arguments:
       //   Option[TupleN] and Option[Seq],
-      // We are not intrested in them, instead we extract proper type parameters from the Option type parameter.
-      case AppliedType(TypeRef(_, cls), (appliedType @ AppliedType(tycon, args)) :: Nil)
-          if (cls == ctx.definitions.OptionClass || cls == ctx.definitions.SomeClass) =>
-        tycon match
-          case TypeRef(_, cls) if cls == ctx.definitions.SeqClass => List(List(appliedType))
-          case _ => List(args)
+      // We are not interested in them, instead we extract proper type parameters from the Option type parameter.
+      case AppliedType(TypeRef(_, cls), (appliedType @ AppliedType(_, args)) :: Nil)
+          if cls == ctx.definitions.OptionClass || cls == ctx.definitions.SomeClass =>
+        appliedType.dealias match
+          case appliedType @ AppliedType(TypeRef(_, cls), args) =>
+            if cls == ctx.definitions.SeqClass then List(List(appliedType)) else List(args)
+          case _ =>
+            List(args)
       // Applied type extractor. We must extract from applied type to retain type parameters
       case appliedType: AppliedType => getExtractorMembers(appliedType)
       // This is necessary to extract proper result type as unapply can return other methods eg. apply

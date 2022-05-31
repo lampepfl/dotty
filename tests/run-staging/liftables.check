@@ -12,7 +12,7 @@ false
 "string"
 
 scala.Predef.classOf[java.lang.String]
-scala.reflect.ClassTag.apply[java.lang.String](scala.Predef.classOf[java.lang.String])
+scala.reflect.ClassTag.apply[scala.Predef.String](scala.Predef.classOf[java.lang.String])
 
 scala.Array.apply[java.lang.String]("a")(scala.reflect.ClassTag.apply[java.lang.String](scala.Predef.classOf[java.lang.String]))
 scala.Array.apply(true, )

@@ -1,10 +1,10 @@
 {
   def ff: scala.Int = {
-    val a: scala.collection.immutable.List[scala.Int] = {
-      type T = scala.collection.immutable.List[scala.Int]
+    val a: scala.List[scala.Int] = {
+      type T = scala.List[scala.Int]
       val b: T = scala.Nil.::[scala.Int](3)
 
-      (b: scala.collection.immutable.List[scala.Int])
+      (b: scala.List[scala.Int])
     }
 
     (a.head: scala.Int)

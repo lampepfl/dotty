@@ -1,0 +1,49 @@
+-- [E007] Type Mismatch Error: tests/neg/i4565.scala:17:13 -------------------------------------------------------------
+17 |def b: Int = a // error
+   |             ^
+   |             Found:    Test1[F[Int, String]]
+   |             Required: Int
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E007] Type Mismatch Error: tests/neg/i4565.scala:20:13 -------------------------------------------------------------
+20 |def d: Int = c // error
+   |             ^
+   |             Found:    F[Int, String]
+   |             Required: Int
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E007] Type Mismatch Error: tests/neg/i4565.scala:23:13 -------------------------------------------------------------
+23 |def f: Int = e // error
+   |             ^
+   |             Found:    F[Int, String]
+   |             Required: Int
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E007] Type Mismatch Error: tests/neg/i4565.scala:26:13 -------------------------------------------------------------
+26 |def h: Int = g // error
+   |             ^
+   |             Found:    Test1[B]
+   |             Required: Int
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E007] Type Mismatch Error: tests/neg/i4565.scala:29:13 -------------------------------------------------------------
+29 |def j: Int = i // error
+   |             ^
+   |             Found:    Test2[B]
+   |             Required: Int
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E007] Type Mismatch Error: tests/neg/i4565.scala:32:13 -------------------------------------------------------------
+32 |def l: Int = k // error
+   |             ^
+   |             Found:    Test3[B]
+   |             Required: Int
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E007] Type Mismatch Error: tests/neg/i4565.scala:35:13 -------------------------------------------------------------
+35 |def n: Int = m // error
+   |             ^
+   |             Found:    MyAlias
+   |             Required: Int
+   |
+   | longer explanation available when compiling with `-explain`

@@ -51,31 +51,34 @@ object TypeUtils {
 
     /** The arity of this tuple type, which can be made up of EmptyTuple, TupleX and `*:` pairs,
      *  or -1 if this is not a tuple type.
+     *  We treat the arity under erasure specially to erase `T *: EmptyTuple` to `Product`
+     *  but `T *: EmptyTuple.type` to `Tuple1` for binary compatibility.
      */
-    def tupleArity(using Context): Int = self match {
+    def tupleArity(underErasure: Boolean)(using Context): Int = self match
       case AppliedType(tycon, _ :: tl :: Nil) if tycon.isRef(defn.PairClass) =>
-        val arity = tl.tupleArity
-        if (arity < 0) arity else arity + 1
-      case self: SingletonType =>
-        if self.termSymbol == defn.EmptyTupleModule then 0 else -1
-      case self if defn.isTupleClass(self.classSymbol) =>
-        self.dealias.argInfos.length
+        val arity = tl.tupleArity(underErasure)
+        if arity < 0 then arity else arity + 1
       case _ =>
-        -1
-    }
+        if self.termSymbol == defn.EmptyTupleModule then
+          if !underErasure || self.isInstanceOf[SingletonType] then 0 else -1
+        else if defn.isTupleClass(self.classSymbol) then
+          self.widenTermRefExpr.dealias.argInfos.length
+        else
+          -1
+
+    inline def tupleArity(using Context): Int = tupleArity(underErasure = false)
 
     /** The element types of this tuple type, which can be made up of EmptyTuple, TupleX and `*:` pairs */
-    def tupleElementTypes(using Context): List[Type] = self match {
+    def tupleElementTypes(using Context): List[Type] = self match
       case AppliedType(tycon, hd :: tl :: Nil) if tycon.isRef(defn.PairClass) =>
         hd :: tl.tupleElementTypes
-      case self: SingletonType =>
-        assert(self.termSymbol == defn.EmptyTupleModule, "not a tuple")
-        Nil
-      case self if defn.isTupleClass(self.classSymbol) =>
-        self.dealias.argInfos
-      case _ =>
-        throw new AssertionError("not a tuple")
-    }
+      case _  =>
+        if self.termSymbol == defn.EmptyTupleModule then
+          Nil
+        else if defn.isTupleClass(self.classSymbol) then
+          self.widenTermRefExpr.dealias.argInfos
+        else
+          throw new AssertionError("not a tuple")
 
     /** The `*:` equivalent of an instance of a Tuple class */
     def toNestedPairs(using Context): Type =

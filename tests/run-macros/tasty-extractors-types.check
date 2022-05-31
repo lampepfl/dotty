@@ -2,11 +2,11 @@ Inferred()
 TypeRef(TermRef(ThisType(TypeRef(NoPrefix(), "<root>")), "scala"), "Int")
 
 Inferred()
-AppliedType(TypeRef(ThisType(TypeRef(NoPrefix(), "immutable")), "List"), List(TypeRef(TermRef(ThisType(TypeRef(NoPrefix(), "scala")), "Predef"), "String")))
+AppliedType(TypeRef(TermRef(ThisType(TypeRef(NoPrefix(), "scala")), "package"), "List"), List(TypeRef(TermRef(ThisType(TypeRef(NoPrefix(), "scala")), "Predef"), "String")))
 
 Inferred()
-AppliedType(TypeRef(ThisType(TypeRef(NoPrefix(), "immutable")), "Map"), List(TypeRef(TermRef(ThisType(TypeRef(NoPrefix(), "scala")), "Predef"), "String"), TypeRef(TermRef(ThisType(TypeRef(NoPrefix(), "<root>")), "scala"), "Int")))
+AppliedType(TypeRef(TermRef(ThisType(TypeRef(NoPrefix(), "scala")), "Predef"), "Map"), List(TypeRef(TermRef(ThisType(TypeRef(NoPrefix(), "scala")), "Predef"), "String"), TypeRef(TermRef(ThisType(TypeRef(NoPrefix(), "<root>")), "scala"), "Int")))
 
 Inferred()
-AppliedType(TypeRef(ThisType(TypeRef(NoPrefix(), "immutable")), "Map"), List(TypeRef(TermRef(ThisType(TypeRef(NoPrefix(), "scala")), "Predef"), "String"), TypeRef(NoPrefix(), "I")))
+AppliedType(TypeRef(TermRef(ThisType(TypeRef(NoPrefix(), "scala")), "Predef"), "Map"), List(TypeRef(TermRef(ThisType(TypeRef(NoPrefix(), "scala")), "Predef"), "String"), TypeRef(NoPrefix(), "I")))
 

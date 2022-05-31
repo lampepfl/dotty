@@ -11,6 +11,7 @@ package xml
 
 import Utility._
 import util.Chars.SU
+import scala.collection.BufferedIterator
 
 
 

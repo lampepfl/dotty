@@ -57,8 +57,7 @@ object TypeApplications {
 
     def unapply(tp: Type)(using Context): Option[Type] = tp match
       case tp @ HKTypeLambda(tparams, AppliedType(fn: Type, args))
-      if fn.typeSymbol.isClass
-         && tparams.hasSameLengthAs(args)
+      if tparams.hasSameLengthAs(args)
          && args.lazyZip(tparams).forall((arg, tparam) => arg == tparam.paramRef)
          && weakerBounds(tp, fn.typeParams) => Some(fn)
       case _ => None
@@ -330,7 +329,7 @@ class TypeApplications(val self: Type) extends AnyVal {
       case dealiased: HKTypeLambda =>
         def tryReduce =
           if (!args.exists(isBounds)) {
-            val followAlias = Config.simplifyApplications && {
+            val followAlias = (Config.simplifyApplications || self.typeSymbol.isPrivate) && {
               dealiased.resType match {
                 case AppliedType(tyconBody, dealiasedArgs) =>
                   // Reduction should not affect type inference when it's

@@ -17,10 +17,10 @@ Optimized: ls.foreach[scala.Any](((x: scala.Int) => if (((`x₂`: scala.Int) => 
 Result: ()
 
 Original: ls.map[scala.Long](((a: scala.Int) => a.toLong)).map[java.lang.String](((b: scala.Long) => b.toString()))
-Optimized: ls.map[java.lang.String](((x: scala.Int) => ((b: scala.Long) => b.toString()).apply(((a: scala.Int) => a.toLong).apply(x))))
+Optimized: ls.map[scala.Predef.String](((x: scala.Int) => ((b: scala.Long) => b.toString()).apply(((a: scala.Int) => a.toLong).apply(x))))
 Result: List(1, 2, 3)
 
 Original: ls.map[scala.Char](((a: scala.Int) => a.toChar)).map[java.lang.String](((b: scala.Char) => b.toString()))
-Optimized: ls.map[java.lang.String](((x: scala.Int) => ((b: scala.Char) => b.toString()).apply(((a: scala.Int) => a.toChar).apply(x))))
+Optimized: ls.map[scala.Predef.String](((x: scala.Int) => ((b: scala.Char) => b.toString()).apply(((a: scala.Int) => a.toChar).apply(x))))
 Result: List(, , )
 

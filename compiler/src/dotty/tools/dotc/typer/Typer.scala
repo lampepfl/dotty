@@ -2773,7 +2773,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
         if ctx.mode.is(Mode.Type) then typedType(_, _, mapPatternBounds = true)
         else typed(_, _))
       if (ctx.mode.is(Mode.Type))
-        elems.foldRight(TypeTree(defn.EmptyTupleModule.termRef): Tree)((elemTpt, elemTpts) =>
+        elems.foldRight(TypeTree(defn.EmptyTupleType.typeRef): Tree)((elemTpt, elemTpts) =>
           AppliedTypeTree(TypeTree(defn.PairClass.typeRef), List(elemTpt, elemTpts)))
           .withSpan(tree.span)
       else {

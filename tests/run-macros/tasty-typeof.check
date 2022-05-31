@@ -1,3 +1,3 @@
-scala.collection.immutable.List[scala.Int]
+scala.List[scala.Int]
 Macros
 Macros

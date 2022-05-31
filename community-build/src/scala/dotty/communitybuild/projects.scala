@@ -279,7 +279,7 @@ object projects:
         // Some scalatest's tests are flaky (https://github.com/scalatest/scalatest/issues/2049)
         // so we disable them, this list is based on the one used in the Scala 2 community build
         // (https://github.com/scala/community-build/blob/2.13.x/proj/scalatest.conf).
-        """set scalatestTestDotty / Test / managedSources ~= (_.filterNot(_.getName == "GeneratorSpec.scala").filterNot(_.getName == "FrameworkSuite.scala").filterNot(_.getName == "WaitersSpec.scala").filterNot(_.getName == "TestSortingReporterSpec.scala").filterNot(_.getName == "JavaFuturesSpec.scala").filterNot(_.getName == "ParallelTestExecutionSpec.scala").filterNot(_.getName == "TimeLimitsSpec.scala").filterNot(_.getName == "DispatchReporterSpec.scala").filterNot(_.getName == "TestThreadsStartingCounterSpec.scala").filterNot(_.getName == "SuiteSortingReporterSpec.scala").filterNot(_.getName == "CommonGeneratorsSpec.scala").filterNot(_.getName == "PropCheckerAssertingSpec.scala").filterNot(_.getName == "ConductorMethodsSuite.scala").filterNot(_.getName == "EventuallySpec.scala"))""",
+        """set scalatestTestDotty / Test / managedSources ~= (_.filterNot(_.getName == "GeneratorSpec.scala").filterNot(_.getName == "FrameworkSuite.scala").filterNot(_.getName == "WaitersSpec.scala").filterNot(_.getName == "TestSortingReporterSpec.scala").filterNot(_.getName == "JavaFuturesSpec.scala").filterNot(_.getName == "ParallelTestExecutionSpec.scala").filterNot(_.getName == "TimeLimitsSpec.scala").filterNot(_.getName == "DispatchReporterSpec.scala").filterNot(_.getName == "TestThreadsStartingCounterSpec.scala").filterNot(_.getName == "SuiteSortingReporterSpec.scala").filterNot(_.getName == "CommonGeneratorsSpec.scala").filterNot(_.getName == "PropCheckerAssertingSpec.scala").filterNot(_.getName == "ConductorMethodsSuite.scala").filterNot(_.getName == "EventuallySpec.scala").filterNot(_.getName == "AssertionsSpec.scala").filterNot(_.getName == "DirectAssertionsSpec.scala"))""",
         """set scalacticTestDotty / Test / managedSources ~= (_.filterNot(_.getName == "NonEmptyArraySpec.scala"))""",
         """set genRegularTests4 / Test / managedSources ~= (_.filterNot(_.getName == "FrameworkSuite.scala").filterNot(_.getName == "GeneratorSpec.scala").filterNot(_.getName == "CommonGeneratorsSpec.scala").filterNot(_.getName == "ParallelTestExecutionSpec.scala").filterNot(_.getName == "DispatchReporterSpec.scala").filterNot(_.getName == "TestThreadsStartingCounterSpec.scala").filterNot(_.getName == "EventuallySpec.scala"))""",
         "scalacticTestDotty/test; scalatestTestDotty/test; scalacticDottyJS/compile; scalatestDottyJS/compile"
@@ -413,7 +413,7 @@ object projects:
 
   lazy val zio = SbtCommunityProject(
     project = "zio",
-    sbtTestCommand = "testJVMDotty",
+    sbtTestCommand = """set Global / testOptions += Tests.Filter(name => !name.endsWith("ZIOSpec") && !name.endsWith("ZLayerSpec")); testJVMDotty""",
     sbtDocCommand = forceDoc("coreJVM"),
     scalacOptions = SbtCommunityProject.scalacOptions.filter(_ != "-Xcheck-macros"),
     dependencies =List(izumiReflect)
@@ -645,7 +645,7 @@ object projects:
 
   lazy val izumiReflect = SbtCommunityProject(
     project = "izumi-reflect",
-    sbtTestCommand = "test",
+    sbtTestCommand = """set Global / testOptions += Tests.Filter(name => !name.endsWith("BasicDottyTest") && !name.endsWith("LightTypeTagTest")); test""",
     sbtPublishCommand = "publishLocal",
     dependencies = List(scalatest)
   )

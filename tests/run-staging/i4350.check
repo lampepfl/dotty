@@ -1,2 +1,2 @@
 (null: scala.Any).asInstanceOf[java.lang.Object]
-(null: scala.Any).asInstanceOf[java.lang.String]
+(null: scala.Any).asInstanceOf[scala.Predef.String]

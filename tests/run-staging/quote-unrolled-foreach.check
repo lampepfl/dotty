@@ -12,7 +12,7 @@
   val size: scala.Int = arr.length
   var i: scala.Int = 0
   while (i.<(size)) {
-    val element: java.lang.String = arr.apply(i)
+    val element: scala.Predef.String = arr.apply(i)
     f.apply(element)
     i = i.+(1)
   }
@@ -22,7 +22,7 @@
   val size: scala.Int = arr.length
   var i: scala.Int = 0
   while (i.<(size)) {
-    val element: java.lang.String = arr.apply(i)
+    val element: scala.Predef.String = arr.apply(i)
     f.apply(element)
     i = i.+(1)
   }

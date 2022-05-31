@@ -1304,11 +1304,11 @@ object Types {
       case tp =>
         tp
 
-    /** Widen all top-level singletons reachable by dealiasing
-     *  and going to the operands of & and |.
+    /** Widen all top-level singletons reachable
+     *  by going to the operands of & and |.
      *  Overridden and cached in OrType.
      */
-    def widenSingletons(using Context): Type = dealias match {
+    def widenSingletons(using Context): Type = this match {
       case tp: SingletonType =>
         tp.widen
       case tp: OrType =>
@@ -1856,11 +1856,11 @@ object Types {
       case _ => this
     }
 
-    /** The set of distinct symbols referred to by this type, after all aliases are expanded */
+    /** The set of distinct symbols referred to by this type */
     def coveringSet(using Context): Set[Symbol] =
       (new CoveringSetAccumulator).apply(Set.empty[Symbol], this)
 
-    /** The number of applications and refinements in this type, after all aliases are expanded */
+    /** The number of applications and refinements in this type */
     def typeSize(using Context): Int =
       (new TypeSizeAccumulator).apply(0, this)
 
@@ -6178,11 +6178,12 @@ object Types {
 
   class TypeSizeAccumulator(using Context) extends TypeAccumulator[Int] {
     var seen = util.HashSet[Type](initialCapacity = 8)
-    def apply(n: Int, tp: Type): Int =
-      if seen.contains(tp) then n
+    def apply(n: Int, tp1: Type): Int =
+      val tp0 = tp1.dealias
+      if seen.contains(tp0) then n
       else {
-        seen += tp
-        tp match {
+        seen += tp0
+        tp0 match {
           case tp: AppliedType =>
             foldOver(n + 1, tp)
           case tp: RefinedType =>
@@ -6192,23 +6193,24 @@ object Types {
           case tp: TypeParamRef =>
             apply(n, TypeComparer.bounds(tp))
           case _ =>
-            foldOver(n, tp)
+            foldOver(n, tp0)
         }
       }
   }
 
   class CoveringSetAccumulator(using Context) extends TypeAccumulator[Set[Symbol]] {
     var seen = util.HashSet[Type](initialCapacity = 8)
-    def apply(cs: Set[Symbol], tp: Type): Set[Symbol] =
-      if seen.contains(tp) then cs
+    def apply(cs: Set[Symbol], tp1: Type): Set[Symbol] =
+      val tp0 = tp1.dealias
+      if seen.contains(tp0) then cs
       else {
-        seen += tp
-        tp match {
+        seen += tp0
+        tp0 match {
           case tp if tp.isExactlyAny || tp.isExactlyNothing =>
             cs
-          case tp: AppliedType =>
+          case tp: AppliedType if !tp.typeSymbol.isAliasType =>
             foldOver(cs + tp.typeSymbol, tp)
-          case tp: RefinedType =>
+          case tp: RefinedType if !tp.typeSymbol.isAliasType =>
             foldOver(cs + tp.typeSymbol, tp)
           case tp: TypeRef if tp.info.isTypeAlias =>
             apply(cs, tp.superType)
@@ -6220,7 +6222,7 @@ object Types {
           case tp: TypeParamRef =>
             apply(cs, TypeComparer.bounds(tp))
           case other =>
-            foldOver(cs, tp)
+            foldOver(cs, tp0)
         }
       }
   }

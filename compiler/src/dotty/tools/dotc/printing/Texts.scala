@@ -158,7 +158,7 @@ object Texts {
     /** A concatenation of elements in `xs` and interspersed with
      *  separator strings `sep`.
      */
-    def apply(xs: Traversable[Text], sep: String = " "): Text =
+    def apply(xs: Iterable[Text], sep: String = " "): Text =
       if (sep == "\n") lines(xs)
       else {
         val ys = xs filterNot (_.isEmpty)
@@ -167,7 +167,7 @@ object Texts {
       }
 
     /** The given texts `xs`, each on a separate line */
-    def lines(xs: Traversable[Text]): Vertical = Vertical(xs.toList.reverse)
+    def lines(xs: Iterable[Text]): Vertical = Vertical(xs.toList.reverse)
 
     extension (text: => Text)
       def provided(cond: Boolean): Text = if (cond) text else Str("")

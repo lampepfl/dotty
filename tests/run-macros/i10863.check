@@ -1,1 +1,1 @@
-[A >: scala.Nothing <: scala.Any] => scala.collection.immutable.List[A]
+scala.List

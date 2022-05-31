@@ -1,2 +1,2 @@
 null.asInstanceOf[java.lang.Object]
-null.asInstanceOf[scala.collection.immutable.List[java.lang.Object]]
+null.asInstanceOf[scala.List[java.lang.Object]]

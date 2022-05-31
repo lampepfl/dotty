@@ -423,7 +423,7 @@ object TypeOps:
     override def apply(tp: Type): Type = tp match
       case tp: TermRef
       if toAvoid(tp) =>
-        tp.info.widenExpr.dealias match {
+        tp.info.widenExpr match {
           case info: SingletonType => apply(info)
           case info => range(defn.NothingType, apply(info))
         }
@@ -840,7 +840,7 @@ object TypeOps:
   }
 
   def nestedPairs(ts: List[Type])(using Context): Type =
-    ts.foldRight(defn.EmptyTupleModule.termRef: Type)(defn.PairClass.typeRef.appliedTo(_, _))
+    ts.foldRight(defn.EmptyTupleType.typeRef: Type)(defn.PairClass.typeRef.appliedTo(_, _))
 
   class StripTypeVarsMap(using Context) extends TypeMap:
     def apply(tp: Type) = mapOver(tp).stripTypeVar

@@ -211,7 +211,7 @@ class PathResolver(using c: Context) {
     import classPathFactory._
 
     // Assemble the elements!
-    def basis: List[Traversable[ClassPath]] =
+    def basis: List[Iterable[ClassPath]] =
       val release = Option(ctx.settings.javaOutputVersion.value).filter(_.nonEmpty)
 
       List(

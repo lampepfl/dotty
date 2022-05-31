@@ -245,7 +245,7 @@ Pattern: scala.StringContext.apply("abc", "xyz")
 Result: Some(List())
 
 Scrutinee: scala.StringContext.apply("abc", "xyz")
-Pattern: scala.StringContext.apply(scala.quoted.runtime.Patterns.patternHole[java.lang.String], scala.quoted.runtime.Patterns.patternHole[java.lang.String])
+Pattern: scala.StringContext.apply(scala.quoted.runtime.Patterns.patternHole[scala.Predef.String], scala.quoted.runtime.Patterns.patternHole[scala.Predef.String])
 Result: Some(List(Expr("abc"), Expr("xyz")))
 
 Scrutinee: scala.StringContext.apply("abc", "xyz")

@@ -25,7 +25,7 @@ object RecMap {
 
     val foo: Any = Rec.empty.fetch("foo") // error
     //                            ^
-    // Match type reduction failed since selector  EmptyTuple.type
+    // Match type reduction failed since selector  EmptyTuple
     // matches none of the cases
     //
     //     case (("foo" : String), t) *: _ => t

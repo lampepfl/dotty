@@ -8,6 +8,7 @@ import Phases.{gettersPhase, elimByNamePhase}
 import StdNames.nme
 import TypeOps.refineUsingParent
 import collection.mutable
+import annotation.tailrec
 import util.Stats
 import util.NoSourcePosition
 import config.Config
@@ -132,16 +133,68 @@ class TypeComparer(@constructorOnly initctx: Context) extends ConstraintHandling
   }
 
   def necessarySubType(tp1: Type, tp2: Type): Boolean =
+    inline def followAlias[T](inline tp: Type)(inline default: T)(inline f: (TypeProxy, Symbol) => T): T =
+      tp match
+        case tp: (AppliedType | TypeRef) => f(tp, tp.typeSymbol)
+        case _ => default
+
+    @tailrec def aliasedSymbols(tp: Type, result: Set[Symbol] = Set.empty): Set[Symbol] =
+      followAlias(tp)(result) { (tp, sym) =>
+        if sym.isAliasType then aliasedSymbols(tp.superType, result + sym)
+        else if sym.exists && (sym ne AnyClass) then result + sym
+        else result
+      }
+
+    @tailrec def dealias(tp: Type, syms: Set[Symbol]): Type =
+      followAlias(tp)(NoType) { (tp, sym) =>
+        if syms contains sym then tp
+        else if sym.isAliasType then dealias(tp.superType, syms)
+        else NoType
+      }
+
     val saved = myNecessaryConstraintsOnly
     myNecessaryConstraintsOnly = true
-    try topLevelSubType(tp1, tp2)
-    finally myNecessaryConstraintsOnly = saved
+
+    try
+      val tryDealias = (tp2 ne tp1) && (tp2 ne WildcardType) && followAlias(tp1)(false) { (_, sym) => sym.isAliasType }
+      if tryDealias then
+        topLevelSubType(dealias(tp1, aliasedSymbols(tp2)) orElse tp1, tp2)
+      else
+        topLevelSubType(tp1, tp2)
+    finally
+      myNecessaryConstraintsOnly = saved
+  end necessarySubType
 
   def testSubType(tp1: Type, tp2: Type): CompareResult =
     GADTused = false
     if !topLevelSubType(tp1, tp2) then CompareResult.Fail
     else if GADTused then CompareResult.OKwithGADTUsed
     else CompareResult.OK
+
+  /** original aliases of types used to instantiate type parameters
+   *  collected in `recur` and to be restored after sub type check */
+  private var realiases: List[(TypeParamRef, NamedType, Type)] = List.empty
+
+  private def realiasConstraints() =
+    this.realiases foreach { (param, alias, dealiased) =>
+      constraint.entry(param) match
+        case TypeBounds(lo, hi) =>
+          val aliasLo = (alias ne lo) && (dealiased eq lo)
+          val aliasHi = (alias ne hi) && (dealiased eq hi)
+          if aliasLo || aliasHi then
+            constraint = constraint.updateEntry(param, TypeBounds(
+              if aliasLo then alias else lo,
+              if aliasHi then alias else hi))
+        case tp =>
+          if (alias ne tp) && (dealiased eq tp) then
+            constraint = constraint.updateEntry(param, alias)
+    }
+
+  private inline def aliasedConstraint(param: Type, alias: NamedType, dealiased: Type) =
+    if alias.symbol.isStatic then
+      param.stripTypeVar match
+        case param: TypeParamRef => this.realiases ::= (param, alias, dealiased)
+        case _ =>
 
   /** The current approximation state. See `ApproxState`. */
   private var approx: ApproxState = ApproxState.Fresh
@@ -182,6 +235,7 @@ class TypeComparer(@constructorOnly initctx: Context) extends ConstraintHandling
     try op finally comparedTypeLambdas = saved
 
   protected def isSubType(tp1: Type, tp2: Type, a: ApproxState): Boolean = {
+    val outermostCall = leftRoot eq null
     val savedApprox = approx
     val savedLeftRoot = leftRoot
     if (a == ApproxState.Fresh) {
@@ -189,11 +243,16 @@ class TypeComparer(@constructorOnly initctx: Context) extends ConstraintHandling
       this.leftRoot = tp1
     }
     else this.approx = a
-    try recur(tp1, tp2)
+    if outermostCall then this.realiases = List.empty
+    try
+      val res = recur(tp1, tp2)
+      if outermostCall then realiasConstraints()
+      res
     catch {
       case ex: Throwable => handleRecursive("subtype", i"$tp1 <:< $tp2", ex, weight = 2)
     }
     finally {
+      if outermostCall then this.realiases = List.empty
       this.approx = savedApprox
       this.leftRoot = savedLeftRoot
     }
@@ -269,6 +328,7 @@ class TypeComparer(@constructorOnly initctx: Context) extends ConstraintHandling
           val info2 = tp2.info
           info2 match
             case info2: TypeAlias =>
+              aliasedConstraint(tp1, tp2, info2.alias)
               if recur(tp1, info2.alias) then return true
               if tp2.asInstanceOf[TypeRef].canDropAlias then return false
             case _ =>
@@ -276,6 +336,7 @@ class TypeComparer(@constructorOnly initctx: Context) extends ConstraintHandling
             case tp1: NamedType =>
               tp1.info match {
                 case info1: TypeAlias =>
+                  aliasedConstraint(tp2, tp1, info1.alias)
                   if recur(info1.alias, tp2) then return true
                   if tp1.asInstanceOf[TypeRef].canDropAlias then return false
                 case _ =>
@@ -385,8 +446,9 @@ class TypeComparer(@constructorOnly initctx: Context) extends ConstraintHandling
       case tp1: NamedType =>
         tp1.info match {
           case info1: TypeAlias =>
-            if (recur(info1.alias, tp2)) return true
-            if (tp1.prefix.isStable) return tryLiftedToThis1
+            aliasedConstraint(tp2, tp1, info1.alias)
+            if recur(info1.alias, tp2) then return true
+            if tp1.prefix.isStable then return tryLiftedToThis1
           case _ =>
             if (tp1 eq NothingType) || isBottom(tp1) then return true
         }
@@ -1026,7 +1088,7 @@ class TypeComparer(@constructorOnly initctx: Context) extends ConstraintHandling
       def isMatchingApply(tp1: Type): Boolean = tp1.widen match {
         case tp1 @ AppliedType(tycon1, args1) =>
           // We intentionally do not automatically dealias `tycon1` or `tycon2` here.
-          // `TypeApplications#appliedTo` already takes care of dealiasing type
+          // `necessarySubType` already takes care of dealiasing type
           // constructors when this can be done without affecting type
           // inference, doing it here would not only prevent code from compiling
           // but could also result in the wrong thing being inferred later, for example

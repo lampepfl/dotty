@@ -1,1 +1,1 @@
-new scala.Array[scala.collection.immutable.List[scala.Int]](1)
+new scala.Array[scala.List[scala.Int]](1)

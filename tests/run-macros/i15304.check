@@ -1,0 +1,5 @@
+Test.MyString
+Test.MyString
+Test.MyString
+scala.Seq[Test.MyString]
+scala.Tuple2[Test.MyString, scala.Int]

@@ -6,6 +6,7 @@ package xml
 import scala.language.unsafeNulls
 
 import scala.collection.mutable
+import scala.collection.BufferedIterator
 import mutable.{ Buffer, ArrayBuffer, ListBuffer }
 import scala.util.control.ControlThrowable
 import util.Chars.SU

@@ -3,4 +3,4 @@ val tuple: (Int, String, Long) = (1,2,3)
 scala> 0.0 *: tuple
 val res0: (Double, Int, String, Long) = (0.0,1,2,3)
 scala> tuple ++ tuple
-val res1: Int *: String *: Long *: tuple.type = (1,2,3,1,2,3)
+val res1: (Int, String, Long, Int, String, Long) = (1,2,3,1,2,3)

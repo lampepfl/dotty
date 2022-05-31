@@ -174,9 +174,10 @@ object Config {
 
   /** If this flag is on, always rewrite an application `S[Ts]` where `S` is an alias for
    *  `[Xs] -> U` to `[Xs := Ts]U`.
-   *  Turning this flag on was observed to give a ~6% speedup on the JUnit test suite.
+   *  Turning this flag on was observed to give a ~6% speedup on the JUnit test suite
+   *  but over-eagerly dealiases type aliases.
    */
-  inline val simplifyApplications = true
+  inline val simplifyApplications = false
 
   /** Assume -indent by default */
   inline val defaultIndent = true
