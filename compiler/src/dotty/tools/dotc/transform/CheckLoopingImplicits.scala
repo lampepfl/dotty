@@ -84,7 +84,7 @@ class CheckLoopingImplicits extends MiniPhase:
         checkNotLooping(t.rhs)
       case _ =>
 
-    if sym.isOneOf(GivenOrImplicit | Lazy | ExtensionMethod) then
+    if sym.isOneOf(GivenOrImplicit | Lazy | ExtensionMethod) || mdef.isInstanceOf[ValDef] then
       checkNotLooping(mdef.rhs)
     mdef
   end transform
