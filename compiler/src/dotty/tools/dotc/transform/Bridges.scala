@@ -31,10 +31,12 @@ class Bridges(root: ClassSymbol, thisPhase: DenotTransformer)(using Context) {
 
     /** Only use the superclass of `root` as a parent class. This means
      *  overriding pairs that have a common implementation in a trait parent
-     *  are also counted. This is necessary because we generate bridge methods
-     *  only in classes, never in traits.
+     *  are also counted. The only exception is generation of bridges for traits,
+     *  where we want to be able to deduplicate bridges already defined in parents.
      */
-    override def parents = Array(root.superClass)
+    override lazy val parents =
+      if(root.is(Trait)) super.parents
+      else Array(root.superClass)
 
     override def exclude(sym: Symbol) =
       !sym.isOneOf(MethodOrModule) || sym.isAllOf(Module | JavaDefined) || super.exclude(sym)
@@ -170,9 +172,14 @@ class Bridges(root: ClassSymbol, thisPhase: DenotTransformer)(using Context) {
    *  time deferred methods in `stats` that are replaced by a bridge with the same signature.
    */
   def add(stats: List[untpd.Tree]): List[untpd.Tree] =
+    // When adding bridges to traits ignore non-public methods
+    // see `DottyBackendTests.invocationReceivers`
     val opc = inContext(preErasureCtx) { new BridgesCursor }
     while opc.hasNext do
-      if !opc.overriding.is(Deferred) then
+      if
+        !opc.overriding.is(Deferred) &&
+        (!root.is(Trait) || opc.overridden.isPublic)
+      then
         addBridgeIfNeeded(opc.overriding, opc.overridden)
       opc.next()
     if bridges.isEmpty then stats

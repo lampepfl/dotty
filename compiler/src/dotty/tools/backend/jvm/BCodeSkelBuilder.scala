@@ -610,7 +610,6 @@ trait BCodeSkelBuilder extends BCodeHelpers {
               genTraitConstructorDefDef(dd)
             else
               genStaticForwarderForDefDef(dd)
-              genInterfaceMethodBridgeForDefDef(dd)
               genDefDef(dd)
           else
             genDefDef(dd)
@@ -690,48 +689,6 @@ trait BCodeSkelBuilder extends BCodeHelpers {
           newOwners = newSym :: Nil
         ).transform(dd.rhs)
       })
-
-    /** Creates a bridges for interfece inherited and narrowed methods,
-     *  to workaround JVM limitations when using LambdaMetaFactory (see issue #15402)
-     *  Example:
-     *  ```
-     *  trait Foo:
-     *    def self: Foo
-     *
-     *  trait Bar extends Foo:
-     *    def self: Bar = this
-     *    def SAM(x: Any): Any
-     *
-     *  def usage(x: List[Foo]) = x.map(_.self)
-     *  ```
-     * We need to define a bridge in trait Bar `def self: Foo = Bar.this.self`
-     * in order to prevent JVM runtime exceptions. Otherwise at the time of
-     * accessing `_.self` in the SAM instance created based on the `trait Bar`
-     * it will complain about missing implementation of `def self: Foo`.
-     * Javac compiler does exactly the same.
-      */
-    private def genInterfaceMethodBridgeForDefDef(dd: DefDef): Unit =
-      val sym = dd.symbol
-      sym.owner.directlyInheritedTraits
-        .flatMap { parent =>
-          val inheritedSym = parent.info.decl(sym.name)
-          Option.when(
-            inheritedSym.exists &&
-            sym.signature != inheritedSym.signature &&
-            sym.info <:< inheritedSym.info
-          )(inheritedSym.symbol.asTerm)
-        }.distinctBy(_.signature)
-         .foreach(genInterfaceMethodBridge(sym.asTerm, _))
-
-    private def genInterfaceMethodBridge(sym: TermSymbol, inheritedSym: TermSymbol): Unit =
-      assert(sym.name == inheritedSym.name, "Not an override")
-      val owner = sym.owner.asClass
-      val bridgeSym = inheritedSym.copy(owner = owner, flags = sym.flags).asTerm
-      val bridge =  tpd.DefDef(bridgeSym, {paramss =>
-        val params = paramss.head
-         tpd.Apply(tpd.This(owner).select(sym), params)
-        })
-      genDefDef(bridge)
 
     private def genStaticForwarderForDefDef(dd: DefDef): Unit =
       val forwarderDef = makeStaticForwarder(dd)

@@ -1065,5 +1065,5 @@ object Erasure {
   }
 
   private def takesBridges(sym: Symbol)(using Context): Boolean =
-    sym.isClass && !sym.isOneOf(Flags.Trait | Flags.Package)
+    sym.isClass && !sym.is(Flags.Package)
 }

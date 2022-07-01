@@ -49,10 +49,9 @@ class Test$bar5$ {
 }
 
 interface Foo1 {
-  public abstract java.lang.Object Base.f(java.lang.Object)
-    generic: public abstract R Base.f(T)
   public default java.lang.String Foo1.f(java.lang.Object)
     generic: public default java.lang.String Foo1.f(T)
+  public default java.lang.Object Foo1.f(java.lang.Object) <bridge> <synthetic>
   public abstract java.lang.Object Base.g(java.lang.Object)
     generic: public abstract R Base.g(T)
   public abstract java.lang.String Foo1.g(java.lang.Object)
@@ -62,10 +61,9 @@ interface Foo1 {
 }
 
 interface Foo2 {
-  public abstract java.lang.Object Base.f(java.lang.Object)
-    generic: public abstract R Base.f(T)
   public default java.lang.Object Foo2.f(java.lang.String)
     generic: public default R Foo2.f(java.lang.String)
+  public default java.lang.Object Foo2.f(java.lang.Object) <bridge> <synthetic>
   public abstract java.lang.Object Base.g(java.lang.Object)
     generic: public abstract R Base.g(T)
   public abstract java.lang.Object Foo2.g(java.lang.String)
