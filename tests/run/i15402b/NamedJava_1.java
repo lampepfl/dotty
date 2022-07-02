@@ -1,0 +1,3 @@
+interface NamedJava {
+    NamedJava self();
+}

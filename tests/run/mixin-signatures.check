@@ -61,9 +61,10 @@ interface Foo1 {
 }
 
 interface Foo2 {
+  public abstract java.lang.Object Base.f(java.lang.Object)
+    generic: public abstract R Base.f(T)
   public default java.lang.Object Foo2.f(java.lang.String)
     generic: public default R Foo2.f(java.lang.String)
-  public default java.lang.Object Foo2.f(java.lang.Object) <bridge> <synthetic>
   public abstract java.lang.Object Base.g(java.lang.Object)
     generic: public abstract R Base.g(T)
   public abstract java.lang.Object Foo2.g(java.lang.String)
