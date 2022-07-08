@@ -1,0 +1,46 @@
+-- [E040] Syntax Error: tests/neg/i15614.scala:2:20 --------------------------------------------------------------------
+2 |def f(i: Int, using j: Int) = i + j   // error // error
+  |                    ^
+  |                    ':' expected, but identifier found.
+  |                    The soft token `using` was taken as an identifier in this context.
+  |---------------------------------------------------------------------------------------------------------------------
+  | Explanation (enabled by `-explain`)
+  |- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  | The soft token `using` has special meaning only in certain contexts.
+   ---------------------------------------------------------------------------------------------------------------------
+-- [E040] Syntax Error: tests/neg/i15614.scala:4:20 --------------------------------------------------------------------
+4 |def g(i: Int, using Int) = i + summon[Int]  // error  // error
+  |                    ^^^
+  |                    ':' expected, but identifier found.
+  |                    The soft token `using` was taken as an identifier in this context.
+  |---------------------------------------------------------------------------------------------------------------------
+  | Explanation (enabled by `-explain`)
+  |- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  | The soft token `using` has special meaning only in certain contexts.
+   ---------------------------------------------------------------------------------------------------------------------
+-- [E040] Syntax Error: tests/neg/i15614.scala:6:19 --------------------------------------------------------------------
+6 |def z(i: Int, using) = i // error
+  |                   ^
+  |                   ':' expected, but ')' found.
+  |                   The soft token `using` was taken as an identifier in this context.
+  |---------------------------------------------------------------------------------------------------------------------
+  | Explanation (enabled by `-explain`)
+  |- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  | The soft token `using` has special meaning only in certain contexts.
+   ---------------------------------------------------------------------------------------------------------------------
+-- [E006] Not Found Error: tests/neg/i15614.scala:2:34 -----------------------------------------------------------------
+2 |def f(i: Int, using j: Int) = i + j   // error // error
+  |                                  ^
+  |                                  Not found: j
+  |---------------------------------------------------------------------------------------------------------------------
+  | Explanation (enabled by `-explain`)
+  |- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  | The identifier for `j` is not bound, that is,
+  | no declaration for this identifier can be found.
+  | That can happen, for example, if `j` or its declaration has either been
+  | misspelt or if an import is missing.
+   ---------------------------------------------------------------------------------------------------------------------
+-- Error: tests/neg/i15614.scala:4:42 ----------------------------------------------------------------------------------
+4 |def g(i: Int, using Int) = i + summon[Int]  // error  // error
+  |                                          ^
+  |                         No given instance of type Int was found for parameter x of method summon in object Predef

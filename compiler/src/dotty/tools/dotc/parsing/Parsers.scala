@@ -3095,8 +3095,14 @@ object Parsers {
           mods |= Param
         }
         atSpan(start, nameStart) {
-          val name = ident()
-          acceptColon()
+          val name =
+            val name0 = ident()
+            if name0 == nme.using && !in.isColon then
+              syntaxErrorOrIncomplete(ExpectedTokenButFoundSoftToken(COLONop, in.token, USING))
+              if in.token == IDENTIFIER then ident() else name0
+            else
+              acceptColon()
+              name0
           if (in.token == ARROW && ofClass && !mods.is(Local))
             syntaxError(VarValParametersMayNotBeCallByName(name, mods.is(Mutable)))
           val tpt = paramType()

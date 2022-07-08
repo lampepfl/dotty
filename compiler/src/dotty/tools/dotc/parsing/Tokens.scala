@@ -179,6 +179,7 @@ object Tokens extends TokensCommon {
   inline val EXPORT = 64;           enter(EXPORT, "export")
   inline val MACRO = 65;            enter(MACRO, "macro") // TODO: remove
   inline val END = 66;              enter(END, "end")
+  inline val USING = 67;            enter(USING, "using")
 
   /** special symbols */
   inline val NEWLINE = 78;          enter(NEWLINE, "end of statement", "new line")

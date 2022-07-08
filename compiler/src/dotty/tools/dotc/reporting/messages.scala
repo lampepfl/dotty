@@ -1143,6 +1143,17 @@ import transform.SymUtils._
         ""
   }
 
+  class ExpectedTokenButFoundSoftToken(expected: Token, found: Token, soft: Token)(using Context) extends SyntaxMsg(ExpectedTokenButFoundID):
+    def msg =
+      val expectedText =
+        if (Tokens.isIdentifier(expected)) "an identifier"
+        else Tokens.showToken(expected)
+      em"""${expectedText} expected, but ${Tokens.showToken(found)} found.
+          |The soft token `${Tokens.showToken(soft)}` was taken as an identifier in this context.""".stripMargin
+
+    def explain = s"The soft token `${Tokens.showToken(soft)}` has special meaning only in certain contexts."
+  end ExpectedTokenButFoundSoftToken
+
   class MixedLeftAndRightAssociativeOps(op1: Name, op2: Name, op2LeftAssoc: Boolean)(using Context)
   extends SyntaxMsg(MixedLeftAndRightAssociativeOpsID) {
     def msg =
