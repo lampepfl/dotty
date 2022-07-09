@@ -180,6 +180,7 @@ object Tokens extends TokensCommon {
   inline val MACRO = 65;            enter(MACRO, "macro") // TODO: remove
   inline val END = 66;              enter(END, "end")
   inline val USING = 67;            enter(USING, "using")
+  inline val ERASED = 68;            enter(ERASED, "erased")
 
   /** special symbols */
   inline val NEWLINE = 78;          enter(NEWLINE, "end of statement", "new line")

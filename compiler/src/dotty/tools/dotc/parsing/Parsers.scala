@@ -3071,7 +3071,7 @@ object Parsers {
           if isErased then
             addParamMod(() => Mod.Erased())
 
-      def param(): ValDef = {
+      def param(): ValDef =
         val start = in.offset
         var mods = impliedMods.withAnnotations(annotations())
         if (ofClass) {
@@ -3097,8 +3097,15 @@ object Parsers {
         atSpan(start, nameStart) {
           val name =
             val name0 = ident()
+            // check for misused using or erased or both
             if name0 == nme.using && !in.isColon then
               syntaxErrorOrIncomplete(ExpectedTokenButFoundSoftToken(COLONop, in.token, USING))
+              if in.token == IDENTIFIER then
+                val next = ident()
+                if next == nme.erased && in.token == IDENTIFIER then ident() else next
+              else name0
+            else if name0 == nme.erased && !in.isColon then
+              syntaxErrorOrIncomplete(ExpectedTokenButFoundSoftToken(COLONop, in.token, ERASED))
               if in.token == IDENTIFIER then ident() else name0
             else
               acceptColon()
@@ -3113,7 +3120,7 @@ object Parsers {
             impliedMods = impliedMods.withMods(Nil) // keep only flags, so that parameter positions don't overlap
           ValDef(name, tpt, default).withMods(mods)
         }
-      }
+      end param
 
       def checkVarArgsRules(vparams: List[ValDef]): Unit = vparams match {
         case Nil =>
@@ -3147,6 +3154,7 @@ object Parsers {
           clause
       }
     }
+    end paramClause
 
     /** ClsParamClauses   ::=  {ClsParamClause} [[nl] ‘(’ [‘implicit’] ClsParams ‘)’]
      *  DefParamClauses   ::=  {DefParamClause} [[nl] ‘(’ [‘implicit’] DefParams ‘)’]
