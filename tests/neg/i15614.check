@@ -58,6 +58,16 @@
    |- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
    | The soft token `using` has special meaning only in certain contexts.
     --------------------------------------------------------------------------------------------------------------------
+-- [E040] Syntax Error: tests/neg/i15614.scala:14:17 -------------------------------------------------------------------
+14 |def untoken(using: Int) = using // error // error
+   |                 ^
+   |                 an identifier expected, but ':' found.
+   |                 The soft token `using` was taken as the soft token in this context.
+   |--------------------------------------------------------------------------------------------------------------------
+   | Explanation (enabled by `-explain`)
+   |- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+   | The soft token `using` has special meaning only in certain contexts.
+    --------------------------------------------------------------------------------------------------------------------
 -- [E006] Not Found Error: tests/neg/i15614.scala:2:34 -----------------------------------------------------------------
 2 |def f(i: Int, using j: Int) = i + j   // error // error
   |                                  ^
@@ -108,5 +118,17 @@
    | The identifier for `j` is not bound, that is,
    | no declaration for this identifier can be found.
    | That can happen, for example, if `j` or its declaration has either been
+   | misspelt or if an import is missing.
+    --------------------------------------------------------------------------------------------------------------------
+-- [E006] Not Found Error: tests/neg/i15614.scala:14:26 ----------------------------------------------------------------
+14 |def untoken(using: Int) = using // error // error
+   |                          ^^^^^
+   |                          Not found: using
+   |--------------------------------------------------------------------------------------------------------------------
+   | Explanation (enabled by `-explain`)
+   |- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+   | The identifier for `using` is not bound, that is,
+   | no declaration for this identifier can be found.
+   | That can happen, for example, if `using` or its declaration has either been
    | misspelt or if an import is missing.
     --------------------------------------------------------------------------------------------------------------------

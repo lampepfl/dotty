@@ -3068,8 +3068,12 @@ object Parsers {
         else
           if isIdent(nme.using) then
             addParamMod(() => Mod.Given())
+            if in.isColon then
+              syntaxErrorOrIncomplete(ExpectedTokenButFoundSoftToken(IDENTIFIER, COLONop, nme.using))
           if isErased then
             addParamMod(() => Mod.Erased())
+            if in.isColon then
+              syntaxErrorOrIncomplete(ExpectedTokenButFoundSoftToken(IDENTIFIER, COLONop, nme.erased))
 
       def param(): ValDef =
         val start = in.offset
@@ -3099,13 +3103,13 @@ object Parsers {
             val name0 = ident()
             // check for misused using or erased or both
             if name0 == nme.using && !in.isColon then
-              syntaxErrorOrIncomplete(ExpectedTokenButFoundSoftToken(COLONop, in.token, USING))
+              syntaxErrorOrIncomplete(ExpectedTokenButFoundSoftToken(COLONop, in.token, nme.using))
               if in.token == IDENTIFIER then
                 val next = ident()
                 if next == nme.erased && in.token == IDENTIFIER then ident() else next
               else name0
             else if name0 == nme.erased && !in.isColon then
-              syntaxErrorOrIncomplete(ExpectedTokenButFoundSoftToken(COLONop, in.token, ERASED))
+              syntaxErrorOrIncomplete(ExpectedTokenButFoundSoftToken(COLONop, in.token, nme.erased))
               if in.token == IDENTIFIER then ident() else name0
             else
               acceptColon()

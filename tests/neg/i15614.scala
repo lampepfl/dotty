@@ -11,6 +11,8 @@ def usingAndErased(i: Int, using erased j: Int) = i + j // error // error
 
 def usingAndErasedType(i: Int, using erased Int) = i + j // error // error
 
+def untoken(using: Int) = using // error // error
+
 /*
 was unhelpful:
 at 2: Not found: j
