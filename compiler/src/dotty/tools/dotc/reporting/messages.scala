@@ -1147,11 +1147,11 @@ import transform.SymUtils._
   class ExpectedTokenButFoundSoftToken(expected: Token, found: Token, soft: Name)(using Context) extends SyntaxMsg(ExpectedTokenButFoundID):
     def msg =
       val expectedText =
-        if (Tokens.isIdentifier(expected)) "an identifier"
+        if Tokens.isIdentifier(expected) then "an identifier"
         else Tokens.showToken(expected)
       val what = if Tokens.isIdentifier(found) || expected == Tokens.COLONop then "an identifier" else "the soft token"
-      em"""${expectedText} expected, but ${Tokens.showToken(found)} found.
-          |The soft token `${soft}` was taken as $what in this context.""".stripMargin
+      em"""$expectedText expected, but ${Tokens.showToken(found)} found.
+          |The soft token `$soft` was taken as $what in this context."""
 
     def explain = s"The soft token `${soft}` has special meaning only in certain contexts."
   end ExpectedTokenButFoundSoftToken
