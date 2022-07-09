@@ -75,10 +75,11 @@
   |---------------------------------------------------------------------------------------------------------------------
   | Explanation (enabled by `-explain`)
   |- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  | The identifier for `j` is not bound, that is,
-  | no declaration for this identifier can be found.
-  | That can happen, for example, if `j` or its declaration has either been
-  | misspelt or if an import is missing.
+  | The identifier for `j` is not bound.
+  | That is, no declaration for this identifier can be found.
+  | That can happen if an import for the identifier is missing,
+  | if the definition of `j` has an error, or if there is a misspelling
+  | of `j` either where it is defined or where it is used.
    ---------------------------------------------------------------------------------------------------------------------
 -- Error: tests/neg/i15614.scala:4:42 ----------------------------------------------------------------------------------
 4 |def g(i: Int, using Int) = i + summon[Int]  // error  // error
@@ -91,10 +92,11 @@
   |---------------------------------------------------------------------------------------------------------------------
   | Explanation (enabled by `-explain`)
   |- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  | The identifier for `j` is not bound, that is,
-  | no declaration for this identifier can be found.
-  | That can happen, for example, if `j` or its declaration has either been
-  | misspelt or if an import is missing.
+  | The identifier for `j` is not bound.
+  | That is, no declaration for this identifier can be found.
+  | That can happen if an import for the identifier is missing,
+  | if the definition of `j` has an error, or if there is a misspelling
+  | of `j` either where it is defined or where it is used.
    ---------------------------------------------------------------------------------------------------------------------
 -- [E006] Not Found Error: tests/neg/i15614.scala:10:54 ----------------------------------------------------------------
 10 |def usingAndErased(i: Int, using erased j: Int) = i + j // error // error
@@ -103,10 +105,11 @@
    |--------------------------------------------------------------------------------------------------------------------
    | Explanation (enabled by `-explain`)
    |- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-   | The identifier for `j` is not bound, that is,
-   | no declaration for this identifier can be found.
-   | That can happen, for example, if `j` or its declaration has either been
-   | misspelt or if an import is missing.
+   | The identifier for `j` is not bound.
+   | That is, no declaration for this identifier can be found.
+   | That can happen if an import for the identifier is missing,
+   | if the definition of `j` has an error, or if there is a misspelling
+   | of `j` either where it is defined or where it is used.
     --------------------------------------------------------------------------------------------------------------------
 -- [E006] Not Found Error: tests/neg/i15614.scala:12:55 ----------------------------------------------------------------
 12 |def usingAndErasedType(i: Int, using erased Int) = i + j // error // error
@@ -115,10 +118,11 @@
    |--------------------------------------------------------------------------------------------------------------------
    | Explanation (enabled by `-explain`)
    |- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-   | The identifier for `j` is not bound, that is,
-   | no declaration for this identifier can be found.
-   | That can happen, for example, if `j` or its declaration has either been
-   | misspelt or if an import is missing.
+   | The identifier for `j` is not bound.
+   | That is, no declaration for this identifier can be found.
+   | That can happen if an import for the identifier is missing,
+   | if the definition of `j` has an error, or if there is a misspelling
+   | of `j` either where it is defined or where it is used.
     --------------------------------------------------------------------------------------------------------------------
 -- [E006] Not Found Error: tests/neg/i15614.scala:14:26 ----------------------------------------------------------------
 14 |def untoken(using: Int) = using // error // error
@@ -127,8 +131,9 @@
    |--------------------------------------------------------------------------------------------------------------------
    | Explanation (enabled by `-explain`)
    |- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-   | The identifier for `using` is not bound, that is,
-   | no declaration for this identifier can be found.
-   | That can happen, for example, if `using` or its declaration has either been
-   | misspelt or if an import is missing.
+   | The identifier for `using` is not bound.
+   | That is, no declaration for this identifier can be found.
+   | That can happen if an import for the identifier is missing,
+   | if the definition of `using` has an error, or if there is a misspelling
+   | of `using` either where it is defined or where it is used.
     --------------------------------------------------------------------------------------------------------------------

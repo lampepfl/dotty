@@ -234,10 +234,11 @@ import transform.SymUtils._
   extends NotFoundMsg(MissingIdentID) {
     def msg = em"Not found: $treeKind$name"
     def explain = {
-      em"""|The identifier for `$treeKind$name` is not bound, that is,
-           |no declaration for this identifier can be found.
-           |That can happen, for example, if `$name` or its declaration has either been
-           |misspelt or if an import is missing."""
+      em"""|The identifier for `$treeKind$name` is not bound.
+           |That is, no declaration for this identifier can be found.
+           |That can happen if an import for the identifier is missing,
+           |if the definition of `$name` has an error, or if there is a misspelling
+           |of `$name` either where it is defined or where it is used."""
     }
   }
 
