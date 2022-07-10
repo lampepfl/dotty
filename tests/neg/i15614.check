@@ -2,72 +2,102 @@
 2 |def f(i: Int, using j: Int) = i + j   // error // error
   |                    ^
   |                    ':' expected, but identifier found.
-  |                    The soft token `using` was taken as an identifier in this context.
+  |                    The soft keyword `using` was taken as an identifier in this context.
+  |                    It is a keyword only at the beginning of a parameter clause.
   |---------------------------------------------------------------------------------------------------------------------
   | Explanation (enabled by `-explain`)
   |- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   | The soft token `using` has special meaning only in certain contexts.
+  | It is a keyword only at the beginning of a parameter clause.
    ---------------------------------------------------------------------------------------------------------------------
 -- [E040] Syntax Error: tests/neg/i15614.scala:4:20 --------------------------------------------------------------------
 4 |def g(i: Int, using Int) = i + summon[Int]  // error  // error
   |                    ^^^
   |                    ':' expected, but identifier found.
-  |                    The soft token `using` was taken as an identifier in this context.
+  |                    The soft keyword `using` was taken as an identifier in this context.
+  |                    It is a keyword only at the beginning of a parameter clause.
   |---------------------------------------------------------------------------------------------------------------------
   | Explanation (enabled by `-explain`)
   |- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   | The soft token `using` has special meaning only in certain contexts.
+  | It is a keyword only at the beginning of a parameter clause.
    ---------------------------------------------------------------------------------------------------------------------
 -- [E040] Syntax Error: tests/neg/i15614.scala:6:19 --------------------------------------------------------------------
 6 |def z(i: Int, using) = i // error
   |                   ^
   |                   ':' expected, but ')' found.
-  |                   The soft token `using` was taken as an identifier in this context.
+  |                   The soft keyword `using` was taken as an identifier in this context.
+  |                   It is a keyword only at the beginning of a parameter clause.
   |---------------------------------------------------------------------------------------------------------------------
   | Explanation (enabled by `-explain`)
   |- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   | The soft token `using` has special meaning only in certain contexts.
+  | It is a keyword only at the beginning of a parameter clause.
    ---------------------------------------------------------------------------------------------------------------------
 -- [E040] Syntax Error: tests/neg/i15614.scala:8:26 --------------------------------------------------------------------
 8 |def erased(i: Int, erased j: Int) = i + j // error // error
   |                          ^
   |                          ':' expected, but identifier found.
-  |                          The soft token `erased` was taken as an identifier in this context.
+  |                          The soft keyword `erased` was taken as an identifier in this context.
+  |                          It is a keyword only at the beginning of a parameter clause.
   |---------------------------------------------------------------------------------------------------------------------
   | Explanation (enabled by `-explain`)
   |- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   | The soft token `erased` has special meaning only in certain contexts.
+  | It is a keyword only at the beginning of a parameter clause.
    ---------------------------------------------------------------------------------------------------------------------
 -- [E040] Syntax Error: tests/neg/i15614.scala:10:33 -------------------------------------------------------------------
 10 |def usingAndErased(i: Int, using erased j: Int) = i + j // error // error
    |                                 ^^^^^^
    |                                 ':' expected, but identifier found.
-   |                                 The soft token `using` was taken as an identifier in this context.
+   |                                 The soft keyword `using` was taken as an identifier in this context.
+   |                                 It is a keyword only at the beginning of a parameter clause.
    |--------------------------------------------------------------------------------------------------------------------
    | Explanation (enabled by `-explain`)
    |- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
    | The soft token `using` has special meaning only in certain contexts.
+   | It is a keyword only at the beginning of a parameter clause.
     --------------------------------------------------------------------------------------------------------------------
 -- [E040] Syntax Error: tests/neg/i15614.scala:12:37 -------------------------------------------------------------------
 12 |def usingAndErasedType(i: Int, using erased Int) = i + j // error // error
    |                                     ^^^^^^
    |                                     ':' expected, but identifier found.
-   |                                     The soft token `using` was taken as an identifier in this context.
+   |                                     The soft keyword `using` was taken as an identifier in this context.
+   |                                     It is a keyword only at the beginning of a parameter clause.
    |--------------------------------------------------------------------------------------------------------------------
    | Explanation (enabled by `-explain`)
    |- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
    | The soft token `using` has special meaning only in certain contexts.
+   | It is a keyword only at the beginning of a parameter clause.
     --------------------------------------------------------------------------------------------------------------------
 -- [E040] Syntax Error: tests/neg/i15614.scala:14:17 -------------------------------------------------------------------
 14 |def untoken(using: Int) = using // error // error
    |                 ^
    |                 an identifier expected, but ':' found.
-   |                 The soft token `using` was taken as the soft token in this context.
+   |                 The soft keyword `using` was taken as the soft keyword in this context.
+   |                 It is a keyword only at the beginning of a parameter clause.
    |--------------------------------------------------------------------------------------------------------------------
    | Explanation (enabled by `-explain`)
    |- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
    | The soft token `using` has special meaning only in certain contexts.
+   | It is a keyword only at the beginning of a parameter clause.
     --------------------------------------------------------------------------------------------------------------------
+-- [E040] Syntax Error: tests/neg/i15614.scala:16:22 -------------------------------------------------------------------
+16 |class C(i: Int, using j: Int): // error
+   |                      ^
+   |                      ':' expected, but identifier found.
+   |                      The soft keyword `using` was taken as an identifier in this context.
+   |                      It is a keyword only at the beginning of a parameter clause.
+   |--------------------------------------------------------------------------------------------------------------------
+   | Explanation (enabled by `-explain`)
+   |- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+   | The soft token `using` has special meaning only in certain contexts.
+   | It is a keyword only at the beginning of a parameter clause.
+    --------------------------------------------------------------------------------------------------------------------
+-- Error: tests/neg/i15614.scala:17:25 ---------------------------------------------------------------------------------
+17 |  def c = i + summon[Int] // error
+   |                         ^
+   |                       No given instance of type Int was found for parameter x of method summon in object Predef
 -- [E006] Not Found Error: tests/neg/i15614.scala:2:34 -----------------------------------------------------------------
 2 |def f(i: Int, using j: Int) = i + j   // error // error
   |                                  ^

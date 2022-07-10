@@ -3062,6 +3062,8 @@ object Parsers {
 
       def addParamMod(mod: () => Mod) = impliedMods = addMod(impliedMods, atSpan(in.skipToken()) { mod() })
 
+      def paramModAdvice = "It is a keyword only at the beginning of a parameter clause."
+
       def paramMods() =
         if in.token == IMPLICIT then
           addParamMod(() => Mod.Implicit())
@@ -3069,11 +3071,11 @@ object Parsers {
           if isIdent(nme.using) then
             addParamMod(() => Mod.Given())
             if in.isColon then
-              syntaxErrorOrIncomplete(ExpectedTokenButFoundSoftToken(IDENTIFIER, COLONop, nme.using))
+              syntaxErrorOrIncomplete(ExpectedTokenButFoundSoftKeyword(IDENTIFIER, COLONop, nme.using, paramModAdvice))
           if isErased then
             addParamMod(() => Mod.Erased())
             if in.isColon then
-              syntaxErrorOrIncomplete(ExpectedTokenButFoundSoftToken(IDENTIFIER, COLONop, nme.erased))
+              syntaxErrorOrIncomplete(ExpectedTokenButFoundSoftKeyword(IDENTIFIER, COLONop, nme.erased, paramModAdvice))
 
       def param(): ValDef =
         val start = in.offset
@@ -3103,13 +3105,13 @@ object Parsers {
             val name0 = ident()
             // check for misused using or erased or both
             if name0 == nme.using && !in.isColon then
-              syntaxErrorOrIncomplete(ExpectedTokenButFoundSoftToken(COLONop, in.token, nme.using))
+              syntaxErrorOrIncomplete(ExpectedTokenButFoundSoftKeyword(COLONop, in.token, nme.using, paramModAdvice))
               if in.token == IDENTIFIER then
                 val next = ident()
                 if next == nme.erased && in.token == IDENTIFIER then ident() else next
               else name0
             else if name0 == nme.erased && !in.isColon then
-              syntaxErrorOrIncomplete(ExpectedTokenButFoundSoftToken(COLONop, in.token, nme.erased))
+              syntaxErrorOrIncomplete(ExpectedTokenButFoundSoftKeyword(COLONop, in.token, nme.erased, paramModAdvice))
               if in.token == IDENTIFIER then ident() else name0
             else
               acceptColon()

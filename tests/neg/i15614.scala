@@ -13,6 +13,9 @@ def usingAndErasedType(i: Int, using erased Int) = i + j // error // error
 
 def untoken(using: Int) = using // error // error
 
+class C(i: Int, using j: Int): // error
+  def c = i + summon[Int] // error
+
 /*
 was unhelpful:
 at 2: Not found: j
