@@ -14,7 +14,7 @@ object ClasspathFromClassloader {
    *  BEWARE: with exotic enough classloaders, this may not work at all or do
    *  the wrong thing.
    */
-  def apply(cl: ClassLoader): String = {
+  def apply(cl: ClassLoader | Null): String = {
     val classpathBuff = List.newBuilder[String]
     def collectClassLoaderPaths(cl: ClassLoader): Unit = {
       if (cl != null) {

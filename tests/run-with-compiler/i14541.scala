@@ -4,7 +4,7 @@ object Test:
   import dotty.tools.runner.RichClassLoader.*
   val classpath = dotty.tools.dotc.util.ClasspathFromClassloader(getClass.getClassLoader)
   def main(args: Array[String]): Unit =
-    getClass.getClassLoader.run("echo", List("hello", "raw", "world"))
+    getClass.getClassLoader.nn.run("echo", List("hello", "raw", "world"))
     // caution: uses "SCALA_OPTS"
     dotty.tools.MainGenericRunner.main(Array("--class-path", classpath, "echo", "hello", "run", "world"))
 

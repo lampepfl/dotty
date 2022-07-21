@@ -78,7 +78,7 @@ def testAnyRefMap =
       i += 1
     while i > 0 do
       i -= 1
-      val v = set.getOrNull(elems(i))
+      val v: Elem | Null = set.getOrNull(elems(i))
       if v != null then
         count += 1
     iter += 1

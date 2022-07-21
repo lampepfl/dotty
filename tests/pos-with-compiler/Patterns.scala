@@ -2,7 +2,7 @@ import dotty.tools.dotc.ast.Trees.*
 import dotty.tools.dotc.core.Types.*
 
 object Patterns {
-  val d: Object = null
+  val d: Object = null.asInstanceOf[Object]
   private def rebase(tp: NamedType): Type = {
     def rebaseFrom(prefix: Type): Type = ???
     tp.prefix match {

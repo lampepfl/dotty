@@ -10,6 +10,7 @@ class C:
     if ??? then g else ""
 
   def f3 =
+    import scala.language.unsafeNulls
     (??? : Boolean) match
     case true => g
     case _ => ""

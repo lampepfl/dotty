@@ -612,6 +612,9 @@ object Build {
 
       Compile / mainClass := Some("dotty.tools.dotc.Main"),
 
+      // Note: bench/profiles/projects.yml should be updated accordingly.
+      Compile / scalacOptions ++= Seq("-Yexplicit-nulls"),
+
       scala := {
         val args: List[String] = spaceDelimited("<arg>").parsed.toList
         val externalDeps = externalCompilerClasspathTask.value
@@ -773,9 +776,6 @@ object Build {
         "tasty-core"     -> (LocalProject("tasty-core-bootstrapped") / Compile / packageBin).value.getAbsolutePath,
       )
     },
-
-    // Note: bench/profiles/projects.yml should be updated accordingly.
-    Compile / scalacOptions ++= Seq("-Yexplicit-nulls"),
 
     repl := (Compile / console).value,
     Compile / console / scalacOptions := Nil, // reset so that we get stock REPL behaviour!  E.g. avoid -unchecked being enabled

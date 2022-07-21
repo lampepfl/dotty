@@ -178,7 +178,7 @@ abstract class WeakHashSet[A <: AnyRef](initialCapacity: Int = 8, loadFactor: Do
         case null                    => addEntryAt(bucket, elem, h, oldHead)
         case _                       =>
           val entryElem = entry.get
-          if entryElem != null && isEqual(elem, entryElem) then entryElem.uncheckedNN
+          if entryElem != null && isEqual(elem, entryElem) then entryElem
           else linkedListLoop(entry.tail)
       }
 

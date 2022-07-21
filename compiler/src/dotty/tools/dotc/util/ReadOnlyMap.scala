@@ -15,19 +15,25 @@ abstract class ReadOnlyMap[Key, Value]:
 
   def isEmpty: Boolean = size == 0
 
-  def get(key: Key): Option[Value] = lookup(key) match
-    case null => None
-    case v => Some(v.uncheckedNN)
+  def get(key: Key): Option[Value] = 
+    val v = lookup(key) 
+    v match
+      case null => None
+      case _ => Some(v)
 
-  def getOrElse(key: Key, value: => Value) = lookup(key) match
-    case null => value
-    case v => v.uncheckedNN
+  def getOrElse(key: Key, value: => Value) = 
+    val v = lookup(key) 
+    v match
+      case null => value
+      case _ => v
 
   def contains(key: Key): Boolean = lookup(key) != null
 
-  def apply(key: Key): Value = lookup(key) match
-    case null => throw new NoSuchElementException(s"$key")
-    case v => v.uncheckedNN
+  def apply(key: Key): Value = 
+    val v = lookup(key) 
+    v match
+      case null => throw new NoSuchElementException(s"$key")
+      case _ => v
 
   def toArray: Array[(Key, Value)] =
     val result = new Array[(Key, Value)](size)

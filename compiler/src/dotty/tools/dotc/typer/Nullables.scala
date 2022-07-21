@@ -28,7 +28,7 @@ object Nullables:
     ctx.explicitNulls && !ctx.mode.is(Mode.SafeNulls)
 
   private def needNullifyHi(lo: Type, hi: Type)(using Context): Boolean =
-    ctx.explicitNulls
+    ctx.mode.is(Mode.SafeNulls)
     && lo.isExactlyNull // only nullify hi if lo is exactly Null type
     && hi.isValueType
     // We cannot check if hi is nullable, because it can cause cyclic reference.

@@ -133,7 +133,7 @@ abstract class GenericHashMap[Key, Value]
       val v1 = value
       v = v1
       update(key, v1)
-    v.uncheckedNN
+    v
 
   private def addOld(key: Key, value: Value): Unit =
     Stats.record(statsItem("re-enter"))

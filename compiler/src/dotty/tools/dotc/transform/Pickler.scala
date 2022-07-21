@@ -49,6 +49,8 @@ class Pickler extends Phase {
   private val beforePickling = new mutable.HashMap[ClassSymbol, String]
   private val picklers = new mutable.HashMap[ClassSymbol, TastyPickler]
 
+  private val typeSimplifier = new TypeSimplifier
+
   /** Drop any elements of this list that are linked module classes of other elements in the list */
   private def dropCompanionModuleClasses(clss: List[ClassSymbol])(using Context): List[ClassSymbol] = {
     val companionModuleClasses =
@@ -97,6 +99,13 @@ class Pickler extends Phase {
               println(i"**** pickled info of $cls")
               println(TastyPrinter.showContents(pickled, ctx.settings.color.value == "never"))
             }
+          // println(i"**** pickled info of $cls")
+          // println(TastyPrinter.showContents(pickled, ctx.settings.color.value == "never"))
+          if cls.show.contains("MainGenericRunner") then
+            import java.nio.file.{Paths, Files}
+            import java.nio.charset.StandardCharsets
+
+            Files.write(Paths.get("debug.txt"), TastyPrinter.showContents(pickled, true).getBytes(StandardCharsets.UTF_8))
           pickled
         }(using ExecutionContext.global)
       }
@@ -135,7 +144,7 @@ class Pickler extends Phase {
       }
     pickling.println("************* entered toplevel ***********")
     for ((cls, unpickler) <- unpicklers) {
-      val unpickled = unpickler.rootTrees
+      val unpickled = typeSimplifier.transform(unpickler.rootTrees)
       testSame(i"$unpickled%\n%", beforePickling(cls), cls)
     }
   }
@@ -151,4 +160,21 @@ class Pickler extends Phase {
                    |
                    |  diff before-pickling.txt after-pickling.txt""".stripMargin)
   end testSame
+
+  // Overwrite types of If, Match, and Try nodes with simplified types
+  // to avoid inconsistencies in unsafe nulls
+  class TypeSimplifier extends TreeMapWithPreciseStatContexts:
+    override def transform(tree: Tree)(using Context): Tree =
+      try tree match
+        case _: If | _: Match | _: Try =>
+          val newTree = super.transform(tree)
+          newTree.overwriteType(newTree.tpe.simplified)
+          newTree
+        case _ =>
+          super.transform(tree)
+      catch
+        case ex: TypeError =>
+          report.error(ex, tree.srcPos)
+          tree
+  end TypeSimplifier
 }

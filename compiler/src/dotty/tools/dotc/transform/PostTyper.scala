@@ -460,6 +460,10 @@ class PostTyper extends MacroTransform with IdentityDenotTransformer { thisPhase
           )
         case Block(_, Closure(_, _, tpt)) if ExpandSAMs.needsWrapperClass(tpt.tpe) =>
           superAcc.withInvalidCurrentClass(super.transform(tree))
+        case _: If | _: Match | _: Try =>
+          val newTree = super.transform(tree)
+          newTree.overwriteType(newTree.tpe.simplified)
+          newTree
         case tree =>
           super.transform(tree)
       }
