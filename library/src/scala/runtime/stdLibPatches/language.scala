@@ -60,6 +60,11 @@ object language:
     @compileTimeOnly("`saferExceptions` can only be used at compile time in import statements")
     object saferExceptions
 
+    /** Experimental support for unsafe Java return in explicit nulls
+     */
+    @compileTimeOnly("`unsafeJavaReturn` can only be used at compile time in import statements")
+    object unsafeJavaReturn
+
   end experimental
 
   /** The deprecated object contains features that are no longer officially suypported in Scala.

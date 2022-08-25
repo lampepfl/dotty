@@ -129,4 +129,6 @@ object Mode {
    *  Type `Null` becomes a subtype of non-primitive value types in TypeComparer.
    */
   val RelaxedOverriding: Mode = newMode(30, "RelaxedOverriding")
+
+  val UnsafeJavaReturn: Mode = newMode(31, "UnsafeJavaReturn")
 }

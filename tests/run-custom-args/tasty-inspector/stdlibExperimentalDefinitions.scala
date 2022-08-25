@@ -46,6 +46,12 @@ val experimentalDefinitionInLibrary = Set(
   "scala.annotation.newMain.Help$",
   "scala.annotation.newMain.Names",
 
+  //// New feature: CanEqualNull annotation
+  // Can be stabilized when language feature is stabilized.
+  // Needs user feedback.
+  // This annotation makes it possible to use `==` and `!=` to compare reference types and null in explicit nulls.
+  "scala.annotation.CanEqualNull",
+
   //// New APIs: Mirror
   // Can be stabilized in 3.3.0 or later.
   "scala.deriving.Mirror$.fromProductTyped", // This API is a bit convoluted. We may need some more feedback before we can stabilize it.

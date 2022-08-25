@@ -26,6 +26,7 @@ import scala.io.Codec
 import collection.mutable
 import printing._
 import config.{JavaPlatform, SJSPlatform, Platform, ScalaSettings}
+import config.Feature
 import classfile.ReusableDataReader
 import StdNames.nme
 
@@ -642,12 +643,19 @@ object Contexts {
     def setProfiler(profiler: Profiler): this.type = updateStore(profilerLoc, profiler)
     def setNotNullInfos(notNullInfos: List[NotNullInfo]): this.type = updateStore(notNullInfosLoc, notNullInfos)
     def setImportInfo(importInfo: ImportInfo): this.type =
-      importInfo.mentionsFeature(nme.unsafeNulls) match
-        case Some(true) =>
-          setMode(this.mode &~ Mode.SafeNulls)
-        case Some(false) if ctx.settings.YexplicitNulls.value =>
-          setMode(this.mode | Mode.SafeNulls)
-        case _ =>
+      if ctx.settings.YexplicitNulls.value then
+        importInfo.mentionsFeature(nme.unsafeNulls) match
+          case Some(true) =>
+            setMode(this.mode &~ Mode.SafeNulls)
+          case Some(false)  =>
+            setMode(this.mode | Mode.SafeNulls)
+          case _ =>
+        importInfo.mentionsFeature(Feature.unsafeJavaReturn) match
+          case Some(true) =>
+            setMode(this.mode | Mode.UnsafeJavaReturn)
+          case Some(false) =>
+            setMode(this.mode &~ Mode.UnsafeJavaReturn)
+          case _ =>
       updateStore(importInfoLoc, importInfo)
     def setTypeAssigner(typeAssigner: TypeAssigner): this.type = updateStore(typeAssignerLoc, typeAssigner)
 

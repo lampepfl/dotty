@@ -157,7 +157,7 @@ class Synthesizer(typer: Typer)(using @constructorOnly c: Context):
           }
 
     /** Is an `CanEqual[cls1, cls2]` instance assumed for predefined classes `cls1`, cls2`? */
-    def canComparePredefinedClasses(cls1: ClassSymbol, cls2: ClassSymbol): Boolean =
+    def canComparePredefinedClasses(cls1: ClassSymbol, cls2: ClassSymbol)(using Context): Boolean =
 
       def cmpWithBoxed(cls1: ClassSymbol, cls2: ClassSymbol) =
         cls2 == defn.NothingClass
@@ -173,15 +173,17 @@ class Synthesizer(typer: Typer)(using @constructorOnly c: Context):
         cmpWithBoxed(cls2, cls1)
       else if ctx.mode.is(Mode.SafeNulls) then
         // If explicit nulls is enabled, and unsafeNulls is not enabled,
+        // and the types don't have `@CanEqualNull` annotation,
         // we want to disallow comparison between Object and Null.
         // If we have to check whether a variable with a non-nullable type has null value
         // (for example, a NotNull java method returns null for some reasons),
-        // we can still cast it to a nullable type then compare its value.
+        // we can still use `eq/ne null` or cast it to a nullable type then compare its value.
         //
         // Example:
         // val x: String = null.asInstanceOf[String]
         // if (x == null) {} // error: x is non-nullable
         // if (x.asInstanceOf[String|Null] == null) {} // ok
+        // if (x eq null) {} // ok
         cls1 == defn.NullClass && cls1 == cls2
       else if cls1 == defn.NullClass then
         cls1 == cls2 || cls2.derivesFrom(defn.ObjectClass)
@@ -196,9 +198,20 @@ class Synthesizer(typer: Typer)(using @constructorOnly c: Context):
       *  interpret.
       */
     def canComparePredefined(tp1: Type, tp2: Type) =
+      // In explicit nulls, when one of type has `@CanEqualNull` annotation,
+      // we use unsafe nulls semantic to check, which allows reference types
+      // to be compared with `Null`.
+      // Example:
+      // val s1: String = ???
+      // s1 == null // error
+      // val s2: String @CanEqualNull = ???
+      // s2 == null // ok
+      val checkCtx = if ctx.explicitNulls
+        && (tp1.hasAnnotation(defn.CanEqualNullAnnot) || tp2.hasAnnotation(defn.CanEqualNullAnnot))
+        then ctx.retractMode(Mode.SafeNulls) else ctx
       tp1.classSymbols.exists(cls1 =>
         tp2.classSymbols.exists(cls2 =>
-          canComparePredefinedClasses(cls1, cls2)))
+          canComparePredefinedClasses(cls1, cls2)(using checkCtx)))
 
     formal.argTypes match
       case args @ (arg1 :: arg2 :: Nil) =>

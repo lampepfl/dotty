@@ -250,6 +250,7 @@ class CompilationTests {
       compileFilesInDir("tests/explicit-nulls/pos-separate", explicitNullsOptions),
       compileFilesInDir("tests/explicit-nulls/pos-patmat", explicitNullsOptions and "-Xfatal-warnings"),
       compileFilesInDir("tests/explicit-nulls/unsafe-common", explicitNullsOptions and "-language:unsafeNulls"),
+      compileFilesInDir("tests/explicit-nulls/unsafe-java", explicitNullsOptions),
       compileFile("tests/explicit-nulls/pos-special/i14682.scala", explicitNullsOptions and "-Ysafe-init"),
       compileFile("tests/explicit-nulls/pos-special/i14947.scala", explicitNullsOptions and "-Ytest-pickler" and "-Xprint-types"),
     )

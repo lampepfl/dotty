@@ -28,6 +28,7 @@ object Feature:
   val symbolLiterals = deprecated("symbolLiterals")
   val fewerBraces = experimental("fewerBraces")
   val saferExceptions = experimental("saferExceptions")
+  val unsafeJavaReturn = experimental("unsafeJavaReturn")
 
   /** Is `feature` enabled by by a command-line setting? The enabling setting is
    *

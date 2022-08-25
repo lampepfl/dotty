@@ -766,8 +766,12 @@ class TypeComparer(@constructorOnly initctx: Context) extends ConstraintHandling
         }
         compareTypeBounds
       case tp2: AnnotatedType if tp2.isRefining =>
-        (tp1.derivesAnnotWith(tp2.annot.sameAnnotation) || tp1.isBottomType) &&
-        recur(tp1, tp2.parent)
+        // `CanEqualNull` is a special refining annotation.
+        // An annotated type is equivalent to the original type.
+        (tp1.derivesAnnotWith(tp2.annot.sameAnnotation)
+        || tp2.annot.matches(defn.CanEqualNullAnnot)
+        || tp1.isBottomType)
+        && recur(tp1, tp2.parent)
       case ClassInfo(pre2, cls2, _, _, _) =>
         def compareClassInfo = tp1 match {
           case ClassInfo(pre1, cls1, _, _, _) =>

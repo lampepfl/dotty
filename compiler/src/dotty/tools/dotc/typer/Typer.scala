@@ -548,7 +548,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
           ref(ownType).withSpan(tree.span)
         case _ =>
           tree.withType(ownType)
-      val tree2 = toNotNullTermRef(tree1, pt)
+      val tree2 = toNotNullTermRef(tree1, pt).tryToCastToCanEqualNull
       checkLegalValue(tree2, pt)
       tree2
 
@@ -646,7 +646,8 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
 
     def typeSelectOnTerm(using Context): Tree =
       val qual = typedExpr(tree.qualifier, shallowSelectionProto(tree.name, pt, this))
-      typedSelect(tree, pt, qual).withSpan(tree.span).computeNullable()
+      val sel = typedSelect(tree, pt, qual).withSpan(tree.span).computeNullable()
+      if pt != AssignProto then sel.tryToCastToCanEqualNull else sel
 
     def javaSelectOnType(qual: Tree)(using Context) =
       // semantic name conversion for `O$` in java code
@@ -3713,7 +3714,8 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
           }
         simplify(typed(etaExpand(tree, wtp, arity), pt), pt, locked)
       else if (wtp.paramInfos.isEmpty && isAutoApplied(tree.symbol))
-        readaptSimplified(tpd.Apply(tree, Nil))
+        val app = tpd.Apply(tree, Nil).tryToCastToCanEqualNull
+        readaptSimplified(app)
       else if (wtp.isImplicitMethod)
         err.typeMismatch(tree, pt)
       else
