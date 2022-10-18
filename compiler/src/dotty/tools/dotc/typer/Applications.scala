@@ -1101,44 +1101,38 @@ trait Applications extends Compatibility {
     else
       throw Error(i"unexpected type.\n  fun = $fun,\n  methPart(fun) = ${methPart(fun)},\n  methPart(fun).tpe = ${methPart(fun).tpe},\n  tpe = ${fun.tpe}")
 
-  def typedNamedArgs(args: List[untpd.Tree])(using Context): List[NamedArg] =
-    for (case arg @ NamedArg(id, argtpt) <- args) yield {
-      if !Feature.namedTypeArgsEnabled then
-        report.error(
-          i"""Named type arguments are experimental,
-             |they must be enabled with a `experimental.namedTypeArguments` language import or setting""",
-          arg.srcPos)
-      val argtpt1 = typedType(argtpt)
-      cpy.NamedArg(arg)(id, argtpt1).withType(argtpt1.tpe)
-    }
-
   def typedTypeApply(tree: untpd.TypeApply, pt: Type)(using Context): Tree = {
+    record("typedTypeApply")
     if (ctx.mode.is(Mode.Pattern))
       return errorTree(tree, "invalid pattern")
 
-    val isNamed = hasNamedArg(tree.args)
-    val typedArgs = if (isNamed) typedNamedArgs(tree.args) else tree.args.mapconserve(typedType(_))
-    record("typedTypeApply")
+    val typedArgs = tree.args.mapconserve {
+      case arg @ NamedArg(id, arg0) =>
+        val arg1 = typedType(arg0)
+        cpy.NamedArg(arg)(id, arg1).withType(arg1.tpe)
+      case arg if isPlaceHolderTypeParam(arg) =>
+        arg.withType(defn.NothingType)
+      case arg =>
+        typedType(arg)
+    }
     typedExpr(tree.fun, PolyProto(typedArgs, pt)) match {
       case _: TypeApply if !ctx.isAfterTyper =>
         errorTree(tree, "illegal repeated type application")
+      case typedFn: Select
+      if (typedFn.tpe eq TryDynamicCallType) && !pt.isInstanceOf[FunProto] =>
+        typedDynamicSelect(typedFn, typedArgs.map(untpd.TypedSplice(_)), pt)
+      case typedFn if typedFn.tpe eq TryDynamicCallType =>
+        tree.withType(TryDynamicCallType)
       case typedFn =>
-        typedFn.tpe.widen match {
-          case pt: PolyType =>
-            if (typedArgs.length <= pt.paramInfos.length && !isNamed)
-              if (typedFn.symbol == defn.Predef_classOf && typedArgs.nonEmpty) {
-                val arg = typedArgs.head
-                if (!arg.symbol.is(Module)) // Allow `classOf[Foo.type]` if `Foo` is an object
-                  checkClassType(arg.tpe, arg.srcPos, traitReq = false, stablePrefixReq = false)
-              }
-          case _ =>
-        }
-        def tryDynamicTypeApply(): Tree = typedFn match {
-          case typedFn: Select if !pt.isInstanceOf[FunProto] => typedDynamicSelect(typedFn, typedArgs.map(untpd.TypedSplice(_)), pt)
-          case _                                             => tree.withType(TryDynamicCallType)
-        }
-        if (typedFn.tpe eq TryDynamicCallType) tryDynamicTypeApply()
-        else assignType(cpy.TypeApply(tree)(typedFn, typedArgs), typedFn, typedArgs)
+        if typedFn.symbol == defn.Predef_classOf && typedArgs.nonEmpty then
+          val arg = typedArgs.head
+          if !arg.symbol.is(Module) then // Allow `classOf[Foo.type]` if `Foo` is an object
+            checkClassType(arg.tpe, arg.srcPos, traitReq = false, stablePrefixReq = false)
+        val normArgs = typedFn.tpe.widen match
+          case tl: PolyType if isNamedArgs(typedArgs) =>
+            reorderArgs(tl.paramNames, typedArgs, placeholderTypeParam)
+          case _ => typedArgs
+        assignType(cpy.TypeApply(tree)(typedFn, normArgs), typedFn, normArgs)
     }
   }
 
@@ -2011,7 +2005,15 @@ trait Applications extends Compatibility {
 
       case pt @ PolyProto(targs1, pt1) =>
         val alts1 = alts.filterConserve(pt.canInstantiate)
-        if isDetermined(alts1) then alts1
+        def altType(alt: TermRef): PolyType = alt.widen.asInstanceOf[PolyType]
+        if isDetermined(alts1) then
+          alts1
+        else if isNamedArgs(targs1) then
+          // can't narrow with bounds because some arguments might be missing
+          resolveMapped(alts1, alt => instantiateNamed(altType(alt), targs1), pt1)
+        else if hasPlaceholderTypeParams(targs1) then
+          // can't narrow with bounds because some arguments are missing
+          resolveMapped(alts1, alt => instantiateWithPlaceholders(altType(alt), targs1), pt1)
         else
           def withinBounds(alt: TermRef) = alt.widen match
             case tp: PolyType =>

@@ -173,8 +173,8 @@ import cc.CaptureSet.IdentityCaptRefMap
     def explain = ""
   }
 
-  class WildcardOnTypeArgumentNotAllowedOnNew()(using Context)
-  extends SyntaxMsg(WildcardOnTypeArgumentNotAllowedOnNewID) {
+  class WildcardTypeArgumentNotAllowed()(using Context)
+  extends SyntaxMsg(WildcardTypeArgumentNotAllowedID) {
     def msg = "Type argument must be fully defined"
     def explain =
       val code1: String =
@@ -1441,6 +1441,11 @@ import cc.CaptureSet.IdentityCaptRefMap
     def msg =
       if pname.firstPart contains '$' then s"not enough arguments for $methString"
       else s"missing argument for parameter $pname of $methString"
+    def explain = ""
+
+  class MissingTypeArgument(pname: Name, tpe: Type)(using Context)
+    extends TypeMsg(MissingTypeArgumentID):
+    def msg = em"missing type argument for parameter $pname of type $tpe"
     def explain = ""
 
   class DoesNotConformToBound(tpe: Type, which: String, bound: Type)(using Context)

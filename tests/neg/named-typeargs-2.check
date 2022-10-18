@@ -1,0 +1,16 @@
+-- [E172] Type Error: tests/neg/named-typeargs-2.scala:7:36 ------------------------------------------------------------
+7 |class Bar1 extends Foo[Map[Key = Int]] // error
+  |                                    ^
+  |                                    missing type argument for parameter Value of type Map
+-- [E172] Type Error: tests/neg/named-typeargs-2.scala:8:38 ------------------------------------------------------------
+8 |class Bar2 extends Foo[Map[Value = Int]] // error
+  |                                      ^
+  |                                      missing type argument for parameter Key of type Map
+-- [E172] Type Error: tests/neg/named-typeargs-2.scala:9:48 ------------------------------------------------------------
+9 |class Bar5 extends Foo[Tuple3[T1 = Int, T3 = Int]] // error
+  |                                                ^
+  |                                                missing type argument for parameter T2 of type Tuple3
+-- [E172] Type Error: tests/neg/named-typeargs-2.scala:10:48 -----------------------------------------------------------
+10 |class Bar8 extends Foo[Baz[F = Int => _, B = Int]] // error
+   |                                                ^
+   |                                                missing type argument for parameter A of type Baz

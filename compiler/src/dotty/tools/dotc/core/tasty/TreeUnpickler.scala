@@ -1359,7 +1359,11 @@ class TreeUnpickler(reader: TastyReader,
               val tycon = readTpt()
               val args = until(end)(readTpt())
               val tree = untpd.AppliedTypeTree(tycon, args)
-              val ownType = ctx.typeAssigner.processAppliedType(tree, tycon.tpe.safeAppliedTo(args.tpes))
+              val ta = ctx.typeAssigner
+              val ownType =
+                if hasPlaceholderTypeParams(args)
+                then ta.instantiateWithPlaceholders(tycon.tpe, args)
+                else ta.processAppliedType(tree, tycon.tpe.safeAppliedTo(args.tpes))
               tree.withType(postProcessFunction(ownType))
             case ANNOTATEDtpt =>
               Annotated(readTpt(), readTerm())
@@ -1409,6 +1413,9 @@ class TreeUnpickler(reader: TastyReader,
           val aliases = readStats(ctx.owner, end)
           val tpt = typeReader.readTpt()
           Block(aliases, tpt)
+        case NAMEDARG =>
+          readByte()
+          NamedArg(readName().toTypeName, readTpt())
         case HOLE =>
           readByte()
           val end = readEnd()

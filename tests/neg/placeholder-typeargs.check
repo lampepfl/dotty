@@ -1,0 +1,28 @@
+-- [E056] Syntax Error: tests/neg/placeholder-typeargs.scala:5:8 -------------------------------------------------------
+5 |val m1: Map[Int, _] = ???   // error
+  |        ^^^^^^^^^^^
+  |        Missing type parameter for [Value] =>> Map[Int, Value]
+-- [E056] Syntax Error: tests/neg/placeholder-typeargs.scala:6:8 -------------------------------------------------------
+6 |val m2: Map[_, String] = ??? // error
+  |        ^^^^^^^^^^^^^^
+  |        Missing type parameter for [Key] =>> Map[Key, String]
+-- [E023] Syntax Error: tests/neg/placeholder-typeargs.scala:7:8 -------------------------------------------------------
+7 |val m4: Map[Int, _, String] = ??? // error
+  |        ^^^^^^^^^^^^^^^^^^^
+  |        Too many type arguments for Map[Key, Value]
+  |        expected: [Key, Value]
+  |        actual:   [Int, _, String]
+  |
+  | longer explanation available when compiling with `-explain`
+-- Error: tests/neg/placeholder-typeargs.scala:9:10 --------------------------------------------------------------------
+9 |type E1 = Either[Int, _] // error
+  |          ^^^^^^^^^^^^^^
+  |          type Either takes more type parameters
+-- Error: tests/neg/placeholder-typeargs.scala:10:10 -------------------------------------------------------------------
+10 |type E2 = Either[_, String] // error
+   |          ^^^^^^^^^^^^^^^^^
+   |          type Either takes more type parameters
+-- Error: tests/neg/placeholder-typeargs.scala:11:20 -------------------------------------------------------------------
+11 |type E3 = Either[_, List] // error
+   |                    ^^^^
+   |                    Type argument List does not have the same kind as its bound 

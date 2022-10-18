@@ -210,40 +210,15 @@ class PostTyper extends MacroTransform with IdentityDenotTransformer { thisPhase
       }
     }
 
-    private def normalizeTypeArgs(tree: TypeApply)(using Context): TypeApply = tree.tpe match {
-      case pt: PolyType => // wait for more arguments coming
-        tree
+    private def normalizeTypeArgs(tree: TypeApply)(using Context): TypeApply = tree.fun match
+      case tree1: TypeApply if tree1.args.exists(isPlaceHolderTypeParam) =>
+        val argsIt = tree.args.iterator
+        val fusedArgs = tree1.args.map { arg =>
+          if isPlaceHolderTypeParam(arg) then argsIt.next else arg
+        }
+        cpy.TypeApply(tree)(tree1.fun, fusedArgs)
       case _ =>
-        def decompose(tree: TypeApply): (Tree, List[Tree]) = tree.fun match {
-          case fun: TypeApply =>
-            val (tycon, args) = decompose(fun)
-            (tycon, args ++ tree.args)
-          case _ =>
-            (tree.fun, tree.args)
-        }
-        def reorderArgs(pnames: List[Name], namedArgs: List[NamedArg], otherArgs: List[Tree]): List[Tree] = pnames match {
-          case pname :: pnames1 =>
-            namedArgs.partition(_.name == pname) match {
-              case (NamedArg(_, arg) :: _, namedArgs1) =>
-                arg :: reorderArgs(pnames1, namedArgs1, otherArgs)
-              case _ =>
-                val otherArg :: otherArgs1 = otherArgs: @unchecked
-                otherArg :: reorderArgs(pnames1, namedArgs, otherArgs1)
-            }
-          case nil =>
-            assert(namedArgs.isEmpty && otherArgs.isEmpty)
-            Nil
-        }
-        val (tycon, args) = decompose(tree)
-        tycon.tpe.widen match {
-          case tp: PolyType if args.exists(isNamedArg) =>
-            val (namedArgs, otherArgs) = args.partition(isNamedArg)
-            val args1 = reorderArgs(tp.paramNames, namedArgs.asInstanceOf[List[NamedArg]], otherArgs)
-            TypeApply(tycon, args1).withSpan(tree.span).withType(tree.tpe)
-          case _ =>
-            tree
-        }
-    }
+        tree
 
     private object dropInlines extends TreeMap {
       override def transform(tree: Tree)(using Context): Tree = tree match {

@@ -101,7 +101,7 @@ object GadtStlc {
   case class ISLAMBDAC[X, E]() extends ISLAMBDA[Abs[Var[X], E]]
 
   // evidence that E reduces
-  type REDUCES[E] = REDUDER[E, _]
+  type REDUCES[E] = REDUDER[E, ?]
 
   def followsIsLambda[G, V, TY1, TY2](
     isval: ISVAL[V],

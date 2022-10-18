@@ -650,6 +650,20 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
     record("typedSelect")
 
     def typeSelectOnTerm(using Context): Tree =
+      tree.qualifier match
+        case qual0 @ untpd.New(tpt: untpd.AppliedTypeTree) =>
+          assert(tree.name == nme.CONSTRUCTOR)
+          typedAheadType(tpt) match
+            case tpt1 @ AppliedTypeTree(tycon, targs)
+            if tpt1.tpe.isInstanceOf[HKTypeLambda] && tycon.tpe.typeSymbol.isClass =>
+              // rewrite `new C[Ts].init` where `C` is a class to new C.init[Ts]
+              return typedTypeApply(
+                untpd.TypeApply(
+                  cpy.Select(tree)(cpy.New(qual0)(untpd.TypedSplice(tycon)), tree.name),
+                  targs.map(untpd.TypedSplice(_))),
+                pt)
+            case _ =>
+        case _ =>
       val qual = typedExpr(tree.qualifier, shallowSelectionProto(tree.name, pt, this))
       typedSelect(tree, pt, qual).withSpan(tree.span).computeNullable()
 
@@ -791,7 +805,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
   }
 
   def typedNew(tree: untpd.New, pt: Type)(using Context): Tree =
-    tree.tpt match {
+    tree.tpt match
       case templ: untpd.Template =>
         import untpd._
         var templ1 = templ
@@ -818,15 +832,13 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
         if tsym.is(Package) then
           report error(em"$tsym cannot be instantiated", tpt1.srcPos)
         tpt1 = tpt1.withType(ensureAccessible(tpt1.tpe, superAccess = false, tpt1.srcPos))
-        tpt1 match {
+        tpt1 match
           case AppliedTypeTree(_, targs) =>
-            for case targ: TypeBoundsTree <- targs do
-              report.error(WildcardOnTypeArgumentNotAllowedOnNew(), targ.srcPos)
+            for case targ: TypeBoundsTree <- targs.mapConserve(stripNamedArg) do
+              report.error(WildcardTypeArgumentNotAllowed(), targ.srcPos)
           case _ =>
-        }
-
         assignType(cpy.New(tree)(tpt1), tpt1)
-    }
+  end typedNew
 
   def typedTyped(tree: untpd.Typed, pt: Type)(using Context): Tree = {
 
@@ -1993,7 +2005,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
       typed(tree.tpt, AnyTypeConstructorProto)
     }
     val tparams = tpt1.tpe.typeParams
-     if tpt1.tpe.isError then
+    if tpt1.tpe.isError then
        val args1 = tree.args.mapconserve(typedType(_))
        assignType(cpy.AppliedTypeTree(tree)(tpt1, args1), tpt1, args1)
      else if (tparams.isEmpty) {
@@ -2002,6 +2014,8 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
     }
     else {
       var args = tree.args
+      if isNamedArgs(args) then
+        args = untpd.reorderArgs(tparams.map(_.paramName), tree.args, placeholderTypeParam)
       val args1 = {
         if (args.length != tparams.length) {
           wrongNumberOfTypeArgs(tpt1.tpe, tparams, args, tree.srcPos)
@@ -2061,19 +2075,17 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
                 // wildcard identifiers `_` instead.
                 TypeTree(tparamBounds).withSpan(arg.span)
               case _ =>
-                typedType(desugaredArg, argPt, mapPatternBounds = true)
+                if isPlaceHolderTypeParam(arg) then arg.withType(defn.NothingType)
+                else typedType(desugaredArg, argPt, mapPatternBounds = true)
             }
           else desugaredArg.withType(UnspecifiedErrorType)
         }
         args.zipWithConserve(tparams)(typedArg)
       }
-      val paramBounds = tparams.lazyZip(args).map {
-        case (tparam, untpd.WildcardTypeBoundsTree()) =>
-          // if type argument is a wildcard, suppress kind checking since
-          // there is no real argument.
-          NoType
-        case (tparam, _) =>
-          tparam.paramInfo.bounds
+      val paramBounds = tparams.lazyZip(args).map { (tparam, arg) => arg match
+        case untpd.WildcardTypeBoundsTree() => NoType   // suppress kind checking for `?`
+        case _ if isPlaceHolderTypeParam(arg) => NoType // suppress kind checking for `_`
+        case _ => tparam.paramInfo.bounds
       }
       var checkedArgs = preCheckKinds(args1, paramBounds)
         // check that arguments conform to bounds is done in phase PostTyper

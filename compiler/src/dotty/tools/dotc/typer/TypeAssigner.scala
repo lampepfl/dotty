@@ -10,7 +10,7 @@ import util.SrcPos
 import NameOps._
 import collection.mutable
 import reporting._
-import Checking.{checkNoPrivateLeaks, checkNoWildcard}
+import Checking.checkNoPrivateLeaks
 import cc.CaptureSet
 
 trait TypeAssigner {
@@ -196,6 +196,51 @@ trait TypeAssigner {
       else tp
     case _ => tp
 
+  /** Instantiate `tl` with named type arguments `args`.
+   *  Issue an error if there are duplicate or unrecognized argument names.
+   *  @return  the instantiated return type, type abstracted over all parameters
+   *           that do not correspond to a named argument
+   */
+  def instantiateNamed(tl: TypeLambda, args: List[Tree])(using Context): Type =
+    val reordered = reorderArgs(tl.paramNames, args, placeholderTypeParam)
+    instantiateWithPlaceholders(tl, reordered)
+
+  /** Instantiate `tycon` with arguments `args`, where some arguments are placeholders `_`.
+   *  @return  the instantiated return type, type abstracted over all placeholders
+   */
+  def instantiateWithPlaceholders(tycon: Type, args: List[Tree])(using Context): Type =
+    val tl = tycon match
+      case tycon: TypeLambda => tycon
+      case _ =>
+        val tparams = tycon.typeParams
+        (tparams: @unchecked) match
+          case (tparam: Symbol) :: _ =>
+            val tparamSyms = tparams.asInstanceOf[List[Symbol]]
+            HKTypeLambda.apply(tparamSyms.map(_.name.asTypeName))(
+              (tl: HKTypeLambda) => tparamSyms.map(_.info.subst(tparamSyms, tl.paramRefs).bounds),
+              (tl: HKTypeLambda) => tycon.appliedTo(tl.paramRefs))
+          case LambdaParam(tl, _) :: _ => tl
+
+    val gaps = args.zipWithIndex.collect {
+      case (arg, n) if isPlaceHolderTypeParam(arg) => n
+    }
+    // mappedArgTypes contains the type of each named argument in its reordered position.
+    // For missing types it contains contiguous parameter references to `tl` starting from 0.
+    // These make sense only once tl is mapped to the new lambda which contains
+    // a parameter for each missing argument.
+    val mappedArgTypes =
+      val newIndex = Iterator.from(0)
+      args.map { arg =>
+        if isPlaceHolderTypeParam(arg) then tl.paramRefs(newIndex.next) else arg.tpe
+      }
+    val resType = tl.resultType.substParams(tl, mappedArgTypes)
+    if gaps.isEmpty then resType
+    else tl.derivedLambdaType(
+        gaps.map(tl.paramNames),
+        gaps.map(n => tl.paramInfos(n).substParams(tl, mappedArgTypes).bounds),
+        resType)
+  end instantiateWithPlaceholders
+
   /** Type assignment method. Each method takes as parameters
    *   - an untpd.Tree to which it assigns a type,
    *   - typed child trees it needs to access to cpmpute that type,
@@ -311,68 +356,34 @@ trait TypeAssigner {
   def assignType(tree: untpd.TypeApply, fn: Tree, args: List[Tree])(using Context): TypeApply = {
     def fail = tree.withType(errorType(err.takesNoParamsStr(fn, "type "), tree.srcPos))
     ConstFold(fn.tpe.widen match {
-      case pt: TypeLambda =>
-        tree.withType {
-          val paramNames = pt.paramNames
-          if (hasNamedArg(args)) {
-            val paramBoundsByName = paramNames.zip(pt.paramInfos).toMap
-
-            // Type arguments which are specified by name (immutable after this first loop)
-            val namedArgMap = new mutable.HashMap[Name, Type]
-            for (case NamedArg(name, arg) <- args)
-              if (namedArgMap.contains(name))
-                report.error(DuplicateNamedTypeParameter(name), arg.srcPos)
-              else if (!paramNames.contains(name))
-                report.error(UndefinedNamedTypeParameter(name, paramNames), arg.srcPos)
-              else
-                namedArgMap(name) = arg.tpe
-
-            // Holds indexes of non-named typed arguments in paramNames
-            val gapBuf = new mutable.ListBuffer[Int]
-            def nextPoly(idx: Int) = {
-              val newIndex = gapBuf.length
-              gapBuf += idx
-              // Re-index unassigned type arguments that remain after transformation
-              pt.paramRefs(newIndex)
-            }
-
-            // Type parameters after naming assignment, conserving paramNames order
-            val normArgs: List[Type] = paramNames.zipWithIndex.map { case (pname, idx) =>
-              namedArgMap.getOrElse(pname, nextPoly(idx))
-            }
-
-            val transform = new TypeMap {
-              def apply(t: Type) = t match {
-                case TypeParamRef(`pt`, idx) => normArgs(idx)
-                case _ => mapOver(t)
-              }
-            }
-            val resultType1 = transform(pt.resultType)
-            if (gapBuf.isEmpty) resultType1
-            else {
-              val gaps = gapBuf.toList
-              pt.derivedLambdaType(
-                gaps.map(paramNames),
-                gaps.map(idx => transform(pt.paramInfos(idx)).bounds),
-                resultType1)
-            }
+      case tl: TypeLambda =>
+        // Make sure arguments don't contain the type `pt` itself.
+        // make a copy of the argument if that's the case.
+        // This is done to compensate for the fact that normally every
+        // reference to a polytype would have to be a fresh copy of that type,
+        // but we want to avoid that because it would increase compilation cost.
+        // See pos/i6682a.scala for a test case where the defensive copying matters.
+        object ensureFresh extends TypeMap, CaptureSet.IdempotentCaptRefMap:
+          var freshened = false
+          def apply(tp: Type) = mapOver(
+            if tp eq tl then
+              freshened = true
+              tl.newLikeThis(tl.paramNames, tl.paramInfos, tl.resType)
+            else
+              tp)
+        var argTypes = args.tpes
+        val freshArgTypes = argTypes.map(ensureFresh)
+        if ensureFresh.freshened then
+          assignType(tree, fn, args.lazyZip(freshArgTypes).map(_.withType(_)))
+        else
+          tree.withType {
+            if !argTypes.hasSameLengthAs(tl.paramNames) then
+              wrongNumberOfTypeArgs(fn.tpe, tl.typeParams, args, tree.srcPos)
+            else if hasPlaceholderTypeParams(args) then
+              instantiateWithPlaceholders(tl, args)
+            else
+              tl.instantiate(argTypes)
           }
-          else {
-            // Make sure arguments don't contain the type `pt` itself.
-            // make a copy of the argument if that's the case.
-            // This is done to compensate for the fact that normally every
-            // reference to a polytype would have to be a fresh copy of that type,
-            // but we want to avoid that because it would increase compilation cost.
-            // See pos/i6682a.scala for a test case where the defensive copying matters.
-            val ensureFresh = new TypeMap with CaptureSet.IdempotentCaptRefMap:
-              def apply(tp: Type) = mapOver(
-                if tp eq pt then pt.newLikeThis(pt.paramNames, pt.paramInfos, pt.resType)
-                else tp)
-            val argTypes = args.tpes.mapConserve(ensureFresh)
-            if (argTypes.hasSameLengthAs(paramNames)) pt.instantiate(argTypes)
-            else wrongNumberOfTypeArgs(fn.tpe, pt.typeParams, args, tree.srcPos)
-          }
-        }
       case err: ErrorType =>
         tree.withType(err)
       case ref: TermRef if ref.isOverloaded =>
@@ -476,16 +487,16 @@ trait TypeAssigner {
     tree.withType(RecType.closeOver(rt => refined.substThis(refineCls, rt.recThis)))
   }
 
-  def assignType(tree: untpd.AppliedTypeTree, tycon: Tree, args: List[Tree])(using Context): AppliedTypeTree = {
-    assert(!hasNamedArg(args) || ctx.reporter.errorsReported, tree)
+  def assignType(tree: untpd.AppliedTypeTree, tycon: Tree, args: List[Tree])(using Context): AppliedTypeTree =
     val tparams = tycon.tpe.typeParams
     val ownType =
-      if tparams.hasSameLengthAs(args) then
-        processAppliedType(tree, tycon.tpe.appliedTo(args.tpes))
-      else
+      if !tparams.hasSameLengthAs(args) then
         wrongNumberOfTypeArgs(tycon.tpe, tparams, args, tree.srcPos)
+      else if hasPlaceholderTypeParams(args) then
+        instantiateWithPlaceholders(tycon.tpe, args)
+      else
+        processAppliedType(tree, tycon.tpe.appliedTo(args.tpes))
     tree.withType(ownType)
-  }
 
   def assignType(tree: untpd.LambdaTypeTree, tparamDefs: List[TypeDef], body: Tree)(using Context): LambdaTypeTree =
     val validParams = tparamDefs.filterConserve { tdef =>

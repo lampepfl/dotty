@@ -19,7 +19,7 @@ object Feature:
   private def deprecated(str: PreName): TermName =
     QualifiedName(nme.deprecated, str.toTermName)
 
-  private val namedTypeArguments = experimental("namedTypeArguments")
+  val namedTypeArguments = experimental("namedTypeArguments")
   private val genericNumberLiterals = experimental("genericNumberLiterals")
   val scala2macros = experimental("macros")
 
@@ -68,8 +68,6 @@ object Feature:
   def dynamicsEnabled(using Context): Boolean = enabled(nme.dynamics)
 
   def dependentEnabled(using Context) = enabled(dependent)
-
-  def namedTypeArgsEnabled(using Context) = enabled(namedTypeArguments)
 
   def genericNumberLiteralsEnabled(using Context) = enabled(genericNumberLiterals)
 

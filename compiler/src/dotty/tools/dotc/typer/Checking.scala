@@ -124,7 +124,24 @@ object Checking {
        && tycon.symbol != defn.TypeBoxClass // TypeBox types are generated for capture
                                             // conversion, may contain AnyKind as arguments
     then
-      checkBounds(args, bounds, instantiate, tree.tpe, tpt)
+      val normedArgs = tree.tpe match
+        case tl: TypeLambda =>
+          val filler = tl.paramRefs.iterator
+          args.map { arg =>
+            if isPlaceHolderTypeParam(arg) then
+              val pref = filler.next
+              if hasNamedArg(args) then
+                // We check for missing arguments here instead of at Typer
+                // since an AppliedTypeTree might be decomposed into constructor
+                // arguments, and the latter do admit missing parameters,
+                // which are then inferred.
+                report.error(MissingTypeArgument(pref.paramName, tycon.tpe),
+                  tree.source.atSpan(Span(tree.span.end - 1)))
+              arg.withType(pref)
+            else arg
+          }
+        case _ => args
+      checkBounds(normedArgs, bounds, instantiate, tree.tpe, tpt)
 
     def checkWildcardApply(tp: Type): Unit = tp match {
       case tp @ AppliedType(tycon, _) =>
@@ -153,8 +170,8 @@ object Checking {
         traverseChildren(tp)
     checker.traverse(tpt.tpe)
 
-  def checkNoWildcard(tree: Tree)(using Context): Tree = tree.tpe match {
-    case tpe: TypeBounds => errorTree(tree, "no wildcard type allowed here")
+  def checkNoWildcard(tree: Tree)(using Context): Tree = tree.typeOpt match {
+    case tpe: TypeBounds => errorTree(tree, WildcardTypeArgumentNotAllowed())
     case _ => tree
   }
 
@@ -169,9 +186,10 @@ object Checking {
    *  A NoType paramBounds is used as a sign that checking should be suppressed.
    */
   def preCheckKind(arg: Tree, paramBounds: Type)(using Context): Tree =
-    if (arg.tpe.widen.isRef(defn.NothingClass) ||
-        !paramBounds.exists ||
-        arg.tpe.hasSameKindAs(paramBounds.bounds.hi)) arg
+    if arg.tpe.widen.isRef(defn.NothingClass)
+      || !paramBounds.exists
+      || arg.tpe.hasSameKindAs(paramBounds.bounds.hi)
+    then arg
     else errorTree(arg, em"Type argument ${arg.tpe} does not have the same kind as its bound $paramBounds")
 
   def preCheckKinds(args: List[Tree], paramBoundss: List[Type])(using Context): List[Tree] = {
@@ -1254,7 +1272,10 @@ trait Checking {
     case _ =>
       if tree.tpe.typeParams.nonEmpty then
         val what = if tree.symbol.exists then tree.symbol.show else i"type $tree"
-        report.error(em"$what takes type parameters", tree.srcPos)
+        val more = tree match
+          case _: AppliedTypeTree => " more"
+          case _ => ""
+        report.error(em"$what takes$more type parameters", tree.srcPos)
 
   /** Check that we are in an inline context (inside an inline method or in inline code) */
   def checkInInlineContext(what: String, pos: SrcPos)(using Context): Unit =

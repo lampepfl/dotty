@@ -223,8 +223,25 @@ trait TreeInfo[T >: Untyped <: Type] { self: Trees.Instance[T] =>
   }
 
   /** Does this list contain a named argument tree? */
-  def hasNamedArg(args: List[Any]): Boolean = args exists isNamedArg
+  def hasNamedArg(args: List[Any]): Boolean = args.exists(isNamedArg)
+
+  /** Does this list consts of only named argument trees? */
+  def isNamedArgs(args: List[Any]): Boolean = args.forall(isNamedArg)
+  
   val isNamedArg: Any => Boolean = (arg: Any) => arg.isInstanceOf[Trees.NamedArg[_]]
+
+  /** Replace all NamedArg node with underlying argument */
+  def stripNamedArg(arg: Tree): Tree = arg match
+    case NamedArg(_, arg1) => arg1
+    case _ => arg
+
+  def hasPlaceholderTypeParams(args: List[Any]): Boolean =
+    args.exists(isPlaceHolderTypeParam)
+    
+  val isPlaceHolderTypeParam: Any => Boolean = {
+    case id @ Ident(tpnme.USCOREkw) => !id.isBackquoted
+    case _ => false
+  }
 
   /** Is this pattern node a catch-all (wildcard or variable) pattern? */
   def isDefaultCase(cdef: CaseDef): Boolean = cdef match {
@@ -405,7 +422,7 @@ trait UntypedTreeInfo extends TreeInfo[Untyped] { self: Trees.Instance[Untyped] 
    *  are ignored by the extractor.
    */
   object ImpureByNameTypeTree:
-  
+
     def apply(tp: ByNameTypeTree)(using Context): untpd.CapturingTypeTree =
       untpd.CapturingTypeTree(
         Ident(nme.CAPTURE_ROOT).withSpan(tp.span.startPos) :: Nil, tp)

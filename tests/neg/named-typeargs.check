@@ -1,0 +1,72 @@
+-- Error: tests/neg/named-typeargs.scala:11:38 -------------------------------------------------------------------------
+11 |  val xs3 = construct[Coll = List, Int](1, 2, 3) // error
+   |                                      ^
+   |                                      `=` expected
+-- [E040] Syntax Error: tests/neg/named-typeargs.scala:13:33 -----------------------------------------------------------
+13 |  val xs4 = construct[List, Elem = Int]() // error // error
+   |                                 ^
+   |                                 ']' expected, but '=' found
+-- [E040] Syntax Error: tests/neg/named-typeargs.scala:29:17 -----------------------------------------------------------
+29 |type T = Foo[(T1 = Int)] // error // error
+   |                 ^
+   |                 ')' expected, but '=' found
+-- [E101] Syntax Error: tests/neg/named-typeargs.scala:7:35 ------------------------------------------------------------
+7 |  val xs1 = construct[Coll = List, Coll = Seq](1, 2, 3) // error
+  |                                   ^^^^^^^^^^
+  |                                   Type parameter Coll was defined multiple times.
+-- [E102] Syntax Error: tests/neg/named-typeargs.scala:9:22 ------------------------------------------------------------
+9 |  val xs2 = construct[C = List](1, 2, 3) // error
+  |                      ^^^^^^^^
+  |                      Type parameter C is undefined. Expected one of Elem, Coll.
+-- [E006] Not Found Error: tests/neg/named-typeargs.scala:13:28 --------------------------------------------------------
+13 |  val xs4 = construct[List, Elem = Int]() // error // error
+   |                            ^^^^
+   |                            Not found: type Elem
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E056] Syntax Error: tests/neg/named-typeargs.scala:17:8 ------------------------------------------------------------
+17 |val m1: Map[Key = Int] = ???   // error
+   |        ^^^^^^^^^^^^^^
+   |        Missing type parameter for [Value] =>> Map[Int, Value]
+-- [E056] Syntax Error: tests/neg/named-typeargs.scala:18:8 ------------------------------------------------------------
+18 |val m2: Map[Value = String] = ??? // error
+   |        ^^^^^^^^^^^^^^^^^^^
+   |        Missing type parameter for [Key] =>> Map[Key, String]
+-- [E101] Syntax Error: tests/neg/named-typeargs.scala:19:23 -----------------------------------------------------------
+19 |val m3: Map[Key = Int, Key = String] = ??? // error
+   |                       ^^^^^^^^^^^^
+   |                       Type parameter Key was defined multiple times.
+-- [E102] Syntax Error: tests/neg/named-typeargs.scala:20:12 -----------------------------------------------------------
+20 |val m4: Map[K = Int, Key = String, Value = Int] = ??? // error
+   |            ^^^^^^^
+   |            Type parameter K is undefined. Expected one of Key, Value.
+-- [E102] Syntax Error: tests/neg/named-typeargs.scala:23:20 -----------------------------------------------------------
+23 |def test2 = new Map[C = String, Value = Int]("a" -> 1) // error
+   |                    ^^^^^^^^^^
+   |                    Type parameter C is undefined. Expected one of Key, Value.
+-- [E084] Syntax Error: tests/neg/named-typeargs.scala:24:26 -----------------------------------------------------------
+24 |def test3 = new Map[Key = ?, Value = Int]("a" -> 1) // error // error
+   |                          ^
+   |                          Type argument must be fully defined
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E007] Type Mismatch Error: tests/neg/named-typeargs.scala:24:42 ----------------------------------------------------
+24 |def test3 = new Map[Key = ?, Value = Int]("a" -> 1) // error // error
+   |                                          ^^^^^^^^
+   |                                          Found:    (String, Int)
+   |                                          Required: (Nothing, Int)
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E007] Type Mismatch Error: tests/neg/named-typeargs.scala:25:44 ----------------------------------------------------
+25 |def test4 = new Map[Value = Int, Key = Int]("a" -> 1) // error
+   |                                            ^^^^^^^^
+   |                                            Found:    (String, Int)
+   |                                            Required: (Int, Int)
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E006] Not Found Error: tests/neg/named-typeargs.scala:29:14 --------------------------------------------------------
+29 |type T = Foo[(T1 = Int)] // error // error
+   |              ^^
+   |              Not found: type T1
+   |
+   | longer explanation available when compiling with `-explain`

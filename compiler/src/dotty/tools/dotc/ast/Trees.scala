@@ -15,6 +15,7 @@ import config.Printers.overload
 import annotation.internal.sharable
 import annotation.unchecked.uncheckedVariance
 import annotation.constructorOnly
+import reporting.*
 import Decorators._
 
 object Trees {
@@ -218,7 +219,7 @@ object Trees {
   }
 
   class UnAssignedTypeException[T >: Untyped](tree: Tree[T]) extends RuntimeException {
-    override def getMessage: String = s"type of $tree is not assigned"
+    override def getMessage: String = s"type of $tree # ${tree.uniqueId} is not assigned"
   }
 
   type LazyTree[-T >: Untyped] = Tree[T] | Lazy[Tree[T]]
@@ -553,6 +554,8 @@ object Trees {
   case class NamedArg[-T >: Untyped] private[ast] (name: Name, arg: Tree[T])(implicit @constructorOnly src: SourceFile)
     extends Tree[T] {
     type ThisTree[-T >: Untyped] = NamedArg[T]
+    override def isType: Boolean = arg.isType
+    override def isTerm: Boolean = !isType // this will classify empty argument trees as terms, which is necessary
   }
 
   /** name = arg, outside a parameter list */
@@ -1776,12 +1779,33 @@ object Trees {
       typer.ApplyTo(apply, fun, selected, proto, expectedType)
     }
 
-
     def resolveConstructor(atp: Type, args: List[Tree])(using Context): tpd.Tree = {
       val targs = atp.argTypes
       withoutMode(Mode.PatternOrTypeBits) {
         applyOverloaded(tpd.New(atp.typeConstructor), nme.CONSTRUCTOR, args, targs, atp)
       }
     }
+
+    /** Reorder `namedArgs` to correspond with `paramNames`, filling any gaps with
+     *  `placeholder`. Flag duplicate argument names and named
+     *  arguments that don't match a name in `paramNames` as errors.
+     *  @pre all elements in `args` are of type NamedArg
+     */
+    def reorderArgs(paramNames: List[Name], namedArgs: List[Tree], placeholder: Tree)(using Context): List[Tree] =
+      def recur(pnames: List[Name], args: List[NamedArg]): List[Tree] = pnames match
+        case pname :: pnames1 =>
+          args.partition(_.name == pname) match
+            case ((arg: NamedArg) :: otherMatching, args1) =>
+              otherMatching match
+                case dup :: _ => report.error(DuplicateNamedTypeParameter(pname), dup.srcPos)
+                case _ =>
+              arg :: recur(pnames1, args1)
+            case _ =>
+              placeholder :: recur(pnames1, args)
+        case nil =>
+          for arg <- args do
+            report.error(UndefinedNamedTypeParameter(arg.name, paramNames), arg.srcPos)
+          Nil
+      recur(paramNames, namedArgs.asInstanceOf[List[NamedArg]])
   }
 }

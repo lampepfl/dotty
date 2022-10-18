@@ -8,15 +8,9 @@ object Test0:
 object Test {
   import language.experimental.namedTypeArguments
 
-  val x: C[T = Int] = // error:  ']' expected, but `=` found // error
-    new C[T = Int] // error:  ']' expected, but `=` found // error
-
-  class E extends C[T = Int] // error: ']' expected, but `=` found // error
-  class F extends C[T = Int]() // error: ']' expected, but `=` found // error
-
   def f[X, Y](x: X, y: Y): Int = ???
 
-  f[X = Int, String](1, "") // error // error
+  f[X = Int, String](1, "") // error
   f[X = Int][X = Int][Y = String](1, "") // error: illegal repeated type application
 
   f[X = Int][Y = String](1, "") // error: illegal repeated type application

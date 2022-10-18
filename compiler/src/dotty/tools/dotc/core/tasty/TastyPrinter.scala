@@ -127,7 +127,7 @@ class TastyPrinter(bytes: Array[Byte]) {
           tag match {
             case RENAMED =>
               printName(); printName()
-            case VALDEF | DEFDEF | TYPEDEF | TYPEPARAM | PARAM | NAMEDARG | BIND =>
+            case VALDEF | DEFDEF | TYPEDEF | TYPEPARAM | PARAM | BIND =>
               printName(); printTrees()
             case REFINEDtype | TERMREFin | TYPEREFin | SELECTin =>
               printName(); printTree(); printTrees()
@@ -149,7 +149,7 @@ class TastyPrinter(bytes: Array[Byte]) {
         }
         else if (tag >= firstNatASTTreeTag) {
           tag match {
-            case IDENT | IDENTtpt | SELECT | SELECTtpt | TERMREF | TYPEREF | SELFDEF => printName()
+            case IDENT | IDENTtpt | SELECT | SELECTtpt | TERMREF | TYPEREF | SELFDEF | NAMEDARG => printName()
             case _ => printNat()
           }
           printTree()

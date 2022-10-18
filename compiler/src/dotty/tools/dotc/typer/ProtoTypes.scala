@@ -636,7 +636,12 @@ object ProtoTypes {
     override def resultType(using Context): Type = resType
 
     def canInstantiate(tp: Type)(using Context) = tp.widen match
-      case tp: PolyType => tp.paramNames.length == targs.length
+      case tp: PolyType =>
+        if isNamedArg(targs.head) then
+          targs.forall {
+            case NamedArg(name, _) => tp.paramNames.contains(name)
+          }
+        else tp.paramNames.length == targs.length
       case _ => false
 
     override def isMatchedBy(tp: Type, keepConstraint: Boolean)(using Context): Boolean =

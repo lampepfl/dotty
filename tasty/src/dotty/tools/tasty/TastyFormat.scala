@@ -656,7 +656,8 @@ object TastyFormat {
        | ANNOTATEDtpt
        | BYNAMEtpt
        | MATCHtpt
-       | BIND => true
+       | BIND
+       | NAMEDARG => true
     case _ => false
   }
 
