@@ -21,6 +21,7 @@ enum MessageKind:
   case MatchCaseUnreachable
   case Compatibility
   case PotentialIssue
+  case CustomCompiletime
 
   /** Human readable message that will end up being shown to the user.
    *  NOTE: This is only used in the situation where you have multiple words

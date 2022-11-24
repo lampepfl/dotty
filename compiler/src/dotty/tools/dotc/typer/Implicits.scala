@@ -1133,7 +1133,7 @@ trait Implicits:
             case _ =>
               tryConversion
         }
-      if ctx.reporter.hasErrors
+      if (ctx.reporter.hasErrors && ctx.reporter.allErrors.exists(_.msg.kind != MessageKind.CustomCompiletime))
          || !cand.ref.symbol.isAccessibleFrom(cand.ref.prefix)
       then
         ctx.reporter.removeBufferedMessages

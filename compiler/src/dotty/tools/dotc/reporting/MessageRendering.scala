@@ -187,7 +187,7 @@ trait MessageRendering {
             s"[E${"0" * (3 - errorNumber.toString.length) + errorNumber}] "
           else ""
         val kind =
-          if (message.kind == MessageKind.NoKind) then diagnosticString
+          if (message.kind == MessageKind.NoKind || message.kind == MessageKind.CustomCompiletime) then diagnosticString
           else s"${message.kind.message} $diagnosticString"
         val title =
           if fileAndPos.isEmpty then s"$errId$kind:" // this happens in dotty.tools.repl.ScriptedTests // TODO add name of source or remove `:` (and update test files)

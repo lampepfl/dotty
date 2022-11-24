@@ -628,7 +628,7 @@ class Inliner(val call: tpd.Tree)(using Context):
         // The context in which we report should still use the existing context reporter
         val ctxOrigReporter = ctxToReport.fresh.setReporter(ctx.reporter)
         inContext(ctxOrigReporter) {
-          report.error(message, callToReport.srcPos)
+          report.error(new reporting.Custom(message), callToReport.srcPos)
         }
       case _ =>
     }
