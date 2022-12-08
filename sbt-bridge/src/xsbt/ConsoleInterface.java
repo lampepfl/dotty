@@ -9,7 +9,6 @@ import scala.Some;
 
 import xsbti.Logger;
 
-import dotty.tools.dotc.core.Contexts.Context;
 import dotty.tools.repl.ReplDriver;
 import dotty.tools.repl.State;
 

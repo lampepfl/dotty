@@ -51,7 +51,7 @@ object Message:
    */
   private class Seen(disambiguate: Boolean):
 
-    val seen = new collection.mutable.HashMap[SeenKey, List[Recorded]]:
+    private val seen = new collection.mutable.HashMap[SeenKey, List[Recorded]]:
       override def default(key: SeenKey) = Nil
 
     var nonSensical = false

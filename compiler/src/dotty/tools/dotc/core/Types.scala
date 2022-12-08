@@ -30,7 +30,7 @@ import Hashable._
 import Uniques._
 import collection.mutable
 import config.Config
-import annotation.{tailrec, constructorOnly}
+import annotation.{tailrec, constructorOnly, threadUnsafe}
 import scala.util.hashing.{ MurmurHash3 => hashing }
 import config.Printers.{core, typr, matchTypes}
 import reporting.{trace, Message}
@@ -40,7 +40,6 @@ import cc.{CapturingType, CaptureSet, derivedCapturingType, isBoxedCapturing, Ev
 import CaptureSet.{CompareResult, IdempotentCaptRefMap, IdentityCaptRefMap}
 
 import scala.annotation.internal.sharable
-import scala.annotation.threadUnsafe
 
 import dotty.tools.dotc.transform.SymUtils._
 
@@ -3160,7 +3159,7 @@ object Types {
    *
    *  Where `RecThis(...)` points back to the enclosing `RecType`.
    */
-  class RecType(parentExp: RecType => Type) extends RefinedOrRecType with BindingType {
+  class RecType(@constructorOnly parentExp: RecType => Type) extends RefinedOrRecType with BindingType {
 
     // See discussion in findMember#goRec why these vars are needed
     private[Types] var opened: Boolean = false
@@ -3884,8 +3883,8 @@ object Types {
   }
 
   abstract case class MethodType(paramNames: List[TermName])(
-      paramInfosExp: MethodType => List[Type],
-      resultTypeExp: MethodType => Type)
+      @constructorOnly paramInfosExp: MethodType => List[Type],
+      @constructorOnly resultTypeExp: MethodType => Type)
     extends MethodOrPoly with TermLambda with NarrowCached { thisMethodType =>
 
     type This = MethodType
@@ -3911,7 +3910,10 @@ object Types {
     protected def prefixString: String = companion.prefixString
   }
 
-  final class CachedMethodType(paramNames: List[TermName])(paramInfosExp: MethodType => List[Type], resultTypeExp: MethodType => Type, val companion: MethodTypeCompanion)
+  final class CachedMethodType(paramNames: List[TermName])(
+      @constructorOnly paramInfosExp: MethodType => List[Type],
+      @constructorOnly resultTypeExp: MethodType => Type,
+      val companion: MethodTypeCompanion)
     extends MethodType(paramNames)(paramInfosExp, resultTypeExp)
 
   abstract class LambdaTypeCompanion[N <: Name, PInfo <: Type, LT <: LambdaType] {
@@ -4080,7 +4082,8 @@ object Types {
    *  Variances are stored in the `typeParams` list of the lambda.
    */
   class HKTypeLambda(val paramNames: List[TypeName], @constructorOnly variances: List[Variance])(
-      paramInfosExp: HKTypeLambda => List[TypeBounds], resultTypeExp: HKTypeLambda => Type)
+      @constructorOnly paramInfosExp: HKTypeLambda => List[TypeBounds],
+      @constructorOnly resultTypeExp: HKTypeLambda => Type)
   extends HKLambda with TypeLambda {
     type This = HKTypeLambda
     def companion: HKTypeLambda.type = HKTypeLambda
@@ -4148,7 +4151,8 @@ object Types {
    *  except it applies to terms and parameters do not have variances.
    */
   class PolyType(val paramNames: List[TypeName])(
-      paramInfosExp: PolyType => List[TypeBounds], resultTypeExp: PolyType => Type)
+      @constructorOnly paramInfosExp: PolyType => List[TypeBounds],
+      @constructorOnly resultTypeExp: PolyType => Type)
   extends MethodOrPoly with TypeLambda {
 
     type This = PolyType
@@ -5568,7 +5572,7 @@ object Types {
       case result: CaptureRef if result.canBeTracked => result
   end BiTypeMap
 
-  abstract class TypeMap(implicit protected var mapCtx: Context)
+  abstract class TypeMap(using protected val mapCtx: Context)
   extends VariantTraversal with (Type => Type) { thisMap =>
 
     def apply(tp: Type): Type
@@ -5701,16 +5705,16 @@ object Types {
           derivedSuperType(tp, this(thistp), this(supertp))
 
         case tp: LazyRef =>
+          val mapCtx1 = mapCtx.asInstanceOf[FreshContext]
           LazyRef { refCtx =>
-            given Context = refCtx
-            val ref1 = tp.ref
-            if refCtx.runId == mapCtx.runId then this(ref1)
+            val ref1 = tp.ref(using refCtx)
+            if refCtx.runId == mapCtx1.runId then this(ref1)
             else // splice in new run into map context
-              val saved = mapCtx
-              mapCtx = mapCtx.fresh
-                .setPeriod(Period(refCtx.runId, mapCtx.phaseId))
-                .setRun(refCtx.run)
-              try this(ref1) finally mapCtx = saved
+              val savedPeriod = mapCtx1.period
+              val savedRun = mapCtx1.run
+              mapCtx1.setPeriod(Period(refCtx.runId, mapCtx1.phaseId)).setRun(refCtx.run)
+              try this(ref1)
+              finally mapCtx1.setPeriod(savedPeriod).setRun(savedRun)
           }
 
         case tp: ClassInfo =>
@@ -5777,7 +5781,7 @@ object Types {
     }
   }
 
-  @sharable object IdentityTypeMap extends TypeMap()(NoContext) {
+  @sharable object IdentityTypeMap extends TypeMap(using NoContext) {
     def apply(tp: Type): Type = tp
   }
 

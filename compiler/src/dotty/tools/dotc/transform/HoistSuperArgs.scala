@@ -42,7 +42,7 @@ object HoistSuperArgs {
  *  as method parameters. The definition is installed in the scope enclosing the class,
  *  or, if that is a package, it is made a static method of the class itself.
  */
-class HoistSuperArgs extends MiniPhase with IdentityDenotTransformer { thisPhase =>
+class HoistSuperArgs extends MiniPhase, IdentityDenotTransformer { thisPhase =>
   import ast.tpd._
 
   override def phaseName: String = HoistSuperArgs.name
@@ -122,7 +122,7 @@ class HoistSuperArgs extends MiniPhase with IdentityDenotTransformer { thisPhase
         case _                    => false
 
       /** Only rewire types that are owned by the current Hoister and is an param or accessor */
-      def needsRewire(tp: Type) = tp match {
+      def needsRewire(tp: Type)(using Context) = tp match {
         case ntp: NamedType =>
           val owner = ntp.symbol.maybeOwner
           (owner == cls || owner == constr) && ntp.symbol.isParamOrAccessor

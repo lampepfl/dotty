@@ -79,12 +79,12 @@ object SymbolLoaders {
       // require yjp.jar at runtime. See SI-2089.
       if (ctx.settings.YtermConflict.value == "package" || ctx.mode.is(Mode.Interactive)) {
         report.warning(
-          s"Resolving package/object name conflict in favor of package ${preExisting.fullName}. The object will be inaccessible.")
+          em"Resolving package/object name conflict in favor of package ${preExisting.fullName}. The object will be inaccessible.")
         owner.asClass.delete(preExisting)
       }
       else if (ctx.settings.YtermConflict.value == "object") {
         report.warning(
-          s"Resolving package/object name conflict in favor of object ${preExisting.fullName}.  The package will be inaccessible.")
+          em"Resolving package/object name conflict in favor of object ${preExisting.fullName}.  The package will be inaccessible.")
         return NoSymbol
       }
       else
@@ -133,7 +133,7 @@ object SymbolLoaders {
         def checkPathMatches(path: List[TermName], what: String, tree: NameTree): Boolean = {
           val ok = filePath == path
           if (!ok)
-            report.warning(i"""$what ${tree.name} is in the wrong directory.
+            report.warning(em"""$what ${tree.name} is in the wrong directory.
                            |It was declared to be in package ${path.reverse.mkString(".")}
                            |But it is found in directory     ${filePath.reverse.mkString(File.separator.nn)}""",
               tree.srcPos.focus)

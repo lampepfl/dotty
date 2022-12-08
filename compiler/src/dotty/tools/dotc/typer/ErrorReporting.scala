@@ -266,7 +266,7 @@ object ErrorReporting {
       ownerSym.typeRef.nonClassTypeMembers.map(_.symbol)
     }.toList
 
-  def dependentMsg =
+  def dependentMsg: Message =
     """Term-dependent types are experimental,
       |they must be enabled with a `experimental.dependent` language import or setting""".stripMargin.toMessage
 

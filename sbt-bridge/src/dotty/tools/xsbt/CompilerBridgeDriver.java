@@ -55,12 +55,12 @@ public class CompilerBridgeDriver extends Driver {
     try {
       log.debug(this::infoOnCachedCompiler);
 
-      Contexts.Context initialCtx = initCtx()
+      Contexts.ContextCls initialCtx = initCtx()
         .fresh()
         .setReporter(reporter)
         .setSbtCallback(callback);
 
-      Contexts.Context context = setup(args, initialCtx).map(t -> t._2).getOrElse(() -> initialCtx);
+      Contexts.ContextCls context = setup(args, initialCtx).map(t -> t._2).getOrElse(() -> initialCtx);
 
       if (ScalacCommand.isHelpFlag(context.settings(), context.settingsState())) {
         throw new InterfaceCompileFailed(args, new Problem[0], StopInfoError);
@@ -91,7 +91,7 @@ public class CompilerBridgeDriver extends Driver {
           callback.problem(problem.category(), problem.position(), problem.message(), problem.severity(),
             true);
         }
-      } else {  
+      } else {
         delegate.printSummary();
       }
 

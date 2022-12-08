@@ -9,6 +9,7 @@ import core.Annotations.Annotation
 import core.Flags
 import core.Names.Name
 import core.StdNames.tpnme
+import core.Decorators.em
 import scala.util.chaining.scalaUtilChainingOps
 
 import collection.mutable
@@ -59,7 +60,7 @@ class TypeOps:
 
   private def warn(msg: String)(using ctx: Context): Unit =
     report.warning(
-      s"Internal error in extracting SemanticDB while compiling ${ctx.compilationUnit.source}: ${msg}"
+      em"Internal error in extracting SemanticDB while compiling ${ctx.compilationUnit.source}: ${msg}"
     )
 
   private def registerFakeSymbol(sym: FakeSymbol)(using Context, SemanticSymbolBuilder): Unit =

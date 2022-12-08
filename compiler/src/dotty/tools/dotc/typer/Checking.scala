@@ -364,7 +364,7 @@ object Checking {
           && !sym.getAnnotation(defn.TargetNameAnnot).isDefined
           && !sym.is(Synthetic) =>
           report.warning(
-            i"$sym has an operator name; it should come with an @targetName annotation", sym.srcPos)
+            em"$sym has an operator name; it should come with an @targetName annotation", sym.srcPos)
         case _ =>
 
   /** Check that `info` of symbol `sym` is not cyclic.
@@ -395,7 +395,7 @@ object Checking {
   def checkRefinementNonCyclic(refinement: Tree, refineCls: ClassSymbol, seen: mutable.Set[Symbol])
     (using Context): Unit = {
     def flag(what: String, tree: Tree) =
-      report.warning(i"$what reference in refinement is deprecated", tree.srcPos)
+      report.warning(em"$what reference in refinement is deprecated", tree.srcPos)
     def forwardRef(tree: Tree) = flag("forward", tree)
     def selfRef(tree: Tree) = flag("self", tree)
     val checkTree = new TreeAccumulator[Unit] {
@@ -731,10 +731,10 @@ object Checking {
       (p1, p2) <- sym.paramSymss.flatten.lazyZip(sym2.paramSymss.flatten)
       if p1.is(Inline) != p2.is(Inline)
     do
-      report.error(
-          if p2.is(Inline) then "Cannot override inline parameter with a non-inline parameter"
-          else "Cannot override non-inline parameter with an inline parameter",
-          p1.srcPos)
+      if p2.is(Inline) then
+        report.error("Cannot override inline parameter with a non-inline parameter", p1.srcPos)
+      else
+        report.error("Cannot override non-inline parameter with an inline parameter", p1.srcPos)
 
   def checkValue(tree: Tree)(using Context): Unit =
     val sym = tree.tpe.termSymbol
@@ -1048,7 +1048,7 @@ trait Checking {
    *  are feasible, i.e. that their lower bound conforms to their upper bound. If a type
    *  argument is infeasible, issue and error and continue with upper bound.
    */
-  def checkFeasibleParent(tp: Type, pos: SrcPos, where: => String = "")(using Context): Type = {
+  def checkFeasibleParent(tp: Type, pos: SrcPos, where: Context ?=> String = "")(using Context): Type = {
     def checkGoodBounds(tp: Type) = tp match {
       case tp @ TypeBounds(lo, hi) if !(lo <:< hi) =>
         report.error(em"no type exists between low bound $lo and high bound $hi$where", pos)
@@ -1539,7 +1539,7 @@ trait NoChecking extends ReChecking {
   override def checkClassType(tp: Type, pos: SrcPos, traitReq: Boolean, stablePrefixReq: Boolean)(using Context): Type = tp
   override def checkImplicitConversionDefOK(sym: Symbol)(using Context): Unit = ()
   override def checkImplicitConversionUseOK(tree: Tree, expected: Type)(using Context): Unit = ()
-  override def checkFeasibleParent(tp: Type, pos: SrcPos, where: => String = "")(using Context): Type = tp
+  override def checkFeasibleParent(tp: Type, pos: SrcPos, where: Context ?=> String = "")(using Context): Type = tp
   override def checkAnnotArgs(tree: Tree)(using Context): tree.type = tree
   override def checkNoTargetNameConflict(stats: List[Tree])(using Context): Unit = ()
   override def checkParentCall(call: Tree, caller: ClassSymbol)(using Context): Unit = ()

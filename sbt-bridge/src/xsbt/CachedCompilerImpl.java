@@ -8,7 +8,7 @@ import xsbti.compile.*;
 
 import java.io.File;
 
-import dotty.tools.dotc.core.Contexts.Context;
+import dotty.tools.dotc.core.Contexts.ContextCls;
 import dotty.tools.dotc.core.Contexts.ContextBase;
 import dotty.tools.dotc.Main;
 import dotty.tools.xsbt.InterfaceCompileFailed;
@@ -60,7 +60,7 @@ public class CachedCompilerImpl implements CachedCompiler {
       return msg;
     });
 
-    Context ctx = new ContextBase().initialCtx().fresh()
+    ContextCls ctx = new ContextBase().initialCtx().fresh()
       .setSbtCallback(callback)
       .setReporter(new DelegatingReporter(delegate));
 

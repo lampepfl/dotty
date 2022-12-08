@@ -179,7 +179,7 @@ class VarianceChecker(using Context) {
     }
 
     override def traverse(tree: Tree)(using Context) = {
-      def sym = tree.symbol
+      val sym = tree.symbol
       // No variance check for private/protected[this] methods/values.
       def skip = !sym.exists
         || sym.name.is(InlineAccessorName) // TODO: should we exclude all synthetic members?
@@ -187,7 +187,7 @@ class VarianceChecker(using Context) {
         || sym.is(TypeParam) && sym.owner.isClass // already taken care of in primary constructor of class
       try tree match {
         case defn: MemberDef if skip =>
-          report.debuglog(s"Skipping variance check of ${sym.showDcl}")
+          report.debuglog(i"Skipping variance check of ${sym.showDcl}")
         case tree: TypeDef =>
           checkVariance(sym, tree.srcPos)
           tree.rhs match {

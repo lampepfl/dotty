@@ -15,7 +15,7 @@ object CheckRealizable {
   sealed abstract class Realizability(val msg: String) {
     def andAlso(other: => Realizability): Realizability =
       if (this == Realizable) other else this
-    def mapError(f: Realizability => Realizability): Realizability =
+    def mapError(f: Realizability => Context ?=> Realizability)(using Context): Realizability =
       if (this == Realizable) this else f(this)
   }
 

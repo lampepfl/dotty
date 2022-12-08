@@ -103,18 +103,18 @@ object report:
     if (ctx.settings.Ylog.value.containsPhase(ctx.phase))
       echo(s"[log ${ctx.phase}] $msg", pos)
 
-  def debuglog(msg: => String)(using Context): Unit =
+  def debuglog(msg: Context ?=> String)(using Context): Unit =
     if (ctx.debug) log(msg)
 
-  def informTime(msg: => String, start: Long)(using Context): Unit = {
+  def informTime(msg: Context ?=> String, start: Long)(using Context): Unit = {
     def elapsed = s" in ${currentTimeMillis - start}ms"
     informProgress(msg + elapsed)
   }
 
-  def informProgress(msg: => String)(using Context): Unit =
+  def informProgress(msg: Context ?=> String)(using Context): Unit =
     inform("[" + msg + "]")
 
-  def logWith[T](msg: => String)(value: T)(using Context): T = {
+  def logWith[T](msg: Context ?=> String)(value: T)(using Context): T = {
     log(msg + " " + value)
     value
   }

@@ -6,7 +6,7 @@ package dotty.tools.xsbt;
 import scala.Tuple2;
 import scala.collection.mutable.HashMap;
 
-import dotty.tools.dotc.core.Contexts.Context;
+import dotty.tools.dotc.core.Contexts.ContextCls;
 import dotty.tools.dotc.reporting.AbstractReporter;
 import dotty.tools.dotc.reporting.Diagnostic;
 import dotty.tools.dotc.reporting.Message;
@@ -28,11 +28,11 @@ final public class DelegatingReporter extends AbstractReporter {
   }
 
   @Override
-  public void printSummary(Context ctx) {
+  public void printSummary(ContextCls ctx) {
     delegate.printSummary();
   }
 
-  public void doReport(Diagnostic dia, Context ctx) {
+  public void doReport(Diagnostic dia, ContextCls ctx) {
     Severity severity = severityOf(dia.level());
     Position position = positionOf(dia.pos().nonInlined());
 

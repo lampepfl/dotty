@@ -197,7 +197,7 @@ trait FullParameterization {
        *  because it is kept by the `cpy` operation of the tree transformer.
        *  It needs to be rewritten to the common result type of `imeth` and `xmeth`.
        */
-      def rewireType(tpe: Type) = tpe match {
+      def rewireType(tpe: Type)(using Context) = tpe match {
         case tpe: TermRef if rewiredTarget(tpe.symbol, derived).exists => tpe.widen
         case _ => tpe
       }

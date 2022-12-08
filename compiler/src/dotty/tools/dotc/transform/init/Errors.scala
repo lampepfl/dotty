@@ -29,7 +29,7 @@ object Errors:
       buildStacktrace(trace, preamble)
 
     def issue(using Context): Unit =
-      report.warning(show, this.pos)
+      report.warning(em"$show", this.pos)
   end Error
 
   def buildStacktrace(trace: Seq[Tree], preamble: String)(using Context): String = if trace.isEmpty then "" else preamble + {

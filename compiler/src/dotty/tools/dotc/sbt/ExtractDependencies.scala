@@ -189,7 +189,7 @@ object ExtractDependencies {
     sym.fullName.stripModuleClassSuffix.toString
 
   /** Report an internal error in incremental compilation. */
-  def internalError(msg: => String, pos: SrcPos = NoSourcePosition)(using Context): Unit =
+  def internalError(msg: Context ?=> String, pos: SrcPos = NoSourcePosition)(using Context): Unit =
     report.error(em"Internal error in the incremental compiler while compiling ${ctx.compilationUnit.source}: $msg", pos)
 }
 
@@ -461,7 +461,7 @@ private class ExtractDependenciesCollector extends tpd.TreeTraverser { thisTreeT
     // Avoid cycles by remembering both the types (testcase:
     // tests/run/enum-values.scala) and the symbols of named types (testcase:
     // tests/pos-java-interop/i13575) we've seen before.
-    val seen = new mutable.HashSet[Symbol | Type]
+    private val seen = new mutable.HashSet[Symbol | Type]
     def traverse(tp: Type): Unit = if (!seen.contains(tp)) {
       seen += tp
       tp match {

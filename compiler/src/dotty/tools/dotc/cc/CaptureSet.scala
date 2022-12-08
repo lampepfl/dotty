@@ -175,7 +175,7 @@ sealed abstract class CaptureSet extends Showable:
       case Nil =>
         addDependent(that)
     recur(elems.toList)
-      .showing(i"subcaptures $this <:< $that = ${result.show}", capt)
+      .showing(i"subcaptures $this <:< $that = $result", capt)
 
   /** Two capture sets are considered =:= equal if they mutually subcapture each other
    *  in a frozen state.

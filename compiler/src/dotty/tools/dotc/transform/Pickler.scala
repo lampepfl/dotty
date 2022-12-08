@@ -100,7 +100,7 @@ class Pickler extends Phase {
           pickled
         }(using ExecutionContext.global)
       }
-      def force(): Array[Byte] =
+      def force()(using Context): Array[Byte] =
         val result = Await.result(pickledF, Duration.Inf)
         positionWarnings.foreach(report.warning(_))
         result

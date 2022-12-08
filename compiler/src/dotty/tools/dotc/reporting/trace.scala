@@ -90,8 +90,10 @@ trait TraceSyntax:
       val leading = s"==> $q?"
       val trailing = (res: T) => s"<== $q = ${showOp(res)}"
       var finalized = false
-      var logctx = ctx
-      while logctx.reporter.isInstanceOf[StoreReporter] do logctx = logctx.outer
+      def skipStoreReporter(c: Context): Context = c.reporter match
+        case _: StoreReporter => skipStoreReporter(c.outer)
+        case _ => c
+      val logctx = skipStoreReporter(ctx)
       def margin = ctx.base.indentTab * ctx.base.indent
       def doLog(s: String) = if isForced then println(s) else report.log(s)(using logctx)
       def finalize(msg: String) =

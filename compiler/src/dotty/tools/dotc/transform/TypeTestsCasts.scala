@@ -195,12 +195,13 @@ object TypeTestsCasts {
           def testCls = effectiveClass(testType.widen)
           def unboxedTestCls = effectiveClass(unboxedTestType.widen)
 
-          def unreachable(why: => String)(using Context): Boolean = {
-            if (flagUnrelated)
-              if (inMatch) report.error(em"this case is unreachable since $why", expr.srcPos)
-              else report.warning(em"this will always yield false since $why", expr.srcPos)
+          def unreachable(why: Message)(using Context): Boolean =
+            if flagUnrelated then
+              if inMatch then
+                report.error(why.prepend("this case is unreachable since "), expr.srcPos)
+              else
+                report.warning(why.prepend("this will always yield false since "), expr.srcPos)
             false
-          }
 
           /** Are `foundCls` and `testCls` classes that allow checks
            *  whether a test would be always false?
@@ -230,9 +231,9 @@ object TypeTestsCasts {
                   && !unboxedTestCls.derivesFrom(foundCls)
                   && (testCls.is(Final) || !testCls.is(Trait) && !foundCls.is(Trait))
                 if (foundCls.is(Final))
-                  unreachable(i"$exprType is not a subclass of $testCls")
+                  unreachable(em"$exprType is not a subclass of $testCls")
                 else if (unrelated)
-                  unreachable(i"$exprType and $testCls are unrelated")
+                  unreachable(em"$exprType and $testCls are unrelated")
                 else true
               }
               else true

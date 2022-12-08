@@ -1257,7 +1257,7 @@ trait Applications extends Compatibility {
     if !ctx.mode.is(Mode.InTypeTest) then
       checkMatchable(selType, tree.srcPos, pattern = true)
 
-    def notAnExtractor(tree: Tree): Tree =
+    def notAnExtractor(tree: Tree)(using Context): Tree =
       // prefer inner errors
       // e.g. report not found ident instead of not an extractor in tests/neg/i2950.scala
       if (!tree.tpe.isError && tree.tpe.isErroneous) tree

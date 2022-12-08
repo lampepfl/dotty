@@ -14,7 +14,7 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.ArrayList;
 
-import dotty.tools.dotc.core.Contexts.Context;
+import dotty.tools.dotc.core.Contexts.ContextCls;
 import dotty.tools.dotc.core.Contexts.ContextBase;
 import dotty.tools.dotc.reporting.Reporter;
 import dotty.tools.xsbt.InterfaceCompileFailed;
@@ -52,12 +52,12 @@ public class DottydocRunner {
     }
     args = retained.toArray(new String[retained.size()]);
 
-    Context ctx = new ContextBase().initialCtx().fresh()
+    ContextCls ctx = new ContextBase().initialCtx().fresh()
       .setReporter(new DelegatingReporter(delegate));
 
     try {
       Class<?> dottydocMainClass = Class.forName("dotty.tools.dottydoc.Main");
-      Method processMethod = dottydocMainClass.getMethod("process", args.getClass(), Context.class); // args.getClass() is String[]
+      Method processMethod = dottydocMainClass.getMethod("process", args.getClass(), ContextCls.class); // args.getClass() is String[]
       Reporter reporter = (Reporter) processMethod.invoke(null, args, ctx);
       if (reporter.hasErrors())
         throw new InterfaceCompileFailed(args, new xsbti.Problem[0], "DottyDoc Compilation Failed");

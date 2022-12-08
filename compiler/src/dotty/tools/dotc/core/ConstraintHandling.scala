@@ -484,7 +484,7 @@ trait ConstraintHandling {
    */
   private def fixLevels(tp: Type, fromBelow: Boolean, maxLevel: Int, param: TypeParamRef)(using Context) =
 
-    def needsFix(tp: NamedType) =
+    def needsFix(tp: NamedType)(using Context) =
       (tp.prefix eq NoPrefix) && tp.symbol.nestingLevel > maxLevel
 
     /** An accumulator that determines whether levels need to be fixed

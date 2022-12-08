@@ -246,9 +246,11 @@ class PCPCheckAndHeal(@constructorOnly ictx: Context) extends TreeMapWithStages(
         checkStable(tp, pos, "type witness")
         getQuoteTypeTags.getTagRef(tp)
       case _: SearchFailureType =>
+        val tpStr = tp.show
+        val reqTypeStr = reqType.show
         report.error(
           ctx.typer.missingArgMsg(tag, reqType, "")
-            .prepend(i"Reference to $tp within quotes requires a given $reqType in scope.\n")
+            .prepend(s"Reference to $tpStr within quotes requires a given $reqTypeStr in scope.\n")
             .append("\n"),
             pos)
         tp

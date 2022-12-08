@@ -419,7 +419,8 @@ object Implicits:
     def apply(tpe: SearchFailureType, span: Span)(using Context): SearchFailure = {
       val id = tpe match
         case tpe: (AmbiguousImplicits | TooUnspecific) =>
-          untpd.SearchFailureIdent(nme.AMBIGUOUS, s"/* ambiguous: ${tpe.explanation} */")
+          val explanation = tpe.explanation
+          untpd.SearchFailureIdent(nme.AMBIGUOUS, s"/* ambiguous: $explanation */")
         case _ =>
           untpd.SearchFailureIdent(nme.MISSING, "/* missing */")
       SearchFailure(id.withTypeUnchecked(tpe).withSpan(span))
@@ -1012,12 +1013,15 @@ trait Implicits:
         // context. Without that precaution, an eligible implicit in the current scope
         // would cause a cyclic reference error (if the import is named) or cause a
         // spurious import skip (if the import is a wildcard import). See i12802 for a test case.
-        var searchCtx = ctx
-        if ctx.owner.isImport then
-          while
-            searchCtx = searchCtx.outer
-            (searchCtx.scope eq ctx.scope) && (searchCtx.owner eq ctx.owner.owner)
-          do ()
+
+        val searchCtx =
+          if ctx.owner.isImport then
+            def nextDifferent(searchCtx: Context): Context =
+              if (searchCtx.scope eq ctx.scope) && (searchCtx.owner eq ctx.owner.owner)
+              then nextDifferent(searchCtx.outer)
+              else searchCtx
+            nextDifferent(ctx.outer)
+          else ctx
 
         try ImplicitSearch(pt, argument, span)(using searchCtx).bestImplicit
         catch case ce: CyclicReference =>
@@ -1179,9 +1183,10 @@ trait Implicits:
         val nestedSearches = h.root.nestedSearches
         val result = nestedSearches > limit
         if result then
-          var c = ctx
-          while c.outer.typer eq ctx.typer do c = c.outer
-          report.warning(ImplicitSearchTooLargeWarning(limit, h.openSearchPairs), srcPos)(using c)
+          def warnIn(c: Context): Unit =
+            if c.outer.typer eq ctx.typer then warnIn(c.outer)
+            else report.warning(ImplicitSearchTooLargeWarning(limit, h.openSearchPairs), srcPos)(using c)
+          warnIn(ctx)
         else
           h.root.nestedSearches = nestedSearches + 1
         result
@@ -1368,7 +1373,7 @@ trait Implicits:
        *  and therefore only induces a partial ordering, meaning it cannot be used
        *  as a sorting function (see `java.util.Comparator#compare`).
        */
-      def compareBaseClassesLength(sym1: Symbol, sym2: Symbol): Int =
+      def compareBaseClassesLength(sym1: Symbol, sym2: Symbol)(using Context): Int =
         def len(sym: Symbol) =
           if sym.is(ModuleClass) && sym.companionClass.exists then
             Math.max(sym.asClass.baseClassesLength, sym.companionClass.asClass.baseClassesLength)
@@ -1388,7 +1393,7 @@ trait Implicits:
        *  is underconstrained. So we look for "small" goals first, because that
        *  will give an ambiguity quickly.
        */
-      def compareEligibles(e1: Candidate, e2: Candidate): Int =
+      def compareEligibles(e1: Candidate, e2: Candidate)(using Context): Int =
         if e1 eq e2 then return 0
         val cmpLevel = e1.level - e2.level
         if cmpLevel != 0 then return -cmpLevel // 1.

@@ -169,7 +169,7 @@ class TreeChecker extends Phase with SymTransformer {
             everDefinedSyms.get(sym) match {
               case Some(t)  =>
                 if (t ne tree)
-                  report.warning(i"symbol ${sym.fullName} is defined at least twice in different parts of AST")
+                  report.warning(em"symbol ${sym.fullName} is defined at least twice in different parts of AST")
               // should become an error
               case None =>
                 everDefinedSyms(sym) = tree
@@ -179,7 +179,7 @@ class TreeChecker extends Phase with SymTransformer {
             if (ctx.settings.YcheckMods.value)
               tree match {
                 case t: untpd.MemberDef =>
-                  if (t.name ne sym.name) report.warning(s"symbol ${sym.fullName} name doesn't correspond to AST: ${t}")
+                  if (t.name ne sym.name) report.warning(em"symbol ${sym.fullName} name doesn't correspond to AST: ${t}")
                 // todo: compare trees inside annotations
                 case _ =>
               }
@@ -628,7 +628,7 @@ class TreeChecker extends Phase with SymTransformer {
       tree1
     }
 
-    override def ensureNoLocalRefs(tree: Tree, pt: Type, localSyms: => List[Symbol])(using Context): Tree =
+    override def ensureNoLocalRefs(tree: Tree, pt: Type, localSyms: Context ?=> List[Symbol])(using Context): Tree =
       tree
 
     override def adapt(tree: Tree, pt: Type, locked: TypeVars)(using Context): Tree = {

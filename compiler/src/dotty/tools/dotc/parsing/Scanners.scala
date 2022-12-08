@@ -166,7 +166,7 @@ object Scanners {
         errorButContinue(em"trailing separator is not allowed", offset + litBuf.length - 1)
   }
 
-  class Scanner(source: SourceFile, override val startFrom: Offset = 0, profile: Profile = NoProfile, allowIndent: Boolean = true)(using Context) extends ScannerCommon(source) {
+  class Scanner(source: SourceFile, override val startFrom: Offset = 0, profile: Profile = NoProfile, allowIndent: Boolean = true)(using ictx: Context) extends ScannerCommon(source) {
     val keepComments = !ctx.settings.YdropComments.value
 
     /** A switch whether operators at the start of lines can be infix operators */
@@ -199,7 +199,7 @@ object Scanners {
         error(em"illegal combination of -rewrite targets: ${enabled(0).name} and ${enabled(1).name}")
     }
 
-    private var myLanguageImportContext: Context = ctx
+    private var myLanguageImportContext: Context = ictx
     def languageImportContext = myLanguageImportContext
     final def languageImportContext_=(c: Context) = myLanguageImportContext = c
 

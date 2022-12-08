@@ -7,7 +7,7 @@ import core.Contexts._
 
 object Highlighting {
 
-  abstract class Highlight(private val highlight: String) {
+  sealed abstract class Highlight(private val highlight: String) {
     def text: String
 
     def show(using Context): String = if ctx.useColors then highlight + text + Console.RESET else text

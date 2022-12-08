@@ -270,7 +270,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
                   return pre.select(name, denot)
           case _ =>
             if imp.importSym.isCompleting then
-              report.warning(i"cyclic ${imp.importSym}, ignored", pos)
+              report.warning(em"cyclic ${imp.importSym}, ignored", pos)
         NoType
 
       /** The type representing a named import with enclosing name when imported
@@ -1113,7 +1113,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
    *  expected type of a block is the anonymous class defined inside it. In that
    *  case there's technically a leak which is not removed by the ascription.
    */
-  protected def ensureNoLocalRefs(tree: Tree, pt: Type, localSyms: => List[Symbol])(using Context): Tree = {
+  protected def ensureNoLocalRefs(tree: Tree, pt: Type, localSyms: Context ?=> List[Symbol])(using Context): Tree = {
     def ascribeType(tree: Tree, pt: Type): Tree = tree match {
       case block @ Block(stats, expr) if !expr.isInstanceOf[Closure] =>
         val expr1 = ascribeType(expr, pt)
@@ -2409,7 +2409,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
     if sym.is(Method) && sym.owner.denot.isRefinementClass then
       for annot <- sym.paramSymss.flatten.filter(_.isTerm).flatMap(_.getAnnotation(defn.ImplicitNotFoundAnnot)) do
         report.warning(
-          i"The annotation ${defn.ImplicitNotFoundAnnot} is not allowed on parameters of methods defined inside a refinement and it will have no effect",
+          em"The annotation ${defn.ImplicitNotFoundAnnot} is not allowed on parameters of methods defined inside a refinement and it will have no effect",
           annot.tree.sourcePos
         )
 
@@ -3769,7 +3769,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
           tree.symbol.is(Module) &&
           tree.symbol.companionClass.is(Case) &&
           !tree.tpe.baseClasses.exists(defn.isFunctionClass) && {
-            report.warning("The method `apply` is inserted. The auto insertion will be deprecated, please write `" + tree.show + ".apply` explicitly.", tree.sourcePos)
+            report.warning(em"The method `apply` is inserted. The auto insertion will be deprecated, please write `$tree.apply` explicitly.", tree.sourcePos)
             true
           }
 
@@ -4223,7 +4223,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
   /** Types the body Scala 2 macro declaration `def f = macro <body>` */
   protected def typedScala2MacroBody(call: untpd.Tree)(using Context): Tree =
     // TODO check that call is to a method with valid signature
-    def typedPrefix(tree: untpd.RefTree)(splice: Context ?=> Tree => Tree)(using Context): Tree = {
+    def typedPrefix(tree: untpd.RefTree)(splice: Tree => Context ?=> Tree)(using Context): Tree = {
       tryAlternatively {
         splice(typedExpr(tree, defn.AnyType))
       } {
