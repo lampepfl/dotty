@@ -328,9 +328,10 @@ SimplePattern1    ::=  SimpleRef
                     |  SimplePattern1 ‘.’ id
 PatVar            ::=  varid
                     |  ‘_’
-Patterns          ::=  Pattern {‘,’ Pattern}
+Patterns          ::=  NamedPattern {‘,’ NamedPattern}
 ArgumentPatterns  ::=  ‘(’ [Patterns] ‘)’
                     |  ‘(’ [Patterns ‘,’] PatVar ‘*’ ‘)’
+NamedPattern      ::= [id ‘=’] Pattern
 ```
 
 ### Type and Value Parameters

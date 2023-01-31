@@ -1,0 +1,42 @@
+-- Error: tests/neg/negNamedPatternMatching.scala:43:20 ----------------------------------------------------------------
+43 |  case User(names = "Tom", city = city) => null // error
+   |                    ^^^^^
+   |                    'names' is unknown
+-- Error: tests/neg/negNamedPatternMatching.scala:44:22 ----------------------------------------------------------------
+44 |  case User(city = _, 10) => null // error
+   |                      ^^
+   |                      Only named arguments allowed here
+-- Error: tests/neg/negNamedPatternMatching.scala:45:18 ----------------------------------------------------------------
+45 |  case User(age = Age(years = 10)) => null // error
+   |                  ^^^
+   |                  'patterns.Age' doesn't support named patterns
+-- Error: tests/neg/negNamedPatternMatching.scala:48:11 ----------------------------------------------------------------
+48 |    name = "Tom 2",  // error
+   |           ^^^^^^^
+   |           'name' was already used before
+-- Error: tests/neg/negNamedPatternMatching.scala:49:11 ----------------------------------------------------------------
+49 |    name = "Tom 3" // error
+   |           ^^^^^^^
+   |           'name' was already used before
+-- Error: tests/neg/negNamedPatternMatching.scala:51:22 ----------------------------------------------------------------
+51 |  case User(_, name = "Anna") => null // error
+   |                      ^^^^^^
+   |                      name was already used as a positional pattern
+-- Error: tests/neg/negNamedPatternMatching.scala:52:19 ----------------------------------------------------------------
+52 |  case User(city = City(name = "Berlin")) => null // error
+   |                   ^^^^
+   |                   'patterns.City' doesn't support named patterns
+-- Error: tests/neg/negNamedPatternMatching.scala:55:17 ----------------------------------------------------------------
+55 |val User(names = notRecursive) = user // error // error
+   |                 ^^^^^^^^^^^^
+   |                 'names' is unknown
+-- [E045] Cyclic Error: tests/neg/negNamedPatternMatching.scala:55:30 --------------------------------------------------
+55 |val User(names = notRecursive) = user // error // error
+   |                              ^
+   |                              Recursive value notRecursive needs type
+   |
+   | longer explanation available when compiling with `-explain`
+-- Error: tests/neg/negNamedPatternMatching.scala:63:7 -----------------------------------------------------------------
+63 |  case MySeq(head = 1, tail = 2) => ??? // error
+   |       ^^^^^
+   |       'patterns.MySeq' doesn't support named patterns

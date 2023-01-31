@@ -853,6 +853,8 @@ object StdNames {
 
     final val Uninstantiated: TypeName = "?$"
 
+    val Names: TypeName = "Names"
+
     val JFunctionPrefix: Seq[TypeName] = (0 to 2).map(i => s"scala.runtime.java8.JFunction${i}")
     val JProcedure: Seq[TypeName] = (0 to 22).map(i => s"scala.runtime.function.JProcedure${i}")
   }

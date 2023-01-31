@@ -2930,10 +2930,22 @@ object Parsers {
           p = atSpan(startOffset(t), in.offset) { Apply(p, argumentPatterns()) }
         p
 
-    /** Patterns          ::=  Pattern [`,' Pattern]
+    /** Patterns          ::=  PatternArgument [`,' PatternArgument]
      */
+    // TODO: Should the parser handle the rule that named patterns can't come after positional patterns?
     def patterns(location: Location = Location.InPattern): List[Tree] =
-      commaSeparated(() => pattern(location))
+      commaSeparated(() => namedPattern(location))
+
+    /** PatternArgument   ::= [id `='] Pattern
+     */
+    def namedPattern(location: Location = Location.InPattern): Tree =
+      // TODO: Figure out the performance impact of this lookahead
+      if ((in.token == IDENTIFIER || in.token == BACKQUOTED_IDENT) && in.lookahead.token == EQUALS) then
+        val ident = termIdent()
+        accept(EQUALS)
+        NamedArg(ident.name, pattern(location))
+      else
+        pattern(location)
 
     def patternsOpt(location: Location = Location.InPattern): List[Tree] =
       if (in.token == RPAREN) Nil else patterns(location)
