@@ -3503,6 +3503,17 @@ object Types {
     /** Like `make`, but also supports higher-kinded types as argument */
     def makeHk(tp1: Type, tp2: Type)(using Context): Type =
       TypeComparer.liftIfHK(tp1, tp2, OrType(_, _, soft = true), makeHk, _ & _)
+
+    /**
+     * Recursively split an OrType
+     * @param tp
+     * @return
+     */
+    def split(tp: Type): List[Type] =
+      tp match
+        case OrType(lhs, rhs) => split(lhs) ::: split(rhs)
+        case _ => tp :: Nil
+    
   }
 
   def expectValueTypeOrWildcard(tp: Type, where: => String)(using Context): Unit =

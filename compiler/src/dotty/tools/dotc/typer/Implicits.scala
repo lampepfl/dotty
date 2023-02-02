@@ -3,36 +3,37 @@ package dotc
 package typer
 
 import backend.sjs.JSDefinitions
-import core._
-import ast.{TreeTypeMap, untpd, tpd}
-import util.Spans._
-import util.Stats.{record, monitored}
-import printing.{Showable, Printer}
-import printing.Texts._
-import Contexts._
-import Types._
-import Flags._
+import core.*
+import ast.{TreeTypeMap, tpd, untpd}
+import util.Spans.*
+import util.Stats.{monitored, record}
+import printing.{Printer, Showable}
+import printing.Texts.*
+import Contexts.*
+import Types.*
+import Flags.*
 import Mode.ImplicitsEnabled
-import NameKinds.{LazyImplicitName, EvidenceParamName}
-import Symbols._
-import Types._
-import Decorators._
-import Names._
-import StdNames._
-import ProtoTypes._
-import ErrorReporting._
+import NameKinds.{EvidenceParamName, LazyImplicitName}
+import Symbols.*
+import Types.*
+import Decorators.*
+import Names.*
+import StdNames.*
+import ProtoTypes.*
+import ErrorReporting.*
 import Inferencing.{fullyDefinedType, isFullyDefined}
 import Scopes.newScope
-import transform.TypeUtils._
-import Hashable._
+import transform.TypeUtils.*
+import Hashable.*
 import util.{EqHashMap, Stats}
 import config.{Config, Feature}
 import Feature.migrateTo3
-import config.Printers.{implicits, implicitsDetailed}
-import collection.mutable
-import reporting._
-import annotation.tailrec
+import config.Printers.{implicits, implicitsDetailed, saferExceptions}
 
+import collection.mutable
+import reporting.*
+
+import annotation.tailrec
 import scala.annotation.internal.sharable
 import scala.annotation.threadUnsafe
 
@@ -865,11 +866,62 @@ trait Implicits:
 
   private var synthesizer: Synthesizer | Null = null
 
+  // =============================== Implicit Search of a CanThrow Capability =====================
+
+  /**
+   * Combain results of a CanThrow capability search
+   */
+  def resolveCanThrow(results: List[SearchResult])(using Context): SearchResult =
+    def merge(l: List[SearchResult], acc: SearchResult)(using Context): SearchResult =
+      (l, acc) match
+        case (Nil, _) => acc
+        case (SearchFailure(f) :: xs, SearchFailure(fcc)) =>
+          // TODO : We should merge both failure together
+          merge(xs, acc)
+        case ((failure@SearchFailure(_)) :: xs, _: SearchSuccess) =>
+          // Check the remaining of the list for other failures, success will be ignored
+          merge(xs, failure)
+        case ((_: SearchSuccess) :: xs, failure@SearchFailure(_)) =>
+          // Ignore success and propagate the failure
+          merge(xs, failure)
+        case (SearchSuccess(arg, _, l1, e1) :: xs, SearchSuccess(argAcc, _, l2, e2)) =>
+          // Merge both success together
+          val capability =
+            tpd.Apply(
+              tpd.Select(tpd.Ident(defn.CanThrowClass.companionModule.termRef), nme.apply.toTermName),
+              arg :: argAcc :: Nil
+            )
+          merge(xs, SearchSuccess(capability, capability.symbol.termRef, l1 min l2, e1 || e2)(ctx.typerState, ctx.gadt))
+
+    assert(results.nonEmpty) // We cannot merge an empty list of SearchResult
+    merge(results.tail, results.head)
+
+
+  /**
+   * Find all implicit parameters for a CanThrow capability and combain them into one SearchResult
+   */
+  def inferImplicitCanThrow(formal: AppliedType, span: Span)(using Context) : SearchResult =
+    val AppliedType(base, args) = formal
+    assert(base.isRef(defn.CanThrowClass.asType))
+    val types = (for arg <- args yield OrType.split(arg)).flatten.filter(_.isCheckedException)
+    saferExceptions.println(i"implicit search for a CanThrow for each type in $types")
+    val results =
+      for t <- types
+      yield
+        inferImplicit(defn.CanThrowClass.typeRef.appliedTo(t), EmptyTree, span)
+    saferExceptions.println(i"capabilities $results")
+    resolveCanThrow(results)
+
   /** Find an implicit argument for parameter `formal`.
    *  Return a failure as a SearchFailureType in the type of the returned tree.
    */
   def inferImplicitArg(formal: Type, span: Span)(using Context): Tree =
-    inferImplicit(formal, EmptyTree, span) match
+    // If trying to infer a CanThrow capability, split it in case of a UnionType
+    val result = formal match
+      case f@AppliedType(base, _) if base.isRef(defn.CanThrowClass.asType) =>
+        inferImplicitCanThrow(f, span)
+      case _ => inferImplicit(formal, EmptyTree, span)
+    result match
       case SearchSuccess(arg, _, _, _) => arg
       case fail @ SearchFailure(failed) =>
         if fail.isAmbiguous then failed

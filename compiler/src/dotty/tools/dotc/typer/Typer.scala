@@ -3,52 +3,52 @@ package dotc
 package typer
 
 import backend.sjs.JSDefinitions
-import core._
-import ast._
-import Trees._
-import Constants._
-import StdNames._
-import Scopes._
-import Denotations._
-import ProtoTypes._
-import Contexts._
-import Symbols._
-import Types._
-import SymDenotations._
-import Annotations._
-import Names._
-import NameOps._
-import NameKinds._
-import NamerOps._
-import ContextOps._
-import Flags._
-import Decorators._
-import ErrorReporting._
-import Checking._
-import Inferencing._
+import core.*
+import ast.*
+import Trees.*
+import Constants.*
+import StdNames.*
+import Scopes.*
+import Denotations.*
+import ProtoTypes.*
+import Contexts.*
+import Symbols.*
+import Types.*
+import SymDenotations.*
+import Annotations.*
+import Names.*
+import NameOps.*
+import NameKinds.*
+import NamerOps.*
+import ContextOps.*
+import Flags.*
+import Decorators.*
+import ErrorReporting.*
+import Checking.*
+import Inferencing.*
 import Dynamic.isDynamicExpansion
 import EtaExpansion.etaExpand
 import TypeComparer.CompareResult
 import inlines.{Inlines, PrepareInlineable}
-import util.Spans._
-import util.common._
+import util.Spans.*
+import util.common.*
 import util.{Property, SimpleIdentityMap, SrcPos}
-import Applications.{tupleComponentTypes, wrapDefs, defaultArgument}
+import Applications.{defaultArgument, tupleComponentTypes, wrapDefs}
 
 import collection.mutable
 import annotation.tailrec
-import Implicits._
+import Implicits.*
 import util.Stats.record
-import config.Printers.{gadts, typr}
+import config.Printers.{gadts, saferExceptions, typr}
 import config.Feature
-import config.Feature.{sourceVersion, migrateTo3}
-import config.SourceVersion._
+import config.Feature.{migrateTo3, sourceVersion}
+import config.SourceVersion.*
 import rewrites.Rewrites.patch
-import transform.SymUtils._
-import transform.TypeUtils._
-import reporting._
-import Nullables._
-import NullOpsDecorator._
+import transform.SymUtils.*
+import transform.TypeUtils.*
+import reporting.*
+import Nullables.*
+import NullOpsDecorator.*
 import cc.CheckCaptures
 import config.Config
 
@@ -2824,6 +2824,8 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
     val untpd.InfixOp(l, op, r) = tree
     val result =
       if (ctx.mode.is(Mode.Type))
+        // TODO HR : This code should be removed as well as the infix $throws type
+        // TODO HR : Throws clauses are part of the scala syntax now
         typedAppliedTypeTree(
           if op.name == tpnme.throws && Feature.enabled(Feature.saferExceptions)
           then desugar.throws(l, op, r)
@@ -4132,7 +4134,16 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
               tryInsertApplyOrImplicit(tree, pt, locked)(tree) // error will be reported in typedTypeApply
             case _ =>
               if (ctx.mode is Mode.Type) adaptType(tree.tpe)
-              else adaptNoArgs(wtp)
+              else
+                val result = adaptNoArgs(wtp)
+                val annot = result.symbol.annotations
+                val throwsAnnot = annot.filter(ThrownException.unapply(_).isDefined)
+                val exceptions = throwsAnnot.map(ThrownException.unapply(_).get).flatMap(OrType.split)
+                if exceptions.nonEmpty then
+                  saferExceptions.println(i"Checking for a CanThrow capability for these exceptions : $exceptions")
+                // TODO HR : Still need to add those capabilities in the capture set
+                val capabities = for e <- exceptions yield checkCanThrow(e, tree.span)
+                result
           }
       }
     }

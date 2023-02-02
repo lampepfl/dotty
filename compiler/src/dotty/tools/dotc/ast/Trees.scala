@@ -2,21 +2,34 @@ package dotty.tools
 package dotc
 package ast
 
-import core._
-import Types._, Names._, NameOps._, Flags._, util.Spans._, Contexts._, Constants._
-import typer.{ ConstFold, ProtoTypes }
-import SymDenotations._, Symbols._, Denotations._, StdNames._, Comments._
+import core.*
+import Types.*
+import Names.*
+import NameOps.*
+import Flags.*
+import util.Spans.*
+import Contexts.*
+import Constants.*
+import typer.{ConstFold, ProtoTypes}
+import SymDenotations.*
+import Symbols.*
+import Denotations.*
+import StdNames.*
+import Comments.*
+
 import collection.mutable.ListBuffer
 import printing.Printer
 import printing.Texts.Text
-import util.{Stats, Attachment, Property, SourceFile, NoSource, SrcPos, SourcePosition}
+import util.{Attachment, NoSource, Property, SourceFile, SourcePosition, SrcPos, Stats}
 import config.Config
 import config.Printers.overload
+
 import annotation.internal.sharable
 import annotation.unchecked.uncheckedVariance
 import annotation.constructorOnly
 import compiletime.uninitialized
-import Decorators._
+import Decorators.*
+import dotty.tools.dotc.ast.untpd.Tree
 
 object Trees {
 
@@ -692,6 +705,8 @@ object Trees {
    *  Every TypeVar is created as the type of one InferredTypeTree.
    */
   class InferredTypeTree[+T <: Untyped](implicit @constructorOnly src: SourceFile) extends TypeTree[T]
+
+  class ThrowsReturn[+T <: Untyped](val rteTpe : Tree[T], val except : List[Any])(implicit @constructorOnly src: SourceFile) extends TypeTree[T]
 
   /** ref.type */
   case class SingletonTypeTree[+T <: Untyped] private[ast] (ref: Tree[T])(implicit @constructorOnly src: SourceFile)

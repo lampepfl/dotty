@@ -3,35 +3,36 @@ package dotc
 package parsing
 
 import scala.language.unsafeNulls
-
 import scala.annotation.internal.sharable
 import scala.collection.mutable.ListBuffer
 import scala.collection.immutable.BitSet
-import util.{ SourceFile, SourcePosition, NoSourcePosition }
-import Tokens._
-import Scanners._
+import util.{NoSourcePosition, SourceFile, SourcePosition}
+import Tokens.*
+import Scanners.*
 import xml.MarkupParsers.MarkupParser
-import core._
-import Flags._
-import Contexts._
-import Names._
-import NameKinds.{WildcardParamName, QualifiedName}
-import NameOps._
+import core.*
+import Flags.*
+import Contexts.*
+import Names.*
+import NameKinds.{QualifiedName, WildcardParamName}
+import NameOps.*
 import ast.{Positioned, Trees}
-import ast.Trees._
-import StdNames._
-import util.Spans._
-import Constants._
+import ast.Trees.*
+import StdNames.*
+import util.Spans.*
+import Constants.*
 import Symbols.NoSymbol
-import ScriptParsers._
-import Decorators._
+import ScriptParsers.*
+import Decorators.*
 import util.Chars
+
 import scala.annotation.tailrec
-import rewrites.Rewrites.{patch, overlapsPatch}
-import reporting._
+import rewrites.Rewrites.{overlapsPatch, patch}
+import reporting.*
 import config.Feature
-import config.Feature.{sourceVersion, migrateTo3, globalOnlyImports}
-import config.SourceVersion._
+import config.Feature.{globalOnlyImports, migrateTo3, saferExceptions, sourceVersion}
+import config.Printers
+import config.SourceVersion.*
 import config.SourceVersion
 
 object Parsers {
@@ -3554,9 +3555,10 @@ object Parsers {
       else {
         val mods1 = addFlag(mods, Method)
         val ident = termIdent()
-        var name = ident.name.asTermName
+        val name = ident.name.asTermName
         val tparams = typeParamClauseOpt(ParamOwner.Def)
         val vparamss = paramClauses(numLeadParams = numLeadParams)
+        val exceptions = throwsClauseOpt
         var tpt = fromWithinReturnType { typedOpt() }
         if (migrateTo3) newLineOptWhenFollowedBy(LBRACE)
         val rhs =
@@ -3573,12 +3575,42 @@ object Parsers {
             if (!isExprIntro) syntaxError(MissingReturnType(), in.lastOffset)
             accept(EQUALS)
             expr()
-
-        val ddef = DefDef(name, joinParams(tparams, vparamss), tpt, rhs)
+        val tpe =
+          if exceptions.nonEmpty then
+            ThrowsReturn(exceptions, tpt)
+          else
+            tpt
+        val ddef = DefDef(name, joinParams(tparams, vparamss), tpe, rhs)
         if (isBackquoted(ident)) ddef.pushAttachment(Backquoted, ())
         finalizeDef(ddef, mods1, start)
       }
     }
+
+    /**
+     * Parse a 'throws' declaration.
+     * If the saferException feature is disabled, this function
+     * will return Nil.
+     * ThrowsClause := (throws toplevelTyp (, toplevelTyp)*)?
+     * @return A List of all the exceptions allowed to be thrown
+     */
+    def throwsClauseOpt : List[Tree] =
+      val startOffset = in.offset
+      if (isIdent(nme.throws))
+        in.nextToken()
+        val except = commaSeparated(() => toplevelTyp())
+        Printers.saferExceptions.println(i"Parser will add a throws clause for the given exceptions : $except")
+        if in.featureEnabled(Feature.saferExceptions) then
+          except
+        else
+          report.error(
+            i"""
+                |This syntax is part of the 'safer exceptions' project. To enable it, please add
+                |the following import :
+                |   import scala.language.experimental.saferExceptions
+                |""".stripMargin, source.atSpan(Span(startOffset, in.offset)))
+          Nil
+      else
+        Nil
 
     /** ConstrExpr      ::=  SelfInvocation
      *                    |  `{' SelfInvocation {semi BlockStat} `}'

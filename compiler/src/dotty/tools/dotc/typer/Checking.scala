@@ -2,46 +2,45 @@ package dotty.tools
 package dotc
 package typer
 
-import core._
-import ast._
-import Contexts._
-import Types._
-import Flags._
-import Names._
-import StdNames._
-import Symbols._
-import Trees._
-import ProtoTypes._
-import Scopes._
-import CheckRealizable._
+import core.*
+import ast.*
+import Contexts.*
+import Types.*
+import Flags.*
+import Names.*
+import StdNames.*
+import Symbols.*
+import Trees.*
+import ProtoTypes.*
+import Scopes.*
+import CheckRealizable.*
 import ErrorReporting.errorTree
 import util.Spans.Span
 import Phases.refchecksPhase
 import Constants.Constant
-
 import util.SrcPos
 import util.Spans.Span
 import rewrites.Rewrites.patch
 import inlines.Inlines
-import transform.SymUtils._
-import transform.ValueClasses._
-import Decorators._
+import transform.SymUtils.*
+import transform.ValueClasses.*
+import Decorators.*
 import ErrorReporting.{err, errorType}
-import config.Printers.{typr, patmatch}
+import config.Printers.{patmatch, saferExceptions, typr}
 import NameKinds.DefaultGetterName
-import NameOps._
+import NameOps.*
 import SymDenotations.{NoCompleter, NoDenotation}
 import Applications.unapplyArgs
 import Inferencing.isFullyDefined
 import transform.patmat.SpaceEngine.{isIrrefutable, isIrrefutableQuotedPattern}
 import config.Feature
 import config.Feature.sourceVersion
-import config.SourceVersion._
+import config.SourceVersion.*
 import printing.Formatting.hlAsKeyword
 import transform.TypeUtils.*
 
 import collection.mutable
-import reporting._
+import reporting.*
 
 object Checking {
   import tpd._
@@ -1470,6 +1469,7 @@ trait Checking {
    */
   def checkCanThrow(tp: Type, span: Span)(using Context): Tree =
     if Feature.enabled(Feature.saferExceptions) && tp.isCheckedException then
+      saferExceptions.println(i"checking if CanThrow is in scope for type $tp")
       ctx.typer.implicitArgTree(defn.CanThrowClass.typeRef.appliedTo(tp), span)
     else
       EmptyTree

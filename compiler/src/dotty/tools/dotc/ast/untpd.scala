@@ -70,6 +70,14 @@ object untpd extends Trees.Instance[Untyped] with UntypedTreeInfo {
   case class InterpolatedString(id: TermName, segments: List[Tree])(implicit @constructorOnly src: SourceFile)
     extends TermTree
 
+  /**
+   * A Sugar type wrapping the return type and the exceptions that might be thrown by a function
+   * @param exceptions - Exceptions that might be thrown
+   * @param rteTpe - Return type of the function
+   * @param src - source file of this tree
+   */
+  case class ThrowsReturn(exceptions: List[Tree], rteTpe: Tree)(implicit @constructorOnly src: SourceFile) extends Tree
+
   /** A function type or closure */
   case class Function(args: List[Tree], body: Tree)(implicit @constructorOnly src: SourceFile) extends Tree {
     override def isTerm: Boolean = body.isTerm
@@ -798,6 +806,8 @@ object untpd extends Trees.Instance[Untyped] with UntypedTreeInfo {
         this(x, expr)
       case CapturingTypeTree(refs, parent) =>
         this(this(x, refs), parent)
+      case ThrowsReturn(exceptions, rteTpe) =>
+        x
       case _ =>
         super.foldMoreCases(x, tree)
     }

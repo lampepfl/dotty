@@ -21,6 +21,9 @@ import reporting._
 import dotty.tools.dotc.util.SourceFile
 import util.Spans._
 import scala.collection.mutable.ListBuffer
+import scala.runtime.stdLibPatches.language.experimental.saferExceptions
+import dotty.tools.dotc.printing.Printer
+import dotty.tools.dotc.config.Printers.saferExceptions as sfp
 
 object JavaParsers {
 
@@ -541,11 +544,12 @@ object JavaParsers {
       }
     }
 
-    def optThrows(): Unit =
+    def optThrows(): List[Tree] =
       if (in.token == THROWS) {
         in.nextToken()
         repsep(() => typ(), COMMA)
       }
+      Nil
 
     def methodBody(): Tree = atSpan(in.offset) {
       skipAhead()
@@ -574,11 +578,16 @@ object JavaParsers {
       if (in.token == LPAREN && rtptName != nme.EMPTY && !inInterface) {
         // constructor declaration
         val vparams = formalParams()
-        optThrows()
+        val exceptions = optThrows()
+        val throwsAnnotation =
+          for exc <- exceptions yield
+            val annot = genThrowsAnnotation(exc)
+            sfp.println(i"[JavaParsers] Parser will add ($annot) annotation in ${nme.CONSTRUCTOR}")
+            annot
         List {
           atSpan(start) {
             DefDef(nme.CONSTRUCTOR, joinParams(tparams, List(vparams)),
-                   TypeTree(), methodBody()).withMods(mods)
+                   TypeTree(), methodBody()).withMods(mods.withAnnotations(throwsAnnotation))
           }
         }
       }
@@ -591,7 +600,14 @@ object JavaParsers {
           // method declaration
           val vparams = formalParams()
           if (!isVoid) rtpt = optArrayBrackets(rtpt)
-          optThrows()
+          val exceptions = optThrows()
+          mods1 = mods1.withAnnotations{
+            for exc <- exceptions yield
+              val annot = genThrowsAnnotation(exc)
+              sfp.println(i"[JavaParsers] Parser will add ($annot) annotation in $name")
+              annot
+          }
+
           val bodyOk = !inInterface || mods.isOneOf(Flags.DefaultMethod | Flags.JavaStatic | Flags.Private)
           val body =
             if (bodyOk && in.token == LBRACE)
@@ -627,6 +643,9 @@ object JavaParsers {
         }
       }
     }
+
+    def genThrowsAnnotation(tpe: Tree) : Tree =
+      Apply(Select(New(Ident(tpnme.throws)), nme.CONSTRUCTOR), tpe :: Nil)
 
     /** Parse a sequence of field declarations, separated by commas.
       *  This one is tricky because a comma might also appear in an

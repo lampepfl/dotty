@@ -1331,13 +1331,11 @@ object desugar {
   }
 
   /** Translate throws type `A throws E1 | ... | En` to
-   *  $throws[... $throws[A, E1] ... , En].
+   *  $throws[A, E1| ... | En].
    */
   def throws(tpt: Tree, op: Ident, excepts: Tree)(using Context): AppliedTypeTree = excepts match
     case Parens(excepts1) =>
       throws(tpt, op, excepts1)
-    case InfixOp(l, bar @ Ident(tpnme.raw.BAR), r) =>
-      throws(throws(tpt, op, l), bar, r)
     case e =>
       AppliedTypeTree(
         TypeTree(defn.throwsAlias.typeRef).withSpan(op.span), tpt :: excepts :: Nil)
@@ -1778,6 +1776,23 @@ object desugar {
     }
 
     val desugared = tree match {
+      case ThrowsReturn(exceptions, rteTpe) =>
+        rteTpe match
+          case _ : TypeTree =>
+            report.error(
+              i"""
+                 | Cannot infer return type of a definition using a throws clause.
+                 | Not implemented yet.
+                 |""".stripMargin,
+              tree.srcPos
+            )
+            rteTpe
+          case _ =>
+            val r = exceptions.reduce((left, right) => InfixOp(left, Ident(tpnme.OR), right))
+            val args = AppliedTypeTree(Ident(defn.CanThrowClass.name), r)
+            val fn = FunctionWithMods(args :: Nil, rteTpe, Modifiers(Flags.Given))
+            Printers.saferExceptions.println(i"throws clause desugared to $fn")
+            fn
       case PolyFunction(targs, body) =>
         makePolyFunction(targs, body, pt) orElse tree
       case SymbolLit(str) =>
