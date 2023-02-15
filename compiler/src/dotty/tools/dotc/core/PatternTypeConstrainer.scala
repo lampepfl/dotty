@@ -225,27 +225,17 @@ trait PatternTypeConstrainer { self: TypeComparer =>
    *
    *  It'd be unsound for us to say that `t <: T`, even though that follows from `D[t] <: C[T]`.
    *  Note, however, that if `D` was a final class, we *could* rely on that relationship.
-   *  To support typical case classes, we also assume that this relationship holds for them and their parent traits.
-   *  This is enforced by checking that classes inheriting from case classes do not extend the parent traits of those
-   *  case classes without also appropriately extending the relevant case class
-   *  (see `RefChecks#checkCaseClassInheritanceInvariant`).
+   *  Case classes and sealed traits (and sealed classes) are supported,
+   *  by assuming that this relationship holds for them and their parent traits.
+   *  This is enforced by checking no subclass of them mixes in any parent trait with a different type argument.
+   *  (see `RefChecks#checkVariantInheritanceProblems`).
    */
   def constrainSimplePatternType(patternTp: Type, scrutineeTp: Type, forceInvariantRefinement: Boolean): Boolean = {
     def refinementIsInvariant(tp: Type): Boolean = tp match {
       case tp: SingletonType => true
-      case tp: ClassInfo => tp.cls.is(Final) || tp.cls.is(Case)
+      case tp: ClassInfo => tp.cls.isOneOf(CaseOrFinalOrSealed)
       case tp: TypeProxy => refinementIsInvariant(tp.superType)
       case _ => false
-    }
-
-    def widenVariantParams(tp: Type) = tp match {
-      case tp @ AppliedType(tycon, args) =>
-        val args1 = args.zipWithConserve(tycon.typeParams)((arg, tparam) =>
-          if (tparam.paramVarianceSign != 0) TypeBounds.empty else arg
-        )
-        tp.derivedAppliedType(tycon, args1)
-      case tp =>
-        tp
     }
 
     val patternCls = patternTp.classSymbol
