@@ -70,7 +70,7 @@ extension (tp: Type)
    *  The identity for all other types.
    */
   def boxed(using Context): Type = tp.dealias match
-    case tp @ CapturingType(parent, refs) if !tp.isBoxed && !refs.isAlwaysEmpty =>
+    case tp @ CapturingType.Annotated(parent, refs) if !tp.isBoxed && !refs.isAlwaysEmpty =>
       tp.annot match
         case ann: CaptureAnnotation =>
           ann.boxedType(tp)
@@ -79,6 +79,8 @@ extension (tp: Type)
             case None => ann.tree.putAttachment(BoxedType, BoxedTypeCache())
             case _ =>
           ann.tree.attachment(BoxedType)(tp)
+    case CapturingType.Capability(parent, cs) =>
+      CapturingType(parent, cs).boxed
     case tp: RealTypeBounds =>
       tp.derivedTypeBounds(tp.lo.boxed, tp.hi.boxed)
     case _ =>
@@ -190,6 +192,12 @@ extension (tp: Type)
     case _ =>
       false
 
+  def isCapabilityBase(using Context): Boolean = tp match
+    case tp: NamedType =>
+      val sym = tp.classSymbol
+      sym.exists && sym.asClass.isCapabilityBase
+    case _ => false
+
 extension (cls: ClassSymbol)
 
   def pureBaseClass(using Context): Option[Symbol] =
@@ -199,6 +207,9 @@ extension (cls: ClassSymbol)
         val selfType = bc.givenSelfType
         selfType.exists && selfType.captureSet.isAlwaysEmpty
       })
+
+  def isCapabilityBase(using Context): Boolean =
+    cls.is(Flags.CapabilityBase)
 
 extension (sym: Symbol)
 
@@ -248,6 +259,11 @@ extension (tp: AnnotatedType)
   /** Is this a boxed capturing type? */
   def isBoxed(using Context): Boolean = tp.annot match
     case ann: CaptureAnnotation => ann.boxed
+    case _ => false
+
+extension (tp: Type)
+  def isBoxed(using Context): Boolean = tp match
+    case tp: AnnotatedType => tp.isBoxed
     case _ => false
 
 extension (ts: List[Type])

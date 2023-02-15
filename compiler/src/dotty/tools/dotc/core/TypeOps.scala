@@ -296,7 +296,7 @@ object TypeOps:
       tp1 match {
         case tp1: RecType =>
           return tp1.rebind(approximateOr(tp1.parent, tp2))
-        case CapturingType(parent1, refs1) =>
+        case CapturingType.Annotated(parent1, refs1) =>
           return tp1.derivedCapturingType(approximateOr(parent1, tp2), refs1)
         case err: ErrorType =>
           return err
@@ -305,7 +305,7 @@ object TypeOps:
       tp2 match {
         case tp2: RecType =>
           return tp2.rebind(approximateOr(tp1, tp2.parent))
-        case CapturingType(parent2, refs2) =>
+        case CapturingType.Annotated(parent2, refs2) =>
           return tp2.derivedCapturingType(approximateOr(tp1, parent2), refs2)
         case err: ErrorType =>
           return err

@@ -4974,7 +4974,7 @@ object Types {
           else if (clsd.is(Module)) givenSelf
           else if (ctx.erasedTypes) appliedRef
           else givenSelf match
-            case givenSelf @ EventuallyCapturingType(tp, _) =>
+            case givenSelf @ EventuallyCapturingType.Annotated(tp, _) =>
               givenSelf.derivedAnnotatedType(tp & appliedRef, givenSelf.annot)
             case _ =>
               AndType(givenSelf, appliedRef)

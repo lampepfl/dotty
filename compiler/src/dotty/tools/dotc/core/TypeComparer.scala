@@ -23,7 +23,7 @@ import typer.ProtoTypes.constrained
 import typer.Applications.productSelectorTypes
 import reporting.trace
 import annotation.constructorOnly
-import cc.{CapturingType, derivedCapturingType, CaptureSet, stripCapturing, isBoxedCapturing, boxed, boxedUnlessFun, boxedIfTypeParam, isAlwaysPure}
+import cc.{CapturingType, derivedCapturingType, CaptureSet, stripCapturing, isBoxedCapturing, boxed, boxedUnlessFun, boxedIfTypeParam, isAlwaysPure, isCapabilityBase}
 
 /** Provides methods to compare types.
  */
@@ -302,7 +302,14 @@ class TypeComparer(@constructorOnly initctx: Context) extends ConstraintHandling
                 // For convenience we want X$ <:< X.type
                 // This is safe because X$ self-type is X.type
                 sym1 = sym1.companionModule
-              if ((sym1 ne NoSymbol) && (sym1 eq sym2))
+
+              def isMatchingSymbols =
+                (sym1 eq sym2) || ctx.phase == Phases.checkCapturesPhase && {
+                  sym1.name == sym2.name &&
+                  sym1.is(Flags.CapabilityBase) || sym2.is(Flags.CapabilityBase)
+                }
+
+              if ((sym1 ne NoSymbol) && isMatchingSymbols)
                 ctx.erasedTypes ||
                 sym1.isStaticOwner ||
                 isSubPrefix(tp1.prefix, tp2.prefix) ||
@@ -1137,7 +1144,17 @@ class TypeComparer(@constructorOnly initctx: Context) extends ConstraintHandling
     /** Subtype test for the hk application `tp2 = tycon2[args2]`.
      */
     def compareAppliedType2(tp2: AppliedType, tycon2: Type, args2: List[Type]): Boolean = {
-      val tparams = tycon2.typeParams
+
+      def getTypeParams: List[TypeParamInfo] =
+        if ctx.phase != Phases.checkCapturesPhase then
+          tycon2.typeParams
+        else tycon2.match
+          case tycon2: TypeRef if tycon2.isCapabilityBase =>
+            tycon2.symbol.info.typeParams
+          case _ =>
+            tycon2.typeParams
+
+      val tparams = getTypeParams
       if (tparams.isEmpty) return false // can happen for ill-typed programs, e.g. neg/tcpoly_overloaded.scala
 
       /** True if `tp1` and `tp2` have compatible type constructors and their
@@ -1215,8 +1232,15 @@ class TypeComparer(@constructorOnly initctx: Context) extends ConstraintHandling
                     && ctx.gadt.contains(tycon2sym)
                     && ctx.gadt.isLess(tycon1sym, tycon2sym)
 
+                  def isMatchingSymbols =
+                    (tycon1sym == tycon2sym) || {
+                      ctx.phase == Phases.checkCapturesPhase &&
+                        tycon1sym.name == tycon2sym.name &&
+                        tycon1sym.is(Flags.CapabilityBase) || tycon2sym.is(Flags.CapabilityBase)
+                    }
+
                   val res = (
-                    tycon1sym == tycon2sym && isSubPrefix(tycon1.prefix, tycon2.prefix)
+                    isMatchingSymbols && isSubPrefix(tycon1.prefix, tycon2.prefix)
                     || tycon1sym.byGadtBounds(b => isSubTypeWhenFrozen(b.hi, tycon2))
                     || tycon2sym.byGadtBounds(b => isSubTypeWhenFrozen(tycon1, b.lo))
                     || byGadtOrdering

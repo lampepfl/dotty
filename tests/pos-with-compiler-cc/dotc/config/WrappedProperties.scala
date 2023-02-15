@@ -30,7 +30,9 @@ trait WrappedProperties extends PropertiesTrait {
 object WrappedProperties {
   object AccessControl extends WrappedProperties {
     def wrap[T](body: => T): Option[T] =
-      try Some(body)
+      try
+        val result: T = body
+        Some(result)
       catch {
         // the actual exception we are concerned with is AccessControlException,
         // but that's deprecated on JDK 17, so catching its superclass is a convenient

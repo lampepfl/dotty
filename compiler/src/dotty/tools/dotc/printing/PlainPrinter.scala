@@ -242,7 +242,7 @@ class PlainPrinter(_ctx: Context) extends Printer {
           ~ (Str(": ") provided !tp.resultType.isInstanceOf[MethodOrPoly])
           ~ toText(tp.resultType)
         }
-      case ExprType(ct @ EventuallyCapturingType(parent, refs))
+      case ExprType(ct @ EventuallyCapturingType.Annotated(parent, refs))
       if ct.annot.symbol == defn.RetainsByNameAnnot =>
         if refs.isUniversal then changePrec(GlobalPrec) { "=> " ~ toText(parent) }
         else toText(CapturingType(ExprType(parent), refs))

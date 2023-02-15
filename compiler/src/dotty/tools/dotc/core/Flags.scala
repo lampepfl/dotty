@@ -377,6 +377,9 @@ object Flags {
   /** Symbol cannot be found as a member during typer */
   val (Invisible @ _, _, _) = newFlags(45, "<invisible>")
 
+  /** Symbol represents the pure base class of a capability class */
+  val (CapabilityBase @ _, _, _) = newFlags(46, "<capability-base>")
+
   // ------------ Flags following this one are not pickled ----------------------------------
 
   /** Symbol is not a member of its owner */

@@ -3,7 +3,10 @@ package dotc
 package cc
 
 import core.*
+import Decorators.*
 import Types.*, Symbols.*, Contexts.*
+import NameKinds.UniqueName
+import util.SimpleIdentityMap
 
 /** A (possibly boxed) capturing type. This is internally represented as an annotated type with a @retains
  *  or @retainsByName annotation, but the extractor will succeed only at phase CheckCaptures.
@@ -40,12 +43,14 @@ object CapturingType:
   /** An extractor that succeeds only during CheckCapturingPhase. Boxing statis is
    *  returned separately by CaptureOps.isBoxed.
    */
-  def unapply(tp: AnnotatedType)(using Context): Option[(Type, CaptureSet)] =
+  def unapply(tp: Type)(using Context): Option[(Type, CaptureSet)] =
     if ctx.phase == Phases.checkCapturesPhase
-      && tp.annot.symbol == defn.RetainsAnnot
       && !ctx.mode.is(Mode.IgnoreCaptures)
     then
-      EventuallyCapturingType.unapply(tp)
+      tp match
+        case Annotated(parent, cs) => Some(parent, cs)
+        case Capability(parent, cs) => Some(parent, cs)
+        case _ => None
     else None
 
   /** Check whether a type is uncachable when computing `baseType`.
@@ -58,7 +63,25 @@ object CapturingType:
     ctx.phase == Phases.checkCapturesPhase &&
       (Setup.isDuringSetup || ctx.mode.is(Mode.IgnoreCaptures) && tp.isEventuallyCapturingType)
 
+  object Annotated:
+    def unapply(tp: AnnotatedType)(using Context): Option[(Type, CaptureSet)] =
+      if ctx.phase == Phases.checkCapturesPhase
+        && !ctx.mode.is(Mode.IgnoreCaptures)
+        && tp.annot.symbol == defn.RetainsAnnot
+      then
+        EventuallyCapturingType.unapplyAnnot(tp)
+      else None
+
+  object Capability:
+    def unapply(tp: Type)(using Context): Option[(Type, CaptureSet)] =
+      if ctx.phase == Phases.checkCapturesPhase
+        && !ctx.mode.is(Mode.IgnoreCaptures)
+      then
+        EventuallyCapturingType.unapplyCap(tp)
+      else None
+
 end CapturingType
+
 
 /** An extractor for types that will be capturing types at phase CheckCaptures. Also
  *  included are types that indicate captures on enclosing call-by-name parameters
@@ -66,7 +89,43 @@ end CapturingType
  */
 object EventuallyCapturingType:
 
-  def unapply(tp: AnnotatedType)(using Context): Option[(Type, CaptureSet)] =
+  object Annotated:
+    def unapply(tp: AnnotatedType)(using Context): Option[(Type, CaptureSet)] = unapplyAnnot(tp)
+
+  object Capability:
+    def unapply(tp: TypeRef)(using Context): Option[(Type, CaptureSet)] = unapplyCap(tp)
+
+  private var pureCapClassSymCache: SimpleIdentityMap[ClassSymbol, ClassSymbol] = SimpleIdentityMap.empty
+
+  private def createPureSymbolOf(csym: ClassSymbol)(using Context): ClassSymbol =
+    csym.copy(flags = csym.flags | Flags.CapabilityBase).asClass
+
+  private def pureSymbolOf(csym: ClassSymbol)(using Context): ClassSymbol =
+    pureCapClassSymCache(csym) match
+      case psym: ClassSymbol => psym
+      case null =>
+        val sym = createPureSymbolOf(csym)
+        pureCapClassSymCache = pureCapClassSymCache.updated(csym, sym)
+        sym
+
+  def unapply(tp: Type)(using Context): Option[(Type, CaptureSet)] =
+    tp match
+      case tp: AnnotatedType => unapplyAnnot(tp)
+      case _ => unapplyCap(tp)
+
+  def unapplyCap(tp: Type)(using Context): Option[(Type, CaptureSet)] =
+    if tp.classSymbol.hasAnnotation(defn.CapabilityAnnot) && !tp.classSymbol.is(Flags.CapabilityBase) then
+      val sym = tp.classSymbol
+      val psym = pureSymbolOf(sym.asClass)
+      tp match
+        case tp: TypeRef => Some((psym.typeRef, CaptureSet.universal))
+        case tp: AppliedType =>
+          Some((tp.derivedAppliedType(psym.typeRef, tp.args), CaptureSet.universal))
+        case _ => None
+    else None
+    // None
+
+  def unapplyAnnot(tp: AnnotatedType)(using Context): Option[(Type, CaptureSet)] =
     val sym = tp.annot.symbol
     if sym == defn.RetainsAnnot || sym == defn.RetainsByNameAnnot then
       tp.annot match

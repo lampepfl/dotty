@@ -12,6 +12,7 @@ import transform.Recheck.*
 import CaptureSet.IdentityCaptRefMap
 import Synthetics.isExcluded
 import util.Property
+import reporting.trace
 
 /** A tree traverser that prepares a compilation unit to be capture checked.
  *  It does the following:
@@ -408,8 +409,12 @@ extends tpd.TreeTraverser:
         traverse(tree.rhs)
       case tree @ TypeApply(fn, args) =>
         traverse(fn)
+        val isErasedValue = fn match
+          case Ident(tp) =>
+            fn.symbol eq defn.Compiletime_erasedValue
+          case _ => false
         for case arg: TypeTree <- args do
-          transformTT(arg, boxed = true, exact = false) // type arguments in type applications are boxed
+          transformTT(arg, boxed = !isErasedValue, exact = false) // type arguments in type applications are boxed
       case _ =>
         traverseChildren(tree)
     tree match
