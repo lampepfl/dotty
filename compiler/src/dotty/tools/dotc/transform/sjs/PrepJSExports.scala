@@ -248,7 +248,7 @@ object PrepJSExports {
             }
 
           case _: ExportDestination.TopLevel =>
-            throw new AssertionError(
+            ctx.implode(
                 em"Found a top-level export without an explicit name at ${exportPos.sourcePos}")
 
           case ExportDestination.Static =>

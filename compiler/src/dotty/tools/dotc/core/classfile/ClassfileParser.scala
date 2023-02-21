@@ -863,7 +863,7 @@ class ClassfileParser(
       // create a new class member for immediate inner classes
       if entry.outer.name == currentClassName then
         val file = ctx.platform.classPath.findClassFile(entry.externalName.toString) getOrElse {
-          throw new AssertionError(entry.externalName)
+          ctx.implode(entry.externalName)
         }
         enterClassAndModule(entry, file, entry.jflags)
   }

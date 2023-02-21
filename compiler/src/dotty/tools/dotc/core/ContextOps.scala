@@ -8,7 +8,6 @@ import ast.untpd
 
 /** Extension methods for contexts where we want to keep the ctx.<methodName> syntax */
 object ContextOps:
-
   extension (ctx: Context)
 
     /** Enter symbol into current class, if current class is owner of current context,

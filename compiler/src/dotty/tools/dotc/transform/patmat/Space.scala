@@ -774,7 +774,7 @@ class SpaceEngine(using Context) extends SpaceLogic {
 
   /** Whether the counterexample is satisfiable. The space is flattened and non-empty. */
   def satisfiable(sp: Space): Boolean = {
-    def impossible: Nothing = throw new AssertionError("`satisfiable` only accepts flattened space.")
+    def impossible: Nothing = ctx.implode("`satisfiable` only accepts flattened space.")
 
     def genConstraint(space: Space): List[(Type, Type)] = space match {
       case Prod(tp, unappTp, ss) =>

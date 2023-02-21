@@ -13,7 +13,7 @@ import Scopes._
 import Uniques._
 import ast.Trees._
 import ast.untpd
-import util.{NoSource, SimpleIdentityMap, SourceFile, HashSet, ReusableInstance}
+import util.{NoSource, SimpleIdentityMap, SourceFile, HashSet, ReusableInstance, Implosion}
 import typer.{Implicits, ImportInfo, SearchHistory, SearchRoot, TypeAssigner, Typer, Nullables}
 import inlines.Inliner
 import Nullables._
@@ -453,6 +453,37 @@ object Contexts {
     /** A fresh clone of this context embedded in the specified `outer` context. */
     def freshOver(outer: Context): FreshContext =
       FreshContext(base).init(outer, this).setTyperState(this.typerState)
+
+    /** Crash the compiler with a `Throwable` in a controlled way, reporting useful info
+     * and asking users to submit a crash report.
+     * This helps users by providing information they can use to work around the crash
+     * and helps compiler maintainers by capturing important information about the crash.
+     * With the exception of `ControlThrowable`s, this method should be used instead of 
+     * throwing exceptions whenever a context is available.
+     * 
+     * instead of:
+     * `throw Exception("foo")` 
+     * use:
+     * `ctx.implode(Exception("foo"))`
+     */
+    inline def implode(inline cause: Throwable): Nothing = 
+      Implosion(cause)(using thiscontext)
+
+    /**
+     * Crash the compiler with a message in a controlled way
+     */
+    inline def implode(inline msg: Any): Nothing = 
+      implode(AssertionError(msg))
+
+    /**
+     * A fallback for when an exception has been thrown without using `implode`
+     * This will capture context from this context which may be a parent of the context the actual exception was thrown in.
+     */
+    def lateImplode(cause: Throwable): Nothing = 
+      Implosion(Exception("Context was thrown away, this crash report may not be accurate", (cause)))(using ctx)
+
+    def lateImplode(msg: Any): Nothing = 
+      lateImplode(AssertionError(msg))
 
     final def withOwner(owner: Symbol): Context =
       if (owner ne this.owner) fresh.setOwner(owner) else this

@@ -280,7 +280,7 @@ trait MessageRendering {
     sb.toString
   }
 
-  private  def hl(str: String)(using Context, Level): String =
+  private def hl(str: String)(using Context, Level): String =
     summon[Level].value match
       case interfaces.Diagnostic.ERROR   => Red(str).show
       case interfaces.Diagnostic.WARNING => Yellow(str).show

@@ -1,5 +1,8 @@
 package dotty
 
+import scala.compiletime.*
+import dotty.tools.dotc.core.Contexts.*
+
 package object tools {
 
   val ListOfNil: List[Nil.type] = Nil :: Nil
@@ -38,13 +41,34 @@ package object tools {
 
   def unreachable(x: Any = "<< this case was declared unreachable >>"): Nothing =
     throw new MatchError(x)
+  
 
   transparent inline def assertShort(inline assertion: Boolean, inline message: Any = null): Unit =
     if !assertion then
-      val msg = message
-      val e = if msg == null then AssertionError() else AssertionError("assertion failed: " + msg)
-      e.setStackTrace(Array())
-      throw e
+    summonFrom {
+      case ctx: Context =>  throwAssertionError(message, ctx, truncateStack = true)
+      case _ => throwAssertionError(message, null, truncateStack = true)
+    }
+    
+  transparent inline def assert(inline assertion: Boolean): Unit =
+    assert(assertion, null)
+  
+  transparent inline def assert(inline assertion: Boolean, inline message: Any): Unit =
+    if !assertion then
+    summonFrom {
+      case ctx: Context =>  throwAssertionError(message, ctx)
+      case _ => throwAssertionError(message, null)
+    }
+
+  // extracted from `assert` to make it as small (and inlineable) as possible
+  private def throwAssertionError(message: Any | Null, ctx: Context | Null, truncateStack: Boolean = false): Nothing =
+
+    val assertionError = AssertionError("assertion failed: " + String.valueOf(message).nn)
+    if truncateStack then assertionError.setStackTrace(Array())
+    if ctx == null then
+      throw assertionError
+    else 
+      ctx.implode(assertionError)
 
   // Ensure this object is already classloaded, since it's only actually used
   // when handling stack overflows and every operation (including class loading)

@@ -2368,10 +2368,10 @@ class JSCodeGen()(using genCtx: Context) {
     // Construct inline class definition
 
     val jsClassCaptures = originalClassDef.jsClassCaptures.getOrElse {
-      throw new AssertionError(s"no class captures for anonymous JS class at $pos")
+      ctx.implode(s"no class captures for anonymous JS class at $pos")
     }
     val js.JSConstructorDef(_, ctorParams, ctorRestParam, ctorBody) = constructor.getOrElse {
-      throw new AssertionError("No ctor found")
+      ctx.implode("No ctor found")
     }
     assert(ctorParams.isEmpty && ctorRestParam.isEmpty,
         s"non-empty constructor params for anonymous JS class at $pos")
@@ -2396,17 +2396,17 @@ class JSCodeGen()(using genCtx: Context) {
 
     val memberDefinitions0 = instanceMembers.toList.map {
       case fdef: js.FieldDef =>
-        throw new AssertionError("unexpected FieldDef")
+        ctx.implode("unexpected FieldDef")
 
       case fdef: js.JSFieldDef =>
         implicit val pos = fdef.pos
         js.Assign(js.JSSelect(selfRef, fdef.name), jstpe.zeroOf(fdef.ftpe))
 
       case mdef: js.MethodDef =>
-        throw new AssertionError("unexpected MethodDef")
+        ctx.implode("unexpected MethodDef")
 
       case cdef: js.JSConstructorDef =>
-        throw new AssertionError("unexpected JSConstructorDef")
+        ctx.implode("unexpected JSConstructorDef")
 
       case mdef: js.JSMethodDef =>
         implicit val pos = mdef.pos
@@ -2773,7 +2773,7 @@ class JSCodeGen()(using genCtx: Context) {
     if (from == to || from == jstpe.NothingType) {
       value
     } else if (from == jstpe.BooleanType || to == jstpe.BooleanType) {
-      throw new AssertionError(s"Invalid genConversion from $from to $to")
+      ctx.implode(s"Invalid genConversion from $from to $to")
     } else {
       def intValue = (from: @unchecked) match {
         case jstpe.IntType    => value
@@ -3134,7 +3134,7 @@ class JSCodeGen()(using genCtx: Context) {
           case value :: Nil =>
             genSelectSet(genExpr(jsName), value)
           case _ =>
-            throw new AssertionError(s"property methods should have 0 or 1 non-varargs arguments at $pos")
+            ctx.implode(s"property methods should have 0 or 1 non-varargs arguments at $pos")
         }
 
       case JSCallingConvention.BracketAccess =>
@@ -3144,7 +3144,7 @@ class JSCodeGen()(using genCtx: Context) {
           case keyArg :: valueArg :: Nil =>
             genSelectSet(keyArg, valueArg)
           case _ =>
-            throw new AssertionError(s"@JSBracketAccess methods should have 1 or 2 non-varargs arguments at $pos")
+            ctx.implode(s"@JSBracketAccess methods should have 1 or 2 non-varargs arguments at $pos")
         }
 
       case JSCallingConvention.BracketCall =>
@@ -3238,7 +3238,7 @@ class JSCodeGen()(using genCtx: Context) {
             s"Trying to call the super constructor of Object in a non-native JS class at $pos")
         genApplyMethod(genReceiver, sym, genScalaArgs)
       } else if (sym.isClassConstructor) {
-        throw new AssertionError(
+        ctx.implode(
             s"calling a JS super constructor should have happened in genPrimaryJSClassCtor at $pos")
       } else if (sym.owner.isNonNativeJSClass && !sym.isJSExposed) {
         // Reroute to the static method
@@ -3358,7 +3358,7 @@ class JSCodeGen()(using genCtx: Context) {
 
     clauses = clauses.reverse
     val defaultClause = optDefaultClause.getOrElse {
-      throw new AssertionError("No elseClause in pattern match")
+      ctx.implode("No elseClause in pattern match")
     }
 
     /* Builds a `js.Match`, but simplifies it to a `js.If` if there is only

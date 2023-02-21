@@ -4,6 +4,7 @@ import dotty.tools.FatalError
 import config.CompilerCommand
 import core.Comments.{ContextDoc, ContextDocstrings}
 import core.Contexts._
+import util.Implosion
 import core.{MacroClassLoader, TypeError}
 import dotty.tools.dotc.ast.Positioned
 import dotty.tools.io.AbstractFile
@@ -35,14 +36,11 @@ class Driver {
         run.compile(files)
         finish(compiler, run)
       catch
-        case ex: FatalError =>
-          report.error(ex.getMessage.nn) // signals that we should fail compilation.
-        case ex: TypeError =>
-          println(s"${ex.toMessage} while compiling ${files.map(_.path).mkString(", ")}")
-          throw ex
+        case ex: Implosion =>
+          // All handling related to the Implosion is done during creation, so we can swallow this
         case ex: Throwable =>
-          println(s"$ex while compiling ${files.map(_.path).mkString(", ")}")
-          throw ex
+          ctx.lateImplode(ex) //this should never happen except in the case of `FatalError`s
+
     ctx.reporter
 
   protected def finish(compiler: Compiler, run: Run)(using Context): Unit =

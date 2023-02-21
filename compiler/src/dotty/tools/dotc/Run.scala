@@ -179,10 +179,15 @@ class Run(comp: Compiler, ictx: Context) extends ImplicitRunInfo with Constraint
       compileSources(sources)
     catch
       case NonFatal(ex) =>
-        if units.nonEmpty then report.echo(i"exception occurred while compiling $units%, %")
-        else report.echo(s"exception occurred while compiling ${files.map(_.name).mkString(", ")}")
-        throw ex
-
+        try
+          if units.nonEmpty then ctx.lateImplode(i"exception occurred while compiling $units%, %")
+          else ctx.lateImplode(s"exception occurred while compiling ${files.map(_.name).mkString(", ")}")
+        catch 
+          case _: Implosion => 
+          
+      case _ : Implosion => 
+        // All handling related to the Implosion is done during creation, so we can swallow this
+        
   /** TODO: There's a fundamental design problem here: We assemble phases using `fusePhases`
    *  when we first build the compiler. But we modify them with -Yskip, -Ystop
    *  on each run. That modification needs to either transform the tree structure,

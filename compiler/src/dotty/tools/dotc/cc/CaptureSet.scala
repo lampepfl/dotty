@@ -690,7 +690,7 @@ object CaptureSet:
       upper.isAlwaysEmpty || upper.isConst && upper.elems.size == 1 && upper.elems.contains(r1)
     if variance > 0 || isExact then upper
     else if variance < 0 then CaptureSet.empty
-    else assert(false, i"trying to add $upper from $r via ${tm.getClass} in a non-variant setting")
+    else ctx.implode( i"trying to add $upper from $r via ${tm.getClass} in a non-variant setting")
 
   /** Apply `f` to each element in `xs`, and join result sets with `++` */
   def mapRefs(xs: Refs, f: CaptureRef => CaptureSet)(using Context): CaptureSet =

@@ -88,7 +88,7 @@ object TypeUtils {
     def toNestedPairs(using Context): Type =
       tupleElementTypes match
         case Some(types) => TypeOps.nestedPairs(types)
-        case None => throw new AssertionError("not a tuple")
+        case None => ctx.implode("not a tuple")
 
     def refinedWith(name: Name, info: Type)(using Context) = RefinedType(self, name, info)
 

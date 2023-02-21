@@ -256,7 +256,7 @@ abstract class BTypes {
      */
     final def maxValueType(other: BType): BType = {
 
-      def uncomparable: Nothing = throw new AssertionError(s"Cannot compute maxValueType: $this, $other")
+      def uncomparable: Nothing = ctx.implode(s"Cannot compute maxValueType: $this, $other")
 
       if (!other.isPrimitive && !other.isNothingType) uncomparable
 

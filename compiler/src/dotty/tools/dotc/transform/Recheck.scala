@@ -285,7 +285,7 @@ abstract class Recheck extends Phase, SymTransformer:
           constFold(tree, instantiate(fntpe, argTypes, tree.fun.symbol))
             //.showing(i"typed app $tree : $fntpe with ${tree.args}%, % : $argTypes%, % = $result")
         case tp =>
-          assert(false, i"unexpected type of ${tree.fun}: $funtpe")
+          ctx.implode(i"unexpected type of ${tree.fun}: $funtpe")
 
     def recheckTypeApply(tree: TypeApply, pt: Type)(using Context): Type =
       recheck(tree.fun).widen match

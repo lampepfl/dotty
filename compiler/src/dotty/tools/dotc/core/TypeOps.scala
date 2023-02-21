@@ -250,7 +250,7 @@ object TypeOps:
     }
 
     def mergeRefinedOrApplied(tp1: Type, tp2: Type): Type = {
-      def fail = throw new AssertionError(i"Failure to join alternatives $tp1 and $tp2")
+      def fail = ctx.implode(i"Failure to join alternatives $tp1 and $tp2")
       def fallback = tp2 match
         case AndType(tp21, tp22) =>
           mergeRefinedOrApplied(tp1, tp21) & mergeRefinedOrApplied(tp1, tp22)

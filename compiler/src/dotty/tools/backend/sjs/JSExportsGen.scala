@@ -176,7 +176,7 @@ final class JSExportsGen(jsCodeGen: JSCodeGen)(using Context) {
           js.TopLevelMethodExportDef(info.moduleID, methodDef)
 
         case Property =>
-          throw new AssertionError("found top-level exported property")
+          ctx.implode("found top-level exported property")
 
         case Field =>
           val sym = checkSingleField(tups)
@@ -222,7 +222,7 @@ final class JSExportsGen(jsCodeGen: JSCodeGen)(using Context) {
           js.JSFieldDef(flags, name, irTpe)
 
         case kind =>
-          throw new AssertionError(s"unexpected static export kind: $kind")
+          ctx.implode(s"unexpected static export kind: $kind")
       }
     }).toList
   }
@@ -743,7 +743,7 @@ final class JSExportsGen(jsCodeGen: JSCodeGen)(using Context) {
           val modAccessor = outer.info.allMembers.find { denot =>
             denot.symbol.is(Module) && denot.name.unexpandedName == name
           }.getOrElse {
-            throw new AssertionError(i"could not find module accessor for ${targetSym.fullName} at $pos")
+            ctx.implode(i"could not find module accessor for ${targetSym.fullName} at $pos")
           }.symbol
 
           val receiver = captures.head

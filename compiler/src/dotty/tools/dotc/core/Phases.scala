@@ -22,6 +22,8 @@ import ast.{tpd, untpd}
 import scala.annotation.internal.sharable
 import scala.util.control.NonFatal
 
+
+
 object Phases {
 
   inline def phaseOf(id: PhaseId)(using Context): Phase =
@@ -322,9 +324,10 @@ object Phases {
       units.map { unit =>
         val unitCtx = ctx.fresh.setPhase(this.start).setCompilationUnit(unit).withRootImports
         try run(using unitCtx)
-        catch case ex: Throwable =>
-          println(s"$ex while running $phaseName on $unit")
-          throw ex
+        catch 
+          case NonFatal(ex)  =>
+            unitCtx.lateImplode(Exception(i"$ex while running $phaseName on $unit", ex))
+          
         unitCtx.compilationUnit
       }
 

@@ -125,10 +125,11 @@ class ReTyper(nestingLevel: Int = 0) extends Typer(nestingLevel) with ReChecking
   override def typedUnadapted(tree: untpd.Tree, pt: Type, locked: TypeVars)(using Context): Tree =
     try super.typedUnadapted(tree, pt, locked)
     catch {
-      case NonFatal(ex) =>
-        if ctx.phase != Phases.typerPhase && ctx.phase != Phases.inliningPhase then
-          println(i"exception while typing $tree of class ${tree.getClass} # ${tree.uniqueId}")
-        throw ex
+      case NonFatal(ex) if ctx.phase != Phases.typerPhase && ctx.phase != Phases.inliningPhase =>
+        ctx.lateImplode(
+          Exception(i"exception while typing $tree of class ${tree.getClass} # ${tree.uniqueId}", ex)
+        )
+        
     }
 
   override def inlineExpansion(mdef: DefDef)(using Context): List[Tree] = mdef :: Nil

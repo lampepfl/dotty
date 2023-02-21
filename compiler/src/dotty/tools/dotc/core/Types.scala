@@ -3113,8 +3113,8 @@ object Types {
 
     override def underlying(using Context): Type = parent
 
-    private def badInst =
-      throw new AssertionError(s"bad instantiation: $this")
+    private def badInst(using Context) =
+      ctx.implode(s"bad instantiation: $this")
 
     def checkInst(using Context): this.type = this // debug hook
 

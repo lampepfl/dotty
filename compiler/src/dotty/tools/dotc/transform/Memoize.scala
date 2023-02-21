@@ -65,7 +65,7 @@ class Memoize extends MiniPhase with IdentityDenotTransformer { thisPhase =>
   override def checkPostCondition(tree: Tree)(using Context): Unit = {
     def errorLackImplementation(t: Tree) = {
       val definingPhase = phaseOf(t.symbol.initial.validFor.firstPhaseId)
-      throw new AssertionError(
+      ctx.implode(
         i"Non-deferred definition introduced by $definingPhase lacks implementation: $t")
     }
     tree match {
