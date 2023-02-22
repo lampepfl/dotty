@@ -1245,7 +1245,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
 
     val pt1 = pt.strippedDealias.normalized
     if (pt1 ne pt1.dropDependentRefinement)
-       && defn.isContextFunctionType(pt1.nonPrivateMember(nme.apply).info.finalResultType)
+       && pt1.nonPrivateMember(nme.apply).info.finalResultType.isContextFunctionType
     then
       report.error(
         em"""Implementation restriction: Expected result type $pt1
@@ -1440,7 +1440,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
       case ident: untpd.Ident if isContextual =>
         val ident1 = typedIdent(ident, WildcardType)
         val tp = ident1.tpe.widen
-        if defn.isContextFunctionType(tp) && params.size == defn.functionArity(tp) then
+        if tp.isContextFunctionType && params.size == defn.functionArity(tp) then
           paramIndex = params.map(_.name).zipWithIndex.toMap
           fnBody = untpd.TypedSplice(ident1)
           tp.select(nme.apply)
@@ -2420,7 +2420,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
             params <- paramss1.dropWhile(TypeDefs.unapply(_).isDefined).take(1)
             case param: ValDef <- params
           do
-            if defn.isContextFunctionType(param.tpt.tpe) then
+            if param.tpt.tpe.isContextFunctionType then
               report.error("case class element cannot be a context function", param.srcPos)
       else
         if sym.targetName != sym.name then
@@ -2996,7 +2996,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
         }
 
         try
-          val ifpt = defn.asContextFunctionType(pt)
+          val ifpt = pt.asContextFunctionType
           val result =
             if ifpt.exists
               && xtree.isTerm
@@ -3793,7 +3793,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
     }
 
     def adaptNoArgsOther(wtp: Type, functionExpected: Boolean): Tree = {
-      val implicitFun = defn.isContextFunctionType(wtp) && !untpd.isContextualClosure(tree)
+      val implicitFun = wtp.isContextFunctionType && !untpd.isContextualClosure(tree)
       def caseCompanion =
           functionExpected &&
           tree.symbol.is(Module) &&

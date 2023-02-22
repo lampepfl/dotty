@@ -1104,7 +1104,7 @@ trait Implicits:
       val locked = ctx.typerState.ownedVars
       val adapted =
         if argument.isEmpty then
-          if defn.isContextFunctionType(pt) then
+          if pt.isContextFunctionType then
             // need to go through typed, to build the context closure
             typed(untpd.TypedSplice(generated), pt, locked)
           else

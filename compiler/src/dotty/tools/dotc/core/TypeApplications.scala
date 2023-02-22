@@ -253,7 +253,7 @@ class TypeApplications(val self: Type) extends AnyVal {
   /** If self type is higher-kinded, its result type, otherwise NoType.
    *  Note: The hkResult of an any-kinded type is again AnyKind.
    */
-  def hkResult(using Context): Type = self.dealias match {
+  def hkResult(using Context): Type = self match {
     case self: TypeRef =>
       if (self.symbol == defn.AnyKindClass) self else self.info.hkResult
     case self: AppliedType =>
@@ -261,10 +261,6 @@ class TypeApplications(val self: Type) extends AnyVal {
     case self: HKTypeLambda => self.resultType
     case _: SingletonType | _: RefinedType | _: RecType => NoType
     case self: WildcardType => self.optBounds.hkResult
-    case self: TypeVar =>
-      // Using `origin` instead of `underlying`, as is done for typeParams,
-      // avoids having to set ephemeral in some cases.
-      self.origin.hkResult
     case self: TypeProxy => self.superType.hkResult
     case _ => NoType
   }

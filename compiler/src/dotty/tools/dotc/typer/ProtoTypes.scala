@@ -45,7 +45,7 @@ object ProtoTypes {
      *  returning false instead.
      */
     def necessarilyCompatible(tp: Type, pt: Type)(using Context): Boolean =
-      val tpn = normalize(tp, pt, followIFT = !defn.isContextFunctionType(pt))
+      val tpn = normalize(tp, pt, followIFT = !pt.isContextFunctionType)
       necessarySubType(tpn, pt) || tpn.isValueSubType(pt) || viewExists(tpn, pt)
 
     /** Test compatibility after normalization.
@@ -841,7 +841,7 @@ object ProtoTypes {
       case et: ExprType =>
         normalize(et.resultType, pt)
       case wtp =>
-        val iftp = defn.asContextFunctionType(wtp)
+        val iftp = wtp.asContextFunctionType
         if iftp.exists && followIFT then normalize(iftp.dropDependentRefinement.argInfos.last, pt)
         else tp
     }

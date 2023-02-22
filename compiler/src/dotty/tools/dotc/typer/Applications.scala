@@ -746,7 +746,7 @@ trait Applications extends Compatibility {
   class ApplicableToTrees(methRef: TermRef, args: List[Tree], resultType: Type, argMatch: ArgMatch)(using Context)
   extends TestApplication(methRef, methRef.widen, args, resultType, argMatch) {
     def argType(arg: Tree, formal: Type): Type =
-      if untpd.isContextualClosure(arg) && defn.isContextFunctionType(formal) then arg.tpe
+      if untpd.isContextualClosure(arg) && formal.isContextFunctionType then arg.tpe
       else normalize(arg.tpe, formal)
     def treeToArg(arg: Tree): Tree = arg
     def isVarArg(arg: Tree): Boolean = tpd.isWildcardStarArg(arg)

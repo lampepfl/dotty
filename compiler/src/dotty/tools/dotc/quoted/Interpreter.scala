@@ -133,7 +133,7 @@ class Interpreter(pos: SrcPos, classLoader0: ClassLoader)(using Context):
         val argTypes = fnType.paramInfos
         assert(argss.head.size == argTypes.size)
         interpretArgsGroup(argss.head, argTypes) ::: interpretArgs(argss.tail, fnType.resType)
-      case fnType: AppliedType if defn.isContextFunctionType(fnType) =>
+      case fnType: AppliedType if fnType.isContextFunctionType =>
         val argTypes :+ resType = fnType.args: @unchecked
         interpretArgsGroup(argss.head, argTypes) ::: interpretArgs(argss.tail, resType)
       case fnType: PolyType => interpretArgs(argss, fnType.resType)
@@ -309,7 +309,7 @@ class Interpreter(pos: SrcPos, classLoader0: ClassLoader)(using Context):
       else java.lang.Class.forName(javaSig(param), false, classLoader)
     }
     def getExtraParams(tp: Type): List[Type] = tp.widenDealias match {
-      case tp: AppliedType if defn.isContextFunctionType(tp) =>
+      case tp: AppliedType if tp.isContextFunctionType =>
         // Call context function type direct method
         tp.args.init.map(arg => TypeErasure.erasure(arg)) ::: getExtraParams(tp.args.last)
       case _ => Nil
@@ -337,7 +337,7 @@ object Interpreter:
 
     private object Call0 {
       def unapply(arg: Tree)(using Context): Option[(RefTree, List[List[Tree]])] = arg match {
-        case Select(Call0(fn, args), nme.apply) if defn.isContextFunctionType(fn.tpe.widenDealias.finalResultType) =>
+        case Select(Call0(fn, args), nme.apply) if fn.tpe.widenDealias.finalResultType.isContextFunctionType =>
           Some((fn, args))
         case fn: Ident => Some((tpd.desugarIdent(fn).withSpan(fn.span), Nil))
         case fn: Select => Some((fn, Nil))

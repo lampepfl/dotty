@@ -3,6 +3,7 @@ package dotc
 package core
 
 import Symbols._, Types._, Contexts._, Flags._, Names._, StdNames._, Phases._
+import SymDenotations.*
 import Flags.JavaDefined
 import Uniques.unique
 import TypeOps.makePackageObjPrefixExplicit
@@ -24,7 +25,7 @@ enum SourceLanguage:
   def isScala3: Boolean = this eq Scala3
 object SourceLanguage:
   /** The language in which `sym` was defined. */
-  def apply(sym: Symbol)(using Context): SourceLanguage =
+  def apply(sym: SymDenotation)(using Context): SourceLanguage =
     if sym.is(JavaDefined) then
       SourceLanguage.Java
     // Scala 2 methods don't have Inline set, except for the ones injected with `patchStdlibClass`

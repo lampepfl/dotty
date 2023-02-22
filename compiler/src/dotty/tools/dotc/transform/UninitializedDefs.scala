@@ -34,7 +34,7 @@ class UninitializedDefs extends MiniPhase:
       case rhs: RefTree =>
         rhs.symbol == defn.Compiletime_uninitialized
         && tree.symbol.is(Mutable) && tree.symbol.owner.isClass
-      case closureDef(ddef) if defn.isContextFunctionType(tree.tpt.tpe.dealias) =>
+      case closureDef(ddef) if tree.tpt.tpe.dealias.isContextFunctionType =>
         recur(ddef.rhs)
       case _ =>
         false

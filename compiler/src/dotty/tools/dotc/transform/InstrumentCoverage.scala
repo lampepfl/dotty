@@ -399,7 +399,7 @@ class InstrumentCoverage extends MacroTransform with IdentityDenotTransformer:
       */
       body match
         case b @ Block((meth: DefDef) :: Nil, closure: Closure)
-        if meth.symbol == closure.meth.symbol && defn.isContextFunctionType(body.tpe) =>
+        if meth.symbol == closure.meth.symbol && body.tpe.isContextFunctionType =>
           val instr = cpy.DefDef(meth)(rhs = instrumentBody(parent, meth.rhs))
           cpy.Block(b)(instr :: Nil, closure)
         case _ =>

@@ -411,7 +411,7 @@ object SymUtils:
        *                  enclosing the return expression
        */
       def instantiateCFT(pt: Type, paramss: => List[List[Symbol]]): Type =
-        val ift = defn.asContextFunctionType(pt)
+        val ift = pt.asContextFunctionType
         if ift.exists then
           ift.nonPrivateMember(nme.apply).info match
             case appType: MethodType =>

@@ -1753,7 +1753,7 @@ class QuotesImpl private (using val ctx: Context) extends Quotes, QuoteUnpickler
         def isFunctionType: Boolean =
           dotc.core.Symbols.defn.isFunctionType(self)
         def isContextFunctionType: Boolean =
-          dotc.core.Symbols.defn.isContextFunctionType(self)
+          self.isContextFunctionType
         def isErasedFunctionType: Boolean =
           dotc.core.Symbols.defn.isErasedFunctionType(self)
         def isDependentFunctionType: Boolean =

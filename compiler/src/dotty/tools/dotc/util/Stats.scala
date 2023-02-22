@@ -10,6 +10,7 @@ import collection.mutable
 @sharable object Stats {
 
   inline val enabled = false
+  inline val stackTraceEnabled = false
 
   var monitored: Boolean = false
 
@@ -65,4 +66,15 @@ import collection.mutable
           println(hits.toList.sortBy(_._2).map{ case (x, y) => s"$x -> $y" } mkString "\n")
           hits.clear()
     else op
+
+  def recordElem(prefix: String, i: Int, st: StackTraceElement) =
+    record(s"$prefix from $i, ${st.getClassName()}#${st.getMethodName()}/${st.getLineNumber}")
+
+  inline def recordStackTrace(prefix: String): Unit =
+    if enabled && stackTraceEnabled then
+      val ex = new Error()
+      val st = ex.getStackTrace().nn
+      if st.length > 1 then recordElem(prefix, 1, st(1).nn)
+      if st.length > 2 then recordElem(prefix, 2, st(2).nn)
+      if st.length > 3 then recordElem(prefix, 3, st(3).nn)
 }

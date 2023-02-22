@@ -48,7 +48,7 @@ class ExpandSAMs extends MiniPhase:
       tpt.tpe match {
         case NoType =>
           tree // it's a plain function
-        case tpe if defn.isContextFunctionType(tpe) =>
+        case tpe if tpe.isContextFunctionType =>
           tree
         case tpe @ SAMType(_) if tpe.isRef(defn.PartialFunctionClass) =>
           val tpe1 = checkRefinements(tpe, fn)
@@ -67,7 +67,7 @@ class ExpandSAMs extends MiniPhase:
   }
 
   private def checkNoContextFunction(tpt: Tree)(using Context): Unit =
-    if defn.isContextFunctionType(tpt.tpe) then
+    if tpt.tpe.isContextFunctionType then
       report.error(
         em"""Implementation restriction: cannot convert this expression to
             |partial function with context function result type $tpt""",

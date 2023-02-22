@@ -1492,7 +1492,7 @@ trait Checking {
   def checkNoContextFunctionType(tree: Tree)(using Context): Unit =
     def recur(tp: Type): Unit = tp.dealias match
       case tp: HKTypeLambda => recur(tp.resType)
-      case tp if defn.isContextFunctionType(tp) =>
+      case tp if tp.isContextFunctionType =>
         report.error(em"context function type cannot have opaque aliases", tree.srcPos)
       case _ =>
     recur(tree.tpe)

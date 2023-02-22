@@ -103,7 +103,7 @@ class Synthesizer(typer: Typer)(using @constructorOnly c: Context):
         def functionTypeEqual(baseFun: Type, actualArgs: List[Type],
             actualRet: Type, expected: Type) =
           expected =:= defn.FunctionOf(actualArgs, actualRet,
-            defn.isContextFunctionType(baseFun), defn.isErasedFunctionType(baseFun))
+            baseFun.isContextFunctionType, defn.isErasedFunctionType(baseFun))
         val arity: Int =
           if defn.isErasedFunctionType(fun) || defn.isErasedFunctionType(fun) then -1 // TODO support?
           else if defn.isFunctionType(fun) then

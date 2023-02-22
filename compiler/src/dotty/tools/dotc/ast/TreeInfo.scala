@@ -419,7 +419,7 @@ trait UntypedTreeInfo extends TreeInfo[Untyped] { self: Trees.Instance[Untyped] 
     case Block(Nil, expr) => isContextualClosure(expr)
     case Block(DefDef(nme.ANON_FUN, params :: _, _, _) :: Nil, cl: Closure) =>
       if params.isEmpty then
-        cl.tpt.eq(untpd.ContextualEmptyTree) || defn.isContextFunctionType(cl.tpt.typeOpt)
+        cl.tpt.eq(untpd.ContextualEmptyTree) || cl.tpt.typeOpt.isContextFunctionType
       else
         isUsingClause(params)
     case _ => false

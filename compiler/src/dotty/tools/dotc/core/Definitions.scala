@@ -1693,6 +1693,7 @@ class Definitions {
    *  instance?
    */
   def isNonRefinedFunction(tp: Type)(using Context): Boolean =
+    util.Stats.record(i"isNonRefinedFunction")
     val arity = functionArity(tp)
     val sym = tp.dealias.typeSymbol
 
@@ -1798,39 +1799,6 @@ class Definitions {
     Function0SpecializedApplyNames ++ Function1SpecializedApplyNames ++ Function2SpecializedApplyNames
 
   def functionArity(tp: Type)(using Context): Int = tp.dropDependentRefinement.dealias.argInfos.length - 1
-
-  /** Return underlying context function type (i.e. instance of an ContextFunctionN class)
-   *  or NoType if none exists. The following types are considered as underlying types:
-   *   - the alias of an alias type
-   *   - the instance or origin of a TypeVar (i.e. the result of a stripTypeVar)
-   *   - the upper bound of a TypeParamRef in the current constraint
-   */
-  def asContextFunctionType(tp: Type)(using Context): Type =
-    tp.stripTypeVar.dealias match
-      case tp1: TypeParamRef if ctx.typerState.constraint.contains(tp1) =>
-        asContextFunctionType(TypeComparer.bounds(tp1).hiBound)
-      case tp1 =>
-        if tp1.typeSymbol.name.isContextFunction && isFunctionType(tp1) then tp1
-        else NoType
-
-  /** Is `tp` an context function type? */
-  def isContextFunctionType(tp: Type)(using Context): Boolean =
-    asContextFunctionType(tp).exists
-
-  /** An extractor for context function types `As ?=> B`, possibly with
-   *  dependent refinements. Optionally returns a triple consisting of the argument
-   *  types `As`, the result type `B` and a whether the type is an erased context function.
-   */
-  object ContextFunctionType:
-    def unapply(tp: Type)(using Context): Option[(List[Type], Type, Boolean)] =
-      if ctx.erasedTypes then
-        atPhase(erasurePhase)(unapply(tp))
-      else
-        val tp1 = asContextFunctionType(tp)
-        if tp1.exists then
-          val args = tp1.dropDependentRefinement.argInfos
-          Some((args.init, args.last, tp1.typeSymbol.name.isErasedFunction))
-        else None
 
   def isErasedFunctionType(tp: Type)(using Context): Boolean =
     tp.dealias.typeSymbol.name.isErasedFunction && isFunctionType(tp)

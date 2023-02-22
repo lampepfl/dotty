@@ -107,12 +107,16 @@ object Symbols {
       else computeDenot(lastDenot)
     }
 
-    private def computeDenot(lastd: SymDenotation)(using Context): SymDenotation = {
+    private def computeDenot(lastd: SymDenotation)(using Context): SymDenotation =
       util.Stats.record("Symbol.computeDenot")
       val now = ctx.period
       checkedPeriod = now
-      if (lastd.validFor contains now) lastd else recomputeDenot(lastd)
-    }
+      val valid = lastd.validFor.code
+      // Next condition is inlined from Period#contains, optimized since we know
+      // that `now` is a single phase period.
+      if ((valid - now.code) >>> PhaseWidth) <= (valid & PhaseMask)
+      then lastd
+      else recomputeDenot(lastd)
 
     /** Overridden in NoSymbol */
     protected def recomputeDenot(lastd: SymDenotation)(using Context): SymDenotation = {
