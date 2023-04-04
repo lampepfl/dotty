@@ -598,6 +598,9 @@ class Inliner(val call: tpd.Tree)(using Context):
           // reference to a private method is kept at runtime.
           cpy.Select(tree)(qual.asInstance(qual.tpe.widen), name)
 
+        case tree: ImportOrExport =>
+          EmptyTree
+
         case tree => tree
       },
       oldOwners = inlinedMethod :: Nil,

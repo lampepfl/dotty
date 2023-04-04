@@ -8,7 +8,7 @@ import util.SrcPos
 import config.{ScalaVersion, NoScalaVersion, Feature, ScalaRelease}
 import MegaPhase.MiniPhase
 import scala.util.{Failure, Success}
-import ast.tpd
+import ast.{tpd, untpd}
 
 class CrossVersionChecks extends MiniPhase:
   import tpd.*
@@ -20,6 +20,11 @@ class CrossVersionChecks extends MiniPhase:
 
   override def runsAfterGroupsOf: Set[String] = Set(FirstTransform.name)
     // We assume all type trees except TypeTree have been eliminated
+
+  override def checkPostCondition(tree: Tree)(using Context): Unit = tree match
+    case tree: Import =>
+      assert(untpd.languageImport(tree.expr).nonEmpty, i"illegal tree: $tree")
+    case _ =>
 
   // Note: if a symbol has both @deprecated and @migration annotations and both
   // warnings are enabled, only the first one checked here will be emitted.
@@ -168,7 +173,8 @@ class CrossVersionChecks extends MiniPhase:
         case t: RefTree => checkUndesiredProperties(t.symbol, t.srcPos)
         case _ =>
       }
-      tree
+      if untpd.languageImport(tree.expr).isEmpty then EmptyTree
+      else tree
     case _ => tree
 
 end CrossVersionChecks
