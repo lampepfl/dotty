@@ -342,6 +342,8 @@ object TypeErasure {
           repr1.orElse(repr2)
         else
           NoSymbol
+      case tp: FlexibleType =>
+        arrayUpperBound(tp.underlying)
       case _ =>
         NoSymbol
 
@@ -368,6 +370,8 @@ object TypeErasure {
         isGenericArrayElement(tp.tp1, isScala2) && isGenericArrayElement(tp.tp2, isScala2)
       case tp: OrType =>
         isGenericArrayElement(tp.tp1, isScala2) || isGenericArrayElement(tp.tp2, isScala2)
+      case tp: FlexibleType =>
+        isGenericArrayElement(tp.underlying, isScala2)
       case _ => false
     }
   }
@@ -557,6 +561,7 @@ object TypeErasure {
     case tp: TypeProxy => hasStableErasure(tp.translucentSuperType)
     case tp: AndType => hasStableErasure(tp.tp1) && hasStableErasure(tp.tp2)
     case tp: OrType  => hasStableErasure(tp.tp1) && hasStableErasure(tp.tp2)
+    case _: FlexibleType => false
     case _ => false
   }
 
@@ -659,6 +664,7 @@ class TypeErasure(sourceLanguage: SourceLanguage, semiEraseVCs: Boolean, isConst
       case tp: TypeVar if !tp.isInstantiated =>
         assert(inSigName, i"Cannot erase uninstantiated type variable $tp")
         WildcardType
+      case FlexibleType(tp) => this(tp)
       case tp: TypeProxy =>
         this(tp.underlying)
       case tp @ AndType(tp1, tp2) =>

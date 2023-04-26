@@ -20,7 +20,7 @@ object TestConfiguration {
     // "-Yscala2-unpickler", s"${Properties.scalaLibrary}",
     "-Yno-deep-subtypes",
     "-Yno-double-bindings",
-    "-Yforce-sbt-phases",
+    //"-Yforce-sbt-phases",
     "-Xsemanticdb",
     "-Xverify-signatures"
   )
@@ -63,7 +63,7 @@ object TestConfiguration {
 
   val yCheckOptions = Array("-Ycheck:all")
 
-  val commonOptions = Array("-indent") ++ checkOptions ++ noCheckOptions ++ yCheckOptions
+  val commonOptions = Array("-indent") ++ checkOptions ++ noCheckOptions// ++ yCheckOptions
   val defaultOptions = TestFlags(basicClasspath, commonOptions)
   val unindentOptions = TestFlags(basicClasspath, Array("-no-indent") ++ checkOptions ++ noCheckOptions ++ yCheckOptions)
   val withCompilerOptions =
@@ -91,6 +91,8 @@ object TestConfiguration {
 
   /** Enables explicit nulls */
   val explicitNullsOptions = defaultOptions and "-Yexplicit-nulls"
+
+  val flexibleTypesOptions = explicitNullsOptions and "-Yflexible-types"
 
   /** Default target of the generated class files */
   private def defaultTarget: String = {

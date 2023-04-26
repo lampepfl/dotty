@@ -368,6 +368,7 @@ object Types {
       case AppliedType(tycon, args) => tycon.unusableForInference || args.exists(_.unusableForInference)
       case RefinedType(parent, _, rinfo) => parent.unusableForInference || rinfo.unusableForInference
       case TypeBounds(lo, hi) => lo.unusableForInference || hi.unusableForInference
+      case tp: FlexibleType => tp.underlying.unusableForInference || tp.lo.unusableForInference
       case tp: AndOrType => tp.tp1.unusableForInference || tp.tp2.unusableForInference
       case tp: LambdaType => tp.resultType.unusableForInference || tp.paramInfos.exists(_.unusableForInference)
       case WildcardType(optBounds) => optBounds.unusableForInference
@@ -733,13 +734,17 @@ object Types {
           })
         case tp: TypeRef =>
           tp.denot match {
-            case d: ClassDenotation => d.findMember(name, pre, required, excluded)
+            case d: ClassDenotation =>
+              d.findMember(name, pre, required, excluded)
             case d => go(d.info)
           }
+        case tp: FlexibleType =>
+          go(tp.underlying)
         case tp: AppliedType =>
           tp.tycon match {
             case tc: TypeRef =>
-              if (tc.symbol.isClass) go(tc)
+              if (tc.symbol.isClass) then
+                go(tc)
               else {
                 val normed = tp.tryNormalize
                 go(if (normed.exists) normed else tp.superType)
@@ -1400,6 +1405,7 @@ object Types {
         case tp: ExprType => tp.resType.atoms
         case tp: OrType => tp.atoms // `atoms` overridden in OrType
         case tp: AndType => tp.tp1.atoms & tp.tp2.atoms
+        case tp: FlexibleType => tp.underlying.atoms
         case tp: TypeRef if tp.symbol.is(ModuleClass) =>
           // The atom of a module class is the module itself,
           // this corresponds to the special case in TypeComparer
@@ -1630,6 +1636,10 @@ object Types {
 
     /** The type <this . name> with given denotation, reduced if possible. */
     def select(name: Name, denot: Denotation)(using Context): Type =
+      /*println("select:")
+      println(name)
+      println(denot)
+      println(NamedType(this, name, denot).reduceProjection) // "method get" for level12.get(0)*/
       NamedType(this, name, denot).reduceProjection
 
     /** The type <this . sym>, reduced if possible */
@@ -1713,7 +1723,9 @@ object Types {
     }
 
     /** Is this (an alias of) the `scala.Null` type? */
-    final def isNullType(using Context) = isRef(defn.NullClass)
+    final def isNullType(using Context) = {
+      isRef(defn.NullClass)
+    }
 
     /** Is this (an alias of) the `scala.Nothing` type? */
     final def isNothingType(using Context) = isRef(defn.NothingClass)
@@ -2468,6 +2480,7 @@ object Types {
     private def argDenot(param: TypeSymbol)(using Context): Denotation = {
       val cls = param.owner
       val args = prefix.baseType(cls).argInfos
+      //throw new RuntimeException("")
       val typeParams = cls.typeParams
 
       def concretize(arg: Type, tparam: TypeSymbol) = arg match {
@@ -2494,6 +2507,7 @@ object Types {
       }
       else {
         if (!ctx.reporter.errorsReported)
+          //throw RuntimeException("")
           throw TypeError(
             em"""bad parameter reference $this at ${ctx.phase}
                 |the parameter is ${param.showLocated} but the prefix $prefix
@@ -3353,7 +3367,28 @@ object Types {
     }
   }
 
+  // --- FlexibleType -----------------------------------------------------------------
+
+  case class FlexibleType(tp: Type) extends CachedGroundType with ValueType {
+    def hi(using Context) = {
+      this.tp
+    }
+    def lo(using Context) = {
+      OrNull(this.tp)
+    }
+    override def show(using Context) = "FlexibleType("+tp.show+")"
+    def underlying(using Context) : Type = this.tp
+    def derivedFlexibleType(under: Type)(using Context): Type =
+      FlexibleType(under)
+    override def computeHash(bs: Binders): Int = doHash(bs, tp)
+    override def toString = "FlexibleType(%s)".format(tp)
+    //override def hash = NotCached
+  }
+
   // --- AndType/OrType ---------------------------------------------------------------
+
+  // -Vprint:all, -Vprint:typer, -Xprint-types
+  // use obj.show to pretty-print struct
 
   abstract class AndOrType extends CachedGroundType with ValueType {
     def isAnd: Boolean
@@ -5757,6 +5792,8 @@ object Types {
       tp.derivedJavaArrayType(elemtp)
     protected def derivedExprType(tp: ExprType, restpe: Type): Type =
       tp.derivedExprType(restpe)
+    protected def derivedFlexibleType(tp: FlexibleType, under: Type): Type =
+      tp.derivedFlexibleType(under)
     // note: currying needed  because Scala2 does not support param-dependencies
     protected def derivedLambdaType(tp: LambdaType)(formals: List[tp.PInfo], restpe: Type): Type =
       tp.derivedLambdaType(tp.paramNames, formals, restpe)
@@ -5877,6 +5914,9 @@ object Types {
 
         case tp: OrType =>
           derivedOrType(tp, this(tp.tp1), this(tp.tp2))
+
+        case tp: FlexibleType =>
+          derivedFlexibleType(tp, this(tp.underlying))
 
         case tp: MatchType =>
           val bound1 = this(tp.bound)
@@ -6166,6 +6206,14 @@ object Types {
           if (underlying.isExactlyNothing) underlying
           else tp.derivedAnnotatedType(underlying, annot)
       }
+    override protected def derivedFlexibleType(tp: FlexibleType, underlying: Type): Type =
+      underlying match {
+        case Range(lo, hi) =>
+          range(tp.derivedFlexibleType(lo), tp.derivedFlexibleType(hi))
+        case _ =>
+          if (underlying.isExactlyNothing) underlying
+          else tp.derivedFlexibleType(underlying)
+      }
     override protected def derivedCapturingType(tp: Type, parent: Type, refs: CaptureSet): Type =
       parent match // TODO ^^^ handle ranges in capture sets as well
         case Range(lo, hi) =>
@@ -6305,6 +6353,9 @@ object Types {
         if stopBecauseStaticOrLocal(tp) then x else applyToPrefix(x, tp)
 
       case tp: TypeVar =>
+        this(x, tp.underlying)
+
+      case tp: FlexibleType =>
         this(x, tp.underlying)
 
       case ExprType(restpe) =>

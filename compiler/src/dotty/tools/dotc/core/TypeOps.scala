@@ -52,7 +52,6 @@ object TypeOps:
         Stats.record("asSeenFrom skolem prefix required")
       case _ =>
     }
-
     new AsSeenFromMap(pre, cls).apply(tp)
   }
 
@@ -237,6 +236,7 @@ object TypeOps:
         if tp1.isBottomType && (tp1 frozen_<:< tp2) then orBaseClasses(tp2)
         else if tp2.isBottomType && (tp2 frozen_<:< tp1) then orBaseClasses(tp1)
         else intersect(orBaseClasses(tp1), orBaseClasses(tp2))
+      case FlexibleType(tp1) => orBaseClasses(tp1)
       case _ => tp.baseClasses
 
     /** The minimal set of classes in `cs` which derive all other classes in `cs` */

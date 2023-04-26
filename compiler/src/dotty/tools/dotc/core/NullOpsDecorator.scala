@@ -8,6 +8,12 @@ import Types._
 object NullOpsDecorator:
 
   extension (self: Type)
+    def stripFlexible(using Context): Type = {
+      self match {
+        case FlexibleType(tp) => tp
+        case _ => self
+      }
+    }
     /** Syntactically strips the nullability from this type.
      *  If the type is `T1 | ... | Tn`, and `Ti` references to `Null`,
      *  then return `T1 | ... | Ti-1 | Ti+1 | ... | Tn`.
@@ -33,6 +39,7 @@ object NullOpsDecorator:
             if (tp1s ne tp1) && (tp2s ne tp2) then
               tp.derivedAndType(tp1s, tp2s)
             else tp
+          case tp @ FlexibleType(tp1) => strip(tp1)
           case tp @ TypeBounds(lo, hi) =>
             tp.derivedTypeBounds(strip(lo), strip(hi))
           case tp => tp

@@ -382,6 +382,7 @@ private sealed trait YSettings:
   // Experimental language features
   val YnoKindPolymorphism: Setting[Boolean] = BooleanSetting("-Yno-kind-polymorphism", "Disable kind polymorphism.")
   val YexplicitNulls: Setting[Boolean] = BooleanSetting("-Yexplicit-nulls", "Make reference types non-nullable. Nullable types can be expressed with unions: e.g. String|Null.")
+  val YflexibleTypes: Setting[Boolean] = BooleanSetting("-Yflexible-types", "Make Java return types and parameter types use flexible types. Flexible types essentially circumvent explicit nulls and force something resembling the old type system for Java interop.")
   val YcheckInit: Setting[Boolean] = BooleanSetting("-Ysafe-init", "Ensure safe initialization of objects.")
   val YcheckInitGlobal: Setting[Boolean] = BooleanSetting("-Ysafe-init-global", "Check safe initialization of global objects.")
   val YrequireTargetName: Setting[Boolean] = BooleanSetting("-Yrequire-targetName", "Warn if an operator is defined without a @targetName annotation.")

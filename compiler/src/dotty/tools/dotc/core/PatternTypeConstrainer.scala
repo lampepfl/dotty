@@ -10,6 +10,7 @@ import Contexts.ctx
 import dotty.tools.dotc.reporting.trace
 import config.Feature.migrateTo3
 import config.Printers._
+import dotty.tools.dotc.core.NullOpsDecorator.stripFlexible
 
 trait PatternTypeConstrainer { self: TypeComparer =>
 
@@ -175,7 +176,7 @@ trait PatternTypeConstrainer { self: TypeComparer =>
       case tp => tp
     }
 
-    dealiasDropNonmoduleRefs(scrut) match {
+    dealiasDropNonmoduleRefs(scrut.stripFlexible) match {
       case OrType(scrut1, scrut2) =>
         either(constrainPatternType(pat, scrut1), constrainPatternType(pat, scrut2))
       case AndType(scrut1, scrut2) =>
