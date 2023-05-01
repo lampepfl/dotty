@@ -13,7 +13,7 @@ class Foo {
 
 
 object Test {
-  def main() = {
+  def main(args: Array[String]): Unit = {
     val i : Integer = new Integer(3) // Constructor with non-ref arg
     val s1 : String | Null = new String("abc") // Constructor with ref arg
     val s2 : String = new String("abc") // Constructor with ref arg, not null
