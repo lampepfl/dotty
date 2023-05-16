@@ -191,7 +191,14 @@ trait Dynamic {
 
       val scall =
         if (vargss.isEmpty) base
-        else untpd.Apply(base, vargss.flatten.map(untpd.TypedSplice(_)))
+        else untpd.Apply(base, vargss.flatten.map{ t =>
+          val clzSym = t.tpe.resultType.classSymbol.asClass
+          if ValueClasses.isDerivedValueClass(clzSym) then
+            val x = ValueClasses.valueClassUnbox(clzSym).asTerm
+            tpd.Select(t, x.name)
+          else
+            t
+        }.map(untpd.TypedSplice(_)))
 
       // If function is an `applyDynamic` that takes a Class* parameter,
       // add `classOfs`.
@@ -261,7 +268,12 @@ trait Dynamic {
             if tpe.paramInfoss.nestedExists(!TypeErasure.hasStableErasure(_)) then
               fail(i"has a parameter type with an unstable erasure") :: Nil
             else
-              TypeErasure.erasure(tpe).asInstanceOf[MethodType].paramInfos.map(clsOf(_))
+              TypeErasure.erasure(tpe).asInstanceOf[MethodType].paramInfos.map { tpe =>
+                if ValueClasses.isDerivedValueClass(tpe.widen.classSymbol) then
+                  clsOf(ValueClasses.valueClassUnbox(tpe.classSymbol.asClass).info)
+                else
+                  clsOf(tpe)
+              }
           structuralCall(nme.applyDynamic, classOfs).maybeBoxingCast(tpe.finalResultType)
         }
 
