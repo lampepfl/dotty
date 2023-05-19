@@ -2451,6 +2451,17 @@ class SynchronizedCallOnBoxedClass(stat: tpd.Tree)(using Context)
         |you intended."""
 }
 
+class ExtensionNullifiedByMember(method: Symbol, target: Symbol)(using Context)
+  extends Message(ExtensionNullifiedByMemberID):
+  def kind = MessageKind.PotentialIssue
+  def msg(using Context) =
+    i"""Extension method ${hl(method.name.toString)} will never be selected
+       |because ${hl(target.name.toString)} already has a member with the same name."""
+  def explain(using Context) =
+    i"""An extension method can be invoked as a regular method, but if that is intended,
+       |it should not be defined as an extension.
+       |Although extensions can be overloaded, they do not overload existing member methods."""
+
 class TraitCompanionWithMutableStatic()(using Context)
   extends SyntaxMsg(TraitCompanionWithMutableStaticID) {
   def msg(using Context) = i"Companion of traits cannot define mutable @static fields"

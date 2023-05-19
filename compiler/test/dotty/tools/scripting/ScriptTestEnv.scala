@@ -217,8 +217,10 @@ object ScriptTestEnv {
 
     def toUrl: String = Paths.get(absPath).toUri.toURL.toString
 
+    // Used to be an extension on String
     // Treat norm paths with a leading '/' as absolute (Windows java.io.File#isAbsolute treats them as relative)
-    def isAbsolute = p.norm.startsWith("/") || (isWin && p.norm.secondChar == ":")
+    //@annotation.nowarn // hidden by Path#isAbsolute
+    //def isAbsolute = p.norm.startsWith("/") || (isWin && p.norm.secondChar == ":")
   }
 
   extension(f: File) {

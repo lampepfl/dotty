@@ -6,7 +6,9 @@ given Conversion[A, B] with {
   def apply(a: A): B = ???
 }
 
-extension (a: A) def extended_bar(): String = ???
+extension (a: A)
+  @annotation.nowarn
+  def extended_bar(): String = ???
 
 class A {
   implicit def conversion(c: C): D = ???
@@ -45,7 +47,7 @@ class B {
 class C {
   def extensionInCompanion: String = ???
 }
-
+@annotation.nowarn // extensionInCompanion
 object C {
   implicit def companionConversion(c: C): B = ???
 

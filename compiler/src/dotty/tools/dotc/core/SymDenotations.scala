@@ -1355,7 +1355,7 @@ object SymDenotations {
      *  @param inClass   The class containing the result symbol's definition
      *  @param site      The base type from which member types are computed
      *
-     *  inClass <-- find denot.symbol      class C { <-- symbol is here
+     *  inClass <-- find denot.symbol      class C { <-- symbol is here }
      *
      *                   site: Subtype of both inClass and C
      */

@@ -1,0 +1,84 @@
+-- [E194] Potential Issue Warning: tests/warn/i16743.scala:30:6 --------------------------------------------------------
+30 |  def t = 27 // warn
+   |      ^
+   |      Extension method t will never be selected
+   |      because T already has a member with the same name.
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E194] Potential Issue Warning: tests/warn/i16743.scala:32:6 --------------------------------------------------------
+32 |  def g(x: String)(i: Int): String = x*i // warn
+   |      ^
+   |      Extension method g will never be selected
+   |      because T already has a member with the same name.
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E194] Potential Issue Warning: tests/warn/i16743.scala:33:6 --------------------------------------------------------
+33 |  def h(x: String): String = x // warn
+   |      ^
+   |      Extension method h will never be selected
+   |      because T already has a member with the same name.
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E194] Potential Issue Warning: tests/warn/i16743.scala:35:6 --------------------------------------------------------
+35 |  def j(x: Any, y: Int): String = (x.toString)*y // warn
+   |      ^
+   |      Extension method j will never be selected
+   |      because T already has a member with the same name.
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E194] Potential Issue Warning: tests/warn/i16743.scala:36:6 --------------------------------------------------------
+36 |  def k(x: String): String = x // warn
+   |      ^
+   |      Extension method k will never be selected
+   |      because T already has a member with the same name.
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E194] Potential Issue Warning: tests/warn/i16743.scala:38:6 --------------------------------------------------------
+38 |  def m(using String): String = "m" + summon[String] // warn
+   |      ^
+   |      Extension method m will never be selected
+   |      because T already has a member with the same name.
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E194] Potential Issue Warning: tests/warn/i16743.scala:39:6 --------------------------------------------------------
+39 |  def n(using String): String = "n" + summon[String] // warn
+   |      ^
+   |      Extension method n will never be selected
+   |      because T already has a member with the same name.
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E194] Potential Issue Warning: tests/warn/i16743.scala:40:6 --------------------------------------------------------
+40 |  def o: String = "42" // warn
+   |      ^
+   |      Extension method o will never be selected
+   |      because T already has a member with the same name.
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E194] Potential Issue Warning: tests/warn/i16743.scala:41:6 --------------------------------------------------------
+41 |  def u: Int = 27 // warn
+   |      ^
+   |      Extension method u will never be selected
+   |      because T already has a member with the same name.
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E194] Potential Issue Warning: tests/warn/i16743.scala:44:6 --------------------------------------------------------
+44 |  def at: Int = 42 // warn
+   |      ^
+   |      Extension method at will never be selected
+   |      because T already has a member with the same name.
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E194] Potential Issue Warning: tests/warn/i16743.scala:46:6 --------------------------------------------------------
+46 |  def x(using String)(n: Int): Int = summon[String].toInt + n // warn
+   |      ^
+   |      Extension method x will never be selected
+   |      because T already has a member with the same name.
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E194] Potential Issue Warning: tests/warn/i16743.scala:47:6 --------------------------------------------------------
+47 |  def y(using String)(s: String): String = s + summon[String] // warn
+   |      ^
+   |      Extension method y will never be selected
+   |      because T already has a member with the same name.
+   |
+   | longer explanation available when compiling with `-explain`

@@ -22,22 +22,31 @@ final class Baz private (val x: Int) extends AnyVal {
 }
 
 extension (x: Int)
+  @annotation.nowarn
   def unary_- : Int = ???
+  @annotation.nowarn
   def unary_+[T] : Int = ???
   def unary_!() : Int = ??? // warn
+  @annotation.nowarn
   def unary_~(using Int) : Int = ???
 end extension
 
 extension [T](x: Short)
+  @annotation.nowarn
   def unary_- : Int = ???
+  @annotation.nowarn
   def unary_+[U] : Int = ???
   def unary_!() : Int = ??? // warn
+  @annotation.nowarn
   def unary_~(using Int) : Int = ???
 end extension
 
 extension (using Int)(x: Byte)
+  @annotation.nowarn
   def unary_- : Int = ???
+  @annotation.nowarn
   def unary_+[U] : Int = ???
   def unary_!() : Int = ??? // warn
+  @annotation.nowarn
   def unary_~(using Int) : Int = ???
 end extension
