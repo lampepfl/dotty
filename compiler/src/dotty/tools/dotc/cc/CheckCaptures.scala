@@ -203,6 +203,13 @@ class CheckCaptures extends Recheck, SymTransformer:
         interpolator().traverse(tpt.knownType)
           .showing(i"solved vars in ${tpt.knownType}", capt)
 
+    private def solveSeparationSetVarsIn(t: Type)(using Context) = new TypeTraverser:
+      override def traverse(t: Type) =
+        t.separationSet match
+          case seps: CaptureSet.Var => seps.solve()
+          case _ =>
+        traverseChildren(t)
+
     /** Assert subcapturing `cs1 <: cs2` */
     def assertSub(cs1: CaptureSet, cs2: CaptureSet)(using Context) =
       assert(cs1.subCaptures(cs2, frozen = false).isOK, i"$cs1 is not a subset of $cs2")
@@ -388,8 +395,12 @@ class CheckCaptures extends Recheck, SymTransformer:
      *      - add capture set of instantiated class to capture set of result type.
      */
     override def instantiate(mt: MethodType, argTypes: List[Type], sym: Symbol)(using Context): Type =
+      // !cc! the cache of isResultDependent may not be reliable
+      //      because of capture set inference, so here we always do
+      //      the substitution
       val ownType =
-        if mt.isResultDependent then SubstParamsMap(mt, argTypes)(mt.resType)
+        if mt.isResultDependent then
+          SubstParamsMap(mt, argTypes)(mt.resType)
         else mt.resType
 
       if sym.isConstructor then
@@ -504,6 +515,12 @@ class CheckCaptures extends Recheck, SymTransformer:
         try super.recheckDefDef(tree, sym)
         finally
           interpolateVarsIn(tree.tpt)
+
+          sym.paramSymss.flatMap(syms => syms).foreach { sym =>
+            //println(i"FREEZE sepset vars in $sym with info ${sym.info} after checking $tree")
+            solveSeparationSetVarsIn(sym.info)
+          }
+
           curEnv = saved
 
     /** Class-specific capture set relations:
@@ -636,7 +653,7 @@ class CheckCaptures extends Recheck, SymTransformer:
     private def alignDependentFunction(expected: Type, actual: Type)(using Context): Type =
       def recur(expected: Type): Type = expected.dealias match
         case expected @ CapturingType(eparent, refs) =>
-          CapturingType(recur(eparent), refs, boxed = expected.isBoxed)
+          expected.derivedCapturingType(recur(eparent), refs)
         case expected @ defn.FunctionOf(args, resultType, isContextual)
           if defn.isNonRefinedFunction(expected) && defn.isFunctionType(actual) && !defn.isNonRefinedFunction(actual) =>
           val expected1 = toDepFun(args, resultType, isContextual)

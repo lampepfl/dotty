@@ -144,7 +144,7 @@ class RefinedPrinter(_ctx: Context) extends PlainPrinter(_ctx) {
   private def arrow(isGiven: Boolean, isPure: Boolean): String =
     (if isGiven then "?" else "") + (if isPure then "->" else "=>")
 
-  private def toTextFunction(tp: AppliedType, refs: Text = Str("")): Text =
+  private def toTextFunction(tp: AppliedType, refs: Text = Str(""), seps: Text = Str("")): Text =
     val AppliedType(tycon, args) = (tp: @unchecked)
     val tsym = tycon.typeSymbol
     val isGiven = tsym.name.isContextFunction
@@ -164,11 +164,11 @@ class RefinedPrinter(_ctx: Context) extends PlainPrinter(_ctx) {
           ~ ")"
       argStr
       ~ " " ~ arrow(isGiven, isPure)
-      ~ (refs provided !capturesRoot)
+      ~ (refs provided !capturesRoot) ~ seps
       ~ " " ~ argText(args.last)
     }
 
-  private def toTextMethodAsFunction(info: Type, isPure: Boolean, refs: Text = Str("")): Text = info match
+  private def toTextMethodAsFunction(info: Type, isPure: Boolean, refs: Text = Str(""), sepsText: Text = Str("")): Text = info match
     case info: MethodType =>
       val capturesRoot = refs == rootSetText
       changePrec(GlobalPrec) {
@@ -176,7 +176,7 @@ class RefinedPrinter(_ctx: Context) extends PlainPrinter(_ctx) {
         ~ paramsText(info)
         ~ ") "
         ~ arrow(info.isImplicitMethod, isPure && !capturesRoot)
-        ~ (refs provided !capturesRoot)
+        ~ (refs provided !capturesRoot) ~ sepsText
         ~ " "
         ~ toTextMethodAsFunction(info.resultType, isPure)
       }
@@ -754,13 +754,13 @@ class RefinedPrinter(_ctx: Context) extends PlainPrinter(_ctx) {
     }
   }
 
-  override protected def toTextCapturing(tp: Type, refsText: Text, boxText: Text): Text = tp match
+  override protected def toTextCapturing(tp: Type, refsText: Text, sepsText: Text, boxText: Text): Text = tp match
     case tp: AppliedType if defn.isFunctionSymbol(tp.typeSymbol) && !printDebug =>
-      boxText ~ toTextFunction(tp, refsText)
+      boxText ~ toTextFunction(tp, refsText, sepsText)
     case tp: RefinedType if defn.isFunctionOrPolyType(tp) && !printDebug =>
-      boxText ~ toTextMethodAsFunction(tp.refinedInfo, isPure = !tp.typeSymbol.name.isImpureFunction, refsText)
+      boxText ~ toTextMethodAsFunction(tp.refinedInfo, isPure = !tp.typeSymbol.name.isImpureFunction, refsText, sepsText)
     case _ =>
-      super.toTextCapturing(tp, refsText, boxText)
+      super.toTextCapturing(tp, refsText, sepsText, boxText)
 
   override def toText[T <: Untyped](tree: Tree[T]): Text = controlled {
     import untpd._

@@ -3,7 +3,8 @@ package dotc
 package cc
 
 import core.*
-import Types.*, Symbols.*, Contexts.*
+import Types.*, Symbols.*, Contexts.*, Decorators.*
+import dotty.tools.dotc.cc.CaptureAnnotation.SeparationCaptureAnnotation
 
 /** A (possibly boxed) capturing type. This is internally represented as an annotated type with a @retains
  *  or @retainsByName annotation, but the extractor will succeed only at phase CheckCaptures.
@@ -30,19 +31,25 @@ object CapturingType:
    *  boxing status is the same or if A is boxed.
    */
   def apply(parent: Type, refs: CaptureSet, boxed: Boolean = false)(using Context): Type =
-    if refs.isAlwaysEmpty then parent
+    apply(parent, refs, CaptureSet.empty, boxed)
+
+  def apply(parent: Type, refs: CaptureSet, seps: CaptureSet, boxed: Boolean)(using Context): Type =
+    if refs.isAlwaysEmpty && seps.isAlwaysEmpty then parent
     else parent match
       case parent @ CapturingType(parent1, refs1) if boxed || !parent.isBoxed =>
-        apply(parent1, refs ++ refs1, boxed)
+        apply(parent1, refs ++ refs1, seps, boxed)
       case _ =>
-        AnnotatedType(parent, CaptureAnnotation(refs, boxed)(defn.RetainsAnnot))
+        if seps.isAlwaysEmpty then
+          AnnotatedType(parent, CaptureAnnotation(refs, boxed)(defn.RetainsAnnot))
+        else
+          AnnotatedType(parent, SeparationCaptureAnnotation(refs, seps, boxed)(defn.RetainsWithSepAnnot))
 
   /** An extractor that succeeds only during CheckCapturingPhase. Boxing statis is
    *  returned separately by CaptureOps.isBoxed.
    */
   def unapply(tp: AnnotatedType)(using Context): Option[(Type, CaptureSet)] =
     if ctx.phase == Phases.checkCapturesPhase
-      && tp.annot.symbol == defn.RetainsAnnot
+      && (tp.annot.symbol == defn.RetainsAnnot || tp.annot.symbol == defn.RetainsWithSepAnnot)
       && !ctx.mode.is(Mode.IgnoreCaptures)
     then
       EventuallyCapturingType.unapply(tp)
@@ -68,15 +75,21 @@ object EventuallyCapturingType:
 
   def unapply(tp: AnnotatedType)(using Context): Option[(Type, CaptureSet)] =
     val sym = tp.annot.symbol
-    if sym == defn.RetainsAnnot || sym == defn.RetainsByNameAnnot then
+    if sym == defn.RetainsAnnot || sym == defn.RetainsByNameAnnot || sym == defn.RetainsWithSepAnnot then
       tp.annot match
         case ann: CaptureAnnotation =>
           Some((tp.parent, ann.refs))
         case ann =>
-          try Some((tp.parent, ann.tree.toCaptureSet))
-          catch case ex: IllegalCaptureRef => None
+          val result =
+            try
+              Some((tp.parent,
+                    if sym == defn.RetainsWithSepAnnot then
+                      ann.tree.toCapturesAndSeps._1
+                    else
+                      ann.tree.toCaptureSet))
+            catch case ex: IllegalCaptureRef => None
+          result
     else None
 
 end EventuallyCapturingType
-
 

@@ -16,6 +16,7 @@ import scala.util.control.NonFatal
 import scala.annotation.switch
 import config.{Config, Feature}
 import cc.{CapturingType, EventuallyCapturingType, CaptureSet, isBoxed}
+import dotty.tools.dotc.cc.separationSet
 
 class PlainPrinter(_ctx: Context) extends Printer {
 
@@ -158,10 +159,11 @@ class PlainPrinter(_ctx: Context) extends Printer {
   /** Print capturing type, overridden in RefinedPrinter to account for
    *  capturing function types.
    */
-  protected def toTextCapturing(parent: Type, refsText: Text, boxText: Text): Text =
+  protected def toTextCapturing(parent: Type, refsText: Text, sepsText: Text, boxText: Text): Text =
     changePrec(InfixPrec):
       boxText ~ toTextLocal(parent) ~ "^"
       ~ (refsText provided refsText != rootSetText)
+      ~ sepsText
 
   final protected def rootSetText = Str("{cap}")
 
@@ -222,7 +224,9 @@ class PlainPrinter(_ctx: Context) extends Printer {
       case tp @ EventuallyCapturingType(parent, refs) =>
         val boxText: Text = Str("box ") provided tp.isBoxed //&& ctx.settings.YccDebug.value
         val refsText = if refs.isUniversal then rootSetText else toTextCaptureSet(refs)
-        toTextCapturing(parent, refsText, boxText)
+        val seps = tp.separationSet
+        val sepsText = (Str("!") ~ toTextCaptureSet(seps)) provided !seps.isAlwaysEmpty
+        toTextCapturing(parent, refsText, sepsText, boxText)
       case tp: PreviousErrorType if ctx.settings.XprintTypes.value =>
         "<error>" // do not print previously reported error message because they may try to print this error type again recuresevely
       case tp: ErrorType =>

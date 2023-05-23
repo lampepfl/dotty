@@ -250,6 +250,23 @@ extends tpd.TreeTraverser:
     end apply
   end mapInferred
 
+  private def addSeparationSetVar(using Context) = new TypeMap:
+    def apply(tp: Type): Type = tp match
+      case CapturingType(parent, refs) =>
+        tp match
+          case AnnotatedType(parent, ann) if ann.symbol == defn.RetainsWithSepAnnot =>
+            ann match
+              case _: CaptureAnnotation => tp
+              case ann =>
+                try
+                  val (cs, seps) = ann.tree.toCapturesAndSeps
+                  if seps.isAlwaysEmpty then
+                    CapturingType(parent, cs, CaptureSet.Var(), boxed = false)
+                  else tp
+                catch case ex: IllegalCaptureRef => tp
+          case _ => tp.derivedCapturingType(mapOver(parent), refs)
+      case _ => mapOver(tp)
+
   private def transformInferredType(tp: Type, boxed: Boolean)(using Context): Type =
     val tp1 = mapInferred(tp)
     if boxed then box(tp1) else tp1
@@ -351,10 +368,12 @@ extends tpd.TreeTraverser:
   /** Transform type of type tree, and remember the transformed type as the type the tree */
   private def transformTT(tree: TypeTree, boxed: Boolean, exact: Boolean)(using Context): Unit =
     if !tree.hasRememberedType then
-      tree.rememberType(
+      val tp1 =
         if tree.isInstanceOf[InferredTypeTree] && !exact
         then transformInferredType(tree.tpe, boxed)
-        else transformExplicitType(tree.tpe, boxed))
+        else transformExplicitType(tree.tpe, boxed)
+      val tp2 = addSeparationSetVar(tp1)
+      tree.rememberType(tp2)
 
   /** Substitute parameter symbols in `from` to paramRefs in corresponding
    *  method or poly types `to`. We use a single BiTypeMap to do everything.
@@ -471,7 +490,10 @@ extends tpd.TreeTraverser:
               if prevLambdas.isEmpty then restp
               else SubstParams(prevPsymss, prevLambdas)(restp)
 
-        if tree.tpt.hasRememberedType && !sym.isConstructor then
+        def paramsUpdated: Boolean =
+          sym.paramSymss.exists(_.exists(_.isUpdatedAfter(preRecheckPhase)))
+
+        if (tree.tpt.hasRememberedType || paramsUpdated) && !sym.isConstructor then
           val newInfo = integrateRT(sym.info, sym.paramSymss, Nil, Nil)
             .showing(i"update info $sym: ${sym.info} --> $result", capt)
           if newInfo ne sym.info then

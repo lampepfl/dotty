@@ -150,6 +150,9 @@ object untpd extends Trees.Instance[Untyped] with UntypedTreeInfo {
   /** {x1, ..., xN} T   (only relevant under captureChecking) */
   case class CapturesAndResult(refs: List[Tree], parent: Tree)(implicit @constructorOnly src: SourceFile) extends TypTree
 
+  /** {x1, ..., xN}!{y1, ..., yN} T   (only relevant under captureChecking) */
+  case class CapturesWithSepAndResult(refs: List[Tree], seps: List[Tree], parent: Tree)(implicit @constructorOnly src: SourceFile) extends TypTree
+
   /** Short-lived usage in typer, does not need copy/transform/fold infrastructure */
   case class DependentTypeTree(tp: List[Symbol] => Type)(implicit @constructorOnly src: SourceFile) extends Tree
 
@@ -505,6 +508,12 @@ object untpd extends Trees.Instance[Untyped] with UntypedTreeInfo {
   def makeRetaining(parent: Tree, refs: List[Tree], annotName: TypeName)(using Context): Annotated =
     Annotated(parent, New(scalaAnnotationDot(annotName), List(refs)))
 
+  def makeRetainingWithSep(parent: Tree, refs: List[Tree], seps: Option[List[Tree]])(using Context): Annotated =
+    seps match
+      case None => makeRetaining(parent, refs, tpnme.retains)
+      case Some(seps) =>
+        Annotated(parent, New(scalaAnnotationDot(tpnme.retainsWithSep), refs :: seps :: Nil))
+
   def makeConstructor(tparams: List[TypeDef], vparamss: List[List[ValDef]], rhs: Tree = EmptyTree)(using Context): DefDef =
     DefDef(nme.CONSTRUCTOR, joinParams(tparams, vparamss), TypeTree(), rhs)
 
@@ -665,6 +674,9 @@ object untpd extends Trees.Instance[Untyped] with UntypedTreeInfo {
     def CapturesAndResult(tree: Tree)(refs: List[Tree], parent: Tree)(using Context): Tree = tree match
       case tree: CapturesAndResult if (refs eq tree.refs) && (parent eq tree.parent) => tree
       case _ => finalize(tree, untpd.CapturesAndResult(refs, parent))
+    def CapturesWithSepAndResult(tree: Tree)(refs: List[Tree], seps: List[Tree], parent: Tree)(using Context): Tree = tree match
+      case tree: CapturesWithSepAndResult if (refs eq tree.refs) && (seps eq tree.seps) && (parent eq tree.parent) => tree
+      case _ => finalize(tree, untpd.CapturesWithSepAndResult(refs, seps, parent))
 
     def TypedSplice(tree: Tree)(splice: tpd.Tree)(using Context): ProxyTree = tree match {
       case tree: TypedSplice if splice `eq` tree.splice => tree
@@ -729,6 +741,8 @@ object untpd extends Trees.Instance[Untyped] with UntypedTreeInfo {
         cpy.MacroTree(tree)(transform(expr))
       case CapturesAndResult(refs, parent) =>
         cpy.CapturesAndResult(tree)(transform(refs), transform(parent))
+      case CapturesWithSepAndResult(refs, seps, parent) =>
+        cpy.CapturesWithSepAndResult(tree)(transform(refs), transform(seps), transform(parent))
       case _ =>
         super.transformMoreCases(tree)
     }
@@ -788,6 +802,8 @@ object untpd extends Trees.Instance[Untyped] with UntypedTreeInfo {
         this(x, expr)
       case CapturesAndResult(refs, parent) =>
         this(this(x, refs), parent)
+      case CapturesWithSepAndResult(refs, seps, parent) =>
+        this(this(this(x, refs), seps), parent)
       case _ =>
         super.foldMoreCases(x, tree)
     }

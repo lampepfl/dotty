@@ -23,7 +23,7 @@ import typer.ProtoTypes.constrained
 import typer.Applications.productSelectorTypes
 import reporting.trace
 import annotation.constructorOnly
-import cc.{CapturingType, derivedCapturingType, CaptureSet, stripCapturing, isBoxedCapturing, boxed, boxedUnlessFun, boxedIfTypeParam, isAlwaysPure}
+import cc.{CapturingType, derivedCapturingType, CaptureSet, stripCapturing, isBoxedCapturing, boxed, boxedUnlessFun, boxedIfTypeParam, isAlwaysPure, separationSet, SeparationSet}
 
 /** Provides methods to compare types.
  */
@@ -532,11 +532,16 @@ class TypeComparer(@constructorOnly initctx: Context) extends ConstraintHandling
         res
 
       case CapturingType(parent1, refs1) =>
-        if tp2.isAny then true
-        else if subCaptures(refs1, tp2.captureSet, frozenConstraint).isOK && sameBoxed(tp1, tp2, refs1)
-          || !ctx.mode.is(Mode.CheckBoundsOrSelfType) && tp1.isAlwaysPure
-        then recur(parent1, tp2)
-        else thirdTry
+        def checkSeparation =
+          val seps2 = tp2.separationSet
+          SeparationSet.checkSeparation(refs1, seps2, frozen = frozenConstraint)
+        checkSeparation && {
+          if tp2.isAny then true
+          else if subCaptures(refs1, tp2.captureSet, frozenConstraint).isOK && sameBoxed(tp1, tp2, refs1)
+            || !ctx.mode.is(Mode.CheckBoundsOrSelfType) && tp1.isAlwaysPure
+          then recur(parent1, tp2)
+          else thirdTry
+        }
       case tp1: AnnotatedType if !tp1.isRefining =>
         recur(tp1.parent, tp2)
       case tp1: MatchType =>
@@ -835,6 +840,11 @@ class TypeComparer(@constructorOnly initctx: Context) extends ConstraintHandling
         }
         compareTypeBounds
       case CapturingType(parent2, refs2) =>
+        def checkSeparation =
+          val refs1 = tp1.captureSet
+          val seps2 = tp2.separationSet
+          SeparationSet.checkSeparation(refs1, seps2, frozen = frozenConstraint)
+
         def compareCapturing =
           val refs1 = tp1.captureSet
           try
@@ -849,7 +859,7 @@ class TypeComparer(@constructorOnly initctx: Context) extends ConstraintHandling
           catch case ex: AssertionError =>
             println(i"assertion failed while compare captured $tp1 <:< $tp2")
             throw ex
-        compareCapturing || fourthTry
+        checkSeparation && (compareCapturing || fourthTry)
       case tp2: AnnotatedType if tp2.isRefining =>
         (tp1.derivesAnnotWith(tp2.annot.sameAnnotation) || tp1.isBottomType) &&
         recur(tp1, tp2.parent)

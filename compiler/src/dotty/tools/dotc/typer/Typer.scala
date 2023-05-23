@@ -1393,6 +1393,9 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
       case untpd.CapturesAndResult(refs, result) =>
         return typedUnadapted(untpd.makeRetaining(
           cpy.Function(tree)(args, result), refs, tpnme.retains), pt)
+      case untpd.CapturesWithSepAndResult(refs, seps, result) =>
+        return typedUnadapted(untpd.makeRetainingWithSep(
+          cpy.Function(tree)(args, result), refs, Some(seps)), pt)
       case _ =>
     var (funFlags, erasedParams) = tree match {
       case tree: untpd.FunctionWithMods => (tree.mods.flags, tree.erasedParams)

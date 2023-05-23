@@ -1,6 +1,7 @@
 package scala
 
 import annotation.experimental
+import annotation.retains
 
 @experimental object caps:
 
@@ -10,6 +11,9 @@ import annotation.experimental
 
   /** The universal capture reference */
   val cap: Any = ()
+
+  /** The reader capture reference */
+  val rdr: Any @retains(cap) = ()
 
   object unsafe:
 
@@ -46,3 +50,6 @@ import annotation.experimental
    */
   trait Pure:
     this: Pure =>
+
+  /** Marker trait for reader classes. */
+  trait ReadOnly

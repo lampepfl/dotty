@@ -11,14 +11,21 @@ import config.Printers.capt
 import util.Property.Key
 import tpd.*
 import config.Feature
+import dotty.tools.dotc.cc.CaptureAnnotation.SeparationCaptureAnnotation
 
 private val Captures: Key[CaptureSet] = Key()
+private val CapturesAndSeps: Key[(CaptureSet, CaptureSet)] = Key()
 private val BoxedType: Key[BoxedTypeCache] = Key()
 
 /** The arguments of a @retains or @retainsByName annotation */
 private[cc] def retainedElems(tree: Tree)(using Context): List[Tree] = tree match
   case Apply(_, Typed(SeqLiteral(elems, _), _) :: Nil) => elems
   case _ => Nil
+
+private[cc] def retainedWithSepElems(tree: Tree)(using Context): (List[Tree], List[Tree]) = tree match
+  case Apply(Apply(_, Typed(SeqLiteral(elems, _), _) :: Nil), Typed(SeqLiteral(seps, _), _) :: Nil) =>
+    (elems, seps)
+  case _ => (Nil, Nil)
 
 def allowUniversalInBoxed(using Context) =
   Feature.sourceVersion.isAtLeast(SourceVersion.`3.3`)
@@ -45,6 +52,16 @@ extension (tree: Tree)
         tree.putAttachment(Captures, refs)
         refs
 
+  def toCapturesAndSeps(using Context): (CaptureSet, CaptureSet) =
+    tree.getAttachment(CapturesAndSeps) match
+      case Some(res) => res
+      case None =>
+        val (refs, seps) = retainedWithSepElems(tree)
+        val cset = CaptureSet(refs.map(_.toCaptureRef)*)
+        val sset = CaptureSet(seps.map(_.toCaptureRef)*)
+        tree.putAttachment(CapturesAndSeps, (cset, sset))
+        (cset, sset)
+
   /** Under pureFunctions, add a @retainsByName(*)` annotation to the argument of
    *  a by name parameter type, turning the latter into an impure by name parameter type.
    */
@@ -67,7 +84,12 @@ extension (tp: Type)
   def derivedCapturingType(parent: Type, refs: CaptureSet)(using Context): Type = tp match
     case tp @ CapturingType(p, r) =>
       if (parent eq p) && (refs eq r) then tp
-      else CapturingType(parent, refs, tp.isBoxed)
+      else CapturingType(parent, refs, tp.separationSet, tp.isBoxed)
+
+  def derivedCapturingType(parent: Type, refs: CaptureSet, seps: CaptureSet)(using Context): Type = tp match
+    case tp @ CapturingType(p, r) =>
+      if (parent eq p) && (refs eq r) && (seps eq tp.separationSet) then tp
+      else CapturingType(parent, refs, seps, tp.isBoxed)
 
   /** If this is a unboxed capturing type with nonempty capture set, its boxed version.
    *  Or, if type is a TypeBounds of capturing types, the version where the bounds are boxed.
@@ -252,6 +274,18 @@ extension (tp: AnnotatedType)
   def isBoxed(using Context): Boolean = tp.annot match
     case ann: CaptureAnnotation => ann.boxed
     case _ => false
+
+extension (tp: Type)
+  def separationSet(using Context): CaptureSet = tp match
+    case tp: AnnotatedType =>
+      tp.annot match
+      case ann: SeparationCaptureAnnotation => ann.seps
+      case ann if ann.symbol == defn.RetainsWithSepAnnot =>
+        try
+          ann.tree.toCapturesAndSeps._2
+        catch case ex: IllegalCaptureRef => CaptureSet.empty
+      case _ => CaptureSet.empty
+    case _ => CaptureSet.empty
 
 extension (ts: List[Type])
   /** Equivalent to ts.mapconserve(_.boxedUnlessFun(tycon)) but more efficient where

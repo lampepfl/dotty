@@ -14,6 +14,6 @@ class BoxedTypeCache:
     if tp ne unboxed then
       unboxed = tp
       val CapturingType(parent, refs) = tp: @unchecked
-      boxed = CapturingType(parent, refs, boxed = true)
+      boxed = CapturingType(parent, refs, tp.separationSet, boxed = true)
     boxed
 end BoxedTypeCache

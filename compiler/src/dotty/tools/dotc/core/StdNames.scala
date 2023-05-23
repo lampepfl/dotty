@@ -288,6 +288,7 @@ object StdNames {
 
     // Compiler-internal
     val CAPTURE_ROOT: N             = "cap"
+    val CAPTURE_READER: N           = "rdr"
     val CONSTRUCTOR: N              = "<init>"
     val STATIC_CONSTRUCTOR: N       = "<clinit>"
     val EVT2U: N                    = "evt2u$"
@@ -577,6 +578,7 @@ object StdNames {
     val reify : N               = "reify"
     val releaseFence : N        = "releaseFence"
     val retains: N              = "retains"
+    val retainsWithSep: N       = "retainsWithSep"
     val retainsByName: N        = "retainsByName"
     val rootMirror : N          = "rootMirror"
     val run: N                  = "run"
@@ -592,6 +594,7 @@ object StdNames {
     val selectTerm: N           = "selectTerm"
     val selectType: N           = "selectType"
     val self: N                 = "self"
+    val sep: N                  = "sep"
     val seqToArray: N           = "seqToArray"
     val setAccessible: N        = "setAccessible"
     val setAnnotations: N       = "setAnnotations"

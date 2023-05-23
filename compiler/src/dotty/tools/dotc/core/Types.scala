@@ -36,7 +36,7 @@ import config.Printers.{core, typr, matchTypes}
 import reporting.{trace, Message}
 import java.lang.ref.WeakReference
 import compiletime.uninitialized
-import cc.{CapturingType, CaptureSet, derivedCapturingType, isBoxedCapturing, EventuallyCapturingType, boxedUnlessFun}
+import cc.*
 import CaptureSet.{CompareResult, IdempotentCaptRefMap, IdentityCaptRefMap}
 
 import scala.annotation.internal.sharable
@@ -1532,6 +1532,9 @@ object Types {
     /** The capture set of this type. Overridden and cached in CaptureRef */
     def captureSet(using Context): CaptureSet = CaptureSet.ofType(this)
 
+    // The separation set of this type.
+    // def separationSet(using Context): CaptureSet = SeparationSet.ofType(this)
+
     // ----- Normalizing typerefs over refined types ----------------------------
 
     /** If this normalizes* to a refinement type that has a refinement for `name` (which might be followed
@@ -2095,6 +2098,9 @@ object Types {
 
     /** Is this reference the root capability `cap` ? */
     def isRootCapability(using Context): Boolean = false
+
+    /** Is this reference the reader capability `rdr` ? */
+    def isReaderCapability(using Context): Boolean = false
 
     /** Normalize reference so that it can be compared with `eq` for equality */
     def normalizedRef(using Context): CaptureRef = this
@@ -2815,10 +2821,14 @@ object Types {
       ((prefix eq NoPrefix)
       || symbol.is(ParamAccessor) && (prefix eq symbol.owner.thisType)
       || isRootCapability
+      || isReaderCapability
       ) && !symbol.isOneOf(UnstableValueFlags)
 
     override def isRootCapability(using Context): Boolean =
       name == nme.CAPTURE_ROOT && symbol == defn.captureRoot
+
+    override def isReaderCapability(using Context): Boolean =
+      name == nme.CAPTURE_READER && symbol == defn.readerRoot
 
     override def normalizedRef(using Context): CaptureRef =
       if canBeTracked then symbol.termRef else this
@@ -3825,7 +3835,8 @@ object Types {
           case tp: AnnotatedType =>
             tp match
               case CapturingType(parent, refs) =>
-                (compute(status, parent, theAcc) /: refs.elems) {
+                val allRefs = refs.elems ++ tp.separationSet.elems
+                (compute(status, parent, theAcc) /: allRefs) {
                   (s, ref) => ref match
                     case tp: TermParamRef if tp.binder eq thisLambdaType => combine(s, CaptureDeps)
                     case _ => s
@@ -5644,8 +5655,8 @@ object Types {
       tp.derivedMatchType(bound, scrutinee, cases)
     protected def derivedAnnotatedType(tp: AnnotatedType, underlying: Type, annot: Annotation): Type =
       tp.derivedAnnotatedType(underlying, annot)
-    protected def derivedCapturingType(tp: Type, parent: Type, refs: CaptureSet): Type =
-      tp.derivedCapturingType(parent, refs)
+    protected def derivedCapturingType(tp: Type, parent: Type, refs: CaptureSet, seps: CaptureSet): Type =
+      tp.derivedCapturingType(parent, refs, seps)
     protected def derivedWildcardType(tp: WildcardType, bounds: Type): Type =
       tp.derivedWildcardType(bounds)
     protected def derivedSkolemType(tp: SkolemType, info: Type): Type =
@@ -5681,10 +5692,19 @@ object Types {
 
     def isRange(tp: Type): Boolean = tp.isInstanceOf[Range]
 
-    protected def mapCapturingType(tp: Type, parent: Type, refs: CaptureSet, v: Int): Type =
+    protected def mapCapturingType(tp: Type, parent: Type, refs: CaptureSet, seps: CaptureSet, v: Int): Type =
       val saved = variance
+
       variance = v
-      try derivedCapturingType(tp, this(parent), refs.map(this))
+      try derivedCapturingType(
+        tp,
+        this(parent),
+        refs.map(this),
+        try
+          variance = -v
+          seps.map(this)
+        finally
+          variance = v)
       finally variance = saved
 
     /** Map this function over given type */
@@ -5723,7 +5743,7 @@ object Types {
           derivedExprType(tp, this(tp.resultType))
 
         case CapturingType(parent, refs) =>
-          mapCapturingType(tp, parent, refs, variance)
+          mapCapturingType(tp, parent, refs, tp.separationSet, variance)
 
         case tp @ AnnotatedType(underlying, annot) =>
           val underlying1 = this(underlying)
@@ -6065,12 +6085,12 @@ object Types {
           if (underlying.isExactlyNothing) underlying
           else tp.derivedAnnotatedType(underlying, annot)
       }
-    override protected def derivedCapturingType(tp: Type, parent: Type, refs: CaptureSet): Type =
+    override protected def derivedCapturingType(tp: Type, parent: Type, refs: CaptureSet, seps: CaptureSet): Type =
       parent match // TODO ^^^ handle ranges in capture sets as well
         case Range(lo, hi) =>
-          range(derivedCapturingType(tp, lo, refs), derivedCapturingType(tp, hi, refs))
+          range(derivedCapturingType(tp, lo, refs, seps), derivedCapturingType(tp, hi, refs, seps))
         case _ =>
-          tp.derivedCapturingType(parent, refs)
+          tp.derivedCapturingType(parent, refs, seps)
 
     override protected def derivedWildcardType(tp: WildcardType, bounds: Type): WildcardType =
       tp.derivedWildcardType(rangeToBounds(bounds))
@@ -6121,11 +6141,11 @@ object Types {
     /** Overridden in TypeOps.avoid */
     protected def needsRangeIfInvariant(refs: CaptureSet): Boolean = true
 
-    override def mapCapturingType(tp: Type, parent: Type, refs: CaptureSet, v: Int): Type =
+    override def mapCapturingType(tp: Type, parent: Type, refs: CaptureSet, seps: CaptureSet, v: Int): Type =
       if v == 0 && needsRangeIfInvariant(refs) then
-        range(mapCapturingType(tp, parent, refs, -1), mapCapturingType(tp, parent, refs, 1))
+        range(mapCapturingType(tp, parent, refs, seps, -1), mapCapturingType(tp, parent, refs, seps, 1))
       else
-        super.mapCapturingType(tp, parent, refs, v)
+        super.mapCapturingType(tp, parent, refs, seps, v)
 
     protected def reapply(tp: Type): Type = apply(tp)
   }

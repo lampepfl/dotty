@@ -1457,6 +1457,22 @@ object Parsers {
       then CapturesAndResult(captureSet(), core())
       else core()
 
+    def capturesWithSepAndResult(core: () => Tree): Tree =
+      if Feature.ccEnabled && in.token == LBRACE && in.offset == in.lastOffset
+      then
+        val cs = captureSet()
+        if in.isIdent(nme.raw.BANG) then
+          in.nextToken()
+          if in.token == LBRACE then
+            captureSet() match
+              case Nil => CapturesAndResult(cs, core())
+              case seps => CapturesWithSepAndResult(cs, seps, core())
+          else CapturesWithSepAndResult(cs, Nil, core())
+        else
+          CapturesAndResult(cs, core())
+      else
+        core()
+
     /** Type           ::=  FunType
      *                   |  HkTypeParamClause ‘=>>’ Type
      *                   |  FunParamClause ‘=>>’ Type
@@ -1503,7 +1519,7 @@ object Parsers {
           else
             accept(ARROW)
 
-          val resultType = if isPure then capturesAndResult(typ) else typ()
+          val resultType = if isPure then capturesWithSepAndResult(typ) else typ()
           if token == TLARROW then
             for case ValDef(_, tpt, _) <- params do
               if isByNameType(tpt) then
@@ -1687,7 +1703,7 @@ object Parsers {
      */
     private def isCaptureUpArrow =
       val ahead = in.lookahead
-      ahead.token == LBRACE
+      ahead.token == LBRACE || ahead.isIdent(nme.raw.BANG)
       || ahead.isIdent(nme.PUREARROW)
       || ahead.isIdent(nme.PURECTXARROW)
       || !canStartInfixTypeTokens.contains(ahead.token)
@@ -1702,10 +1718,21 @@ object Parsers {
       else if Feature.ccEnabled && in.isIdent(nme.UPARROW) && isCaptureUpArrow then
         val upArrowStart = in.offset
         in.nextToken()
-        def cs =
+        val cs =
           if in.token == LBRACE then captureSet()
           else atSpan(upArrowStart)(captureRoot) :: Nil
-        makeRetaining(t, cs, tpnme.retains)
+        if in.isIdent(nme.raw.BANG) then
+          in.nextToken()
+          val seps =
+            if in.token == LBRACE then
+              val pos = in.offset
+              captureSet() match
+                case Nil => None
+                case seps => Some(seps)
+            else Some(Nil)
+          makeRetainingWithSep(t, cs, seps)
+        else
+          makeRetaining(t, cs, tpnme.retains)
       else
         t
     }
