@@ -179,6 +179,18 @@ trait Dynamic {
   def handleStructural(tree: Tree)(using Context): Tree = {
     val fun @ Select(qual, name) = funPart(tree): @unchecked
     val vargss = termArgss(tree)
+    val isRepeated = vargss.flatten.exists(_.tpe.widen.isRepeatedParam)
+
+    def handleRepeated(args: List[List[Tree]]): List[Tree] =
+      if isRepeated then List(untpd.TypedSplice(tpd.repeated(args.flatten, TypeTree(defn.AnyType))))
+      else args.flatten.map { t =>
+        val clzSym = t.tpe.resultType.classSymbol.asClass
+        if ValueClasses.isDerivedValueClass(clzSym) then
+          val underlying = ValueClasses.valueClassUnbox(clzSym).asTerm
+          tpd.Select(t, underlying.name)
+        else
+          t
+      }.map(untpd.TypedSplice(_))
 
     def structuralCall(selectorName: TermName, classOfs: => List[Tree]) = {
       val selectable = adapt(qual, defn.SelectableClass.typeRef | defn.DynamicClass.typeRef)
@@ -191,14 +203,7 @@ trait Dynamic {
 
       val scall =
         if (vargss.isEmpty) base
-        else untpd.Apply(base, vargss.flatten.map{ t =>
-          val clzSym = t.tpe.resultType.classSymbol.asClass
-          if ValueClasses.isDerivedValueClass(clzSym) then
-            val x = ValueClasses.valueClassUnbox(clzSym).asTerm
-            tpd.Select(t, x.name)
-          else
-            t
-        }.map(untpd.TypedSplice(_)))
+        else untpd.Apply(base, handleRepeated(vargss))
 
       // If function is an `applyDynamic` that takes a Class* parameter,
       // add `classOfs`.
