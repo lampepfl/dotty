@@ -159,7 +159,8 @@ trait CliCommand:
       val maxCol = ctx.settings.pageWidth.value
       val field1 = maxField.min(texts.flatten.map(_._1.length).filter(_ < maxField).max) // widest field under maxField
       val field2 = if field1 + separation + maxField < maxCol then maxCol - field1 - separation else 0 // skinny window -> terminal wrap
-      val separator = " " * separation
+      val toMark = ctx.settings.XshowPhases.value.toSet
+      def separator(name: String) = if toMark(name) then "*" + " " * (separation - 1) else " " * separation
       val EOL = "\n"
       def formatField1(text: String): String = if text.length <= field1 then text.padLeft(field1) else text + EOL + "".padLeft(field1)
       def formatField2(text: String): String =
@@ -169,11 +170,11 @@ trait CliCommand:
             fld.lastIndexOf(" ", field2) match
               case -1 => List(fld)
               case i  => val (prefix, rest) = fld.splitAt(i) ; prefix :: loopOverField2(rest.trim)
-        text.split("\n").toList.flatMap(loopOverField2).filter(_.nonEmpty).mkString(EOL + "".padLeft(field1) + separator)
+        text.split("\n").toList.flatMap(loopOverField2).filter(_.nonEmpty).mkString(EOL + "".padLeft(field1) + separator("no-phase"))
       end formatField2
       def format(first: String, second: String, index: Int, colorPicker: Int => String => Highlight) =
         sb.append(colorPicker(index)(formatField1(first)).show)
-          .append(separator)
+          .append(colorPicker(index)(separator(first)).show)
           .append(formatField2(second))
           .append(EOL): Unit
       def fancy(first: String, second: String, index: Int) = format(first, second, index, color)

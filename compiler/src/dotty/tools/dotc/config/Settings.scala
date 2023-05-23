@@ -66,7 +66,11 @@ object Settings:
 
     private var changed: Boolean = false
 
+    def isPresent: Boolean = changed
+
     def valueIn(state: SettingsState): T = state.value(idx).asInstanceOf[T]
+
+    def userValueIn(state: SettingsState): Option[T] = if isPresent then Some(valueIn(state)) else None
 
     def updateIn(state: SettingsState, x: Any): SettingsState = x match
       case _: T => state.update(idx, x)
@@ -104,8 +108,13 @@ object Settings:
       def fail(msg: String, args: List[String]) =
         ArgsSummary(sstate, args, errors :+ msg, warnings)
 
-      def missingArg =
-        fail(s"missing argument for option $name", args)
+      def missingArg = fail(s"missing argument for option $name", args)
+
+      def isEmptyDefault = default == null.asInstanceOf[T] || summon[ClassTag[T]].match
+        case ListTag => default.asInstanceOf[List[?]].isEmpty
+        case StringTag => default.asInstanceOf[String].isEmpty
+        case OptionTag => default.asInstanceOf[Option[_]].isEmpty
+        case _ => false
 
       def setBoolean(argValue: String, args: List[String]) =
         if argValue.equalsIgnoreCase("true") || argValue.isEmpty then update(true, args)
@@ -138,7 +147,8 @@ object Settings:
         case (OptionTag, _) =>
           update(Some(propertyClass.get.getConstructor().newInstance()), args)
         case (ListTag, _) =>
-          if (argRest.isEmpty) missingArg
+          if argRest.isEmpty then
+            if isEmptyDefault then missingArg else update(List(default), args)
           else
             val strings = argRest.split(",").toList
             choices match
@@ -187,6 +197,7 @@ object Settings:
   object Setting:
     extension [T](setting: Setting[T])
       def value(using Context): T = setting.valueIn(ctx.settingsState)
+      def userValue(using Context): Option[T] = setting.userValueIn(ctx.settingsState)
       def update(x: T)(using Context): SettingsState = setting.updateIn(ctx.settingsState, x)
       def isDefault(using Context): Boolean = setting.isDefaultIn(ctx.settingsState)
 
