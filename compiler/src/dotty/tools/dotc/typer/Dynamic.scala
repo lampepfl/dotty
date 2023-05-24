@@ -181,7 +181,7 @@ trait Dynamic {
     val vargss = termArgss(tree)
     val isRepeated = vargss.flatten.exists(_.tpe.widen.isRepeatedParam)
 
-    def handleRepeated(args: List[List[Tree]]): List[Tree] =
+    def handleRepeated(args: List[List[Tree]]) =
       if isRepeated then List(untpd.TypedSplice(tpd.repeated(args.flatten, TypeTree(defn.AnyType))))
       else args.flatten.map { t =>
         val clzSym = t.tpe.resultType.classSymbol.asClass
