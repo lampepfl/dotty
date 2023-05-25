@@ -2,7 +2,7 @@ package dotty.tools.dotc
 package core
 package tasty
 
-class TastyAnsiiPrinter(bytes: Array[Byte], testPickler: Boolean) extends TastyPrinter(bytes, testPickler) {
+class TastyAnsiiPrinter(bytes: Array[Byte], testPickler: Boolean, isBestEffortTasty: Boolean = false) extends TastyPrinter(bytes, testPickler, isBestEffortTasty) {
 
   def this(bytes: Array[Byte]) = this(bytes, testPickler = false)
 

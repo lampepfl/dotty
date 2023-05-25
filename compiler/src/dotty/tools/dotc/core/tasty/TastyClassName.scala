@@ -12,9 +12,9 @@ import TastyUnpickler.*
 import dotty.tools.tasty.TastyFormat.ASTsSection
 
 /** Reads the package and class name of the class contained in this TASTy */
-class TastyClassName(bytes: Array[Byte]) {
+class TastyClassName(bytes: Array[Byte], isBestEffortTasty: Boolean = false) {
 
-  val unpickler: TastyUnpickler = new TastyUnpickler(bytes)
+  val unpickler: TastyUnpickler = new TastyUnpickler(bytes, isBestEffortTasty)
   import unpickler.{nameAtRef, unpickle}
 
   /** Returns a tuple with the package and class names */

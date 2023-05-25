@@ -919,12 +919,12 @@ trait TypedTreeInfo extends TreeInfo[Type] { self: Trees.Instance[Type] =>
       else cpy.PackageDef(tree)(pid, slicedStats) :: Nil
     case tdef: TypeDef =>
       val sym = tdef.symbol
-      assert(sym.isClass)
+      if !ctx.isBestEffort then assert(sym.isClass)
       if (cls == sym || cls == sym.linkedClass) tdef :: Nil
       else Nil
     case vdef: ValDef =>
       val sym = vdef.symbol
-      assert(sym.is(Module))
+      if !ctx.isBestEffort then assert(sym.is(Module))
       if (cls == sym.companionClass || cls == sym.moduleClass) vdef :: Nil
       else Nil
     case tree =>

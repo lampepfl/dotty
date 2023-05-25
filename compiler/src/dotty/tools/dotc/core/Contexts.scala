@@ -472,6 +472,18 @@ object Contexts {
     /** Is the explicit nulls option set? */
     def explicitNulls: Boolean = base.settings.YexplicitNulls.value
 
+    /** Is best-effort-dir option set? */
+    def isBestEffort: Boolean = base.settings.YbestEffort.value
+
+    /** Is the from-best-effort-tasty option set to true? */
+    def withBestEffortTasty: Boolean = base.settings.YwithBestEffortTasty.value
+
+    /** Were any best effort tasty dependencies used during compilation? */
+    def usesBestEffortTasty: Boolean = base.usedBestEffortTasty
+
+    /** Confirm that a best effort tasty dependency was used during compilation. */
+    def setUsesBestEffortTasty(): Unit = base.usedBestEffortTasty = true
+
     /** A fresh clone of this context embedded in this context. */
     def fresh: FreshContext = freshOver(this)
 
@@ -955,6 +967,9 @@ object Contexts {
     /** Sources and Files that were loaded */
     val sources: util.HashMap[AbstractFile, SourceFile] = util.HashMap[AbstractFile, SourceFile]()
     val files: util.HashMap[TermName, AbstractFile] = util.HashMap()
+
+    /** Was best effort file used during compilation? */
+    private[core] var usedBestEffortTasty = false
 
     // Types state
     /** A table for hash consing unique types */

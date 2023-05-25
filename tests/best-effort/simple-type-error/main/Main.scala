@@ -1,0 +1,2 @@
+object Main:
+  SimpleTypeError.foo

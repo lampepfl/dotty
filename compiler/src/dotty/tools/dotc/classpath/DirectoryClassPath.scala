@@ -290,7 +290,7 @@ case class DirectoryClassPath(dir: JFile) extends JFileDirectoryLookup[BinaryFil
   protected def createFileEntry(file: AbstractFile): BinaryFileEntry = BinaryFileEntry(file)
 
   protected def isMatchingFile(f: JFile): Boolean =
-    f.isTasty || (f.isClass && f.classToTasty.isEmpty)
+    f.isTasty || f.isBestEffortTasty || (f.isClass && f.classToTasty.isEmpty)
 
   private[dotty] def classes(inPackage: PackageName): Seq[BinaryFileEntry] = files(inPackage)
 }

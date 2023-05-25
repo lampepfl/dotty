@@ -1,0 +1,14 @@
+# cyclic reference crashes
+i4368.scala
+i827.scala
+cycles.scala
+i5332.scala
+i4369c.scala
+i1806.scala
+i0091-infpaths.scala
+exports.scala
+i14834.scala
+
+# other type related crashes
+i4653.scala
+overrideClass.scala

@@ -28,6 +28,8 @@ object DenotTransformers {
 
     /** The transformation method */
     def transform(ref: SingleDenotation)(using Context): SingleDenotation
+
+    override def isRunnable(using Context) = super.isRunnable && !ctx.usesBestEffortTasty 
   }
 
   /** A transformer that only transforms the info field of denotations */

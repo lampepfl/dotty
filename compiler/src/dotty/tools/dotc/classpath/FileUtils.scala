@@ -24,7 +24,11 @@ object FileUtils {
 
     def hasTastyExtension: Boolean = file.hasExtension("tasty")
 
+    def hasBetastyExtension: Boolean = file.hasExtension("betasty")
+
     def isTasty: Boolean = !file.isDirectory && hasTastyExtension
+
+    def isBestEffortTasty: Boolean = !file.isDirectory && hasBetastyExtension
 
     def isScalaBinary: Boolean = file.isClass || file.isTasty
 
@@ -54,6 +58,8 @@ object FileUtils {
 
     def isTasty: Boolean = file.isFile && file.getName.endsWith(SUFFIX_TASTY)
 
+    def isBestEffortTasty: Boolean = file.isFile && file.getName.endsWith(SUFFIX_BETASTY)
+
     /** Returns the tasty file associated with this class file */
     def classToTasty: Option[JFile] =
       assert(file.isClass, s"non-class: $file")
@@ -66,6 +72,7 @@ object FileUtils {
   private val SUFFIX_CLASS = ".class"
   private val SUFFIX_SCALA = ".scala"
   private val SUFFIX_TASTY = ".tasty"
+  private val SUFFIX_BETASTY = ".betasty"
   private val SUFFIX_JAVA = ".java"
   private val SUFFIX_SIG = ".sig"
 

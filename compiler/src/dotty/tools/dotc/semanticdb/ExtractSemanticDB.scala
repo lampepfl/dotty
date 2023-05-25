@@ -56,7 +56,7 @@ class ExtractSemanticDB private (phaseMode: ExtractSemanticDB.PhaseMode) extends
   override def isRunnable(using Context) =
     import ExtractSemanticDB.{semanticdbTarget, outputDirectory}
     def writesToOutputJar = semanticdbTarget.isEmpty && outputDirectory.isInstanceOf[JarArchive]
-    super.isRunnable && ctx.settings.Xsemanticdb.value && !writesToOutputJar
+    (super.isRunnable || ctx.isBestEffort) && ctx.settings.Xsemanticdb.value && !writesToOutputJar
 
   // Check not needed since it does not transform trees
   override def isCheckable: Boolean = false

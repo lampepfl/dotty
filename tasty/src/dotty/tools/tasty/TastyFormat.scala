@@ -294,7 +294,6 @@ Note: Attribute tags are grouped into categories that determine what follows, an
 ```
 
 **************************************************************************************/
-
 object TastyFormat {
 
   /** The first four bytes of a TASTy file, followed by four values:

@@ -216,5 +216,6 @@ subsection:
       - page: internals/debug-macros.md
       - page: internals/gadts.md
       - page: internals/coverage.md
+      - page: internals/best-effort-compilation.md
   - page: release-notes-0.1.2.md
     hidden: true

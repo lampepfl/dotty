@@ -391,6 +391,7 @@ object Build {
       "-skip-by-id:scala.runtime.MatchCase",
       "-skip-by-id:dotty.tools.tasty",
       "-skip-by-id:dotty.tools.tasty.util",
+      "-skip-by-id:dotty.tools.tasty.besteffort",
       "-project-footer", s"Copyright (c) 2002-$currentYear, LAMP/EPFL",
       "-author",
       "-groups",
@@ -2268,6 +2269,7 @@ object ScaladocConfigs {
       "scala.runtime.MatchCase",
       "dotty.tools.tasty",
       "dotty.tools.tasty.util",
+      "dotty.tools.tasty.besteffort"
     ))
     def projectFooter = ProjectFooter(s"Copyright (c) 2002-$currentYear, LAMP/EPFL")
     def defaultTemplate = DefaultTemplate("static-site-main")

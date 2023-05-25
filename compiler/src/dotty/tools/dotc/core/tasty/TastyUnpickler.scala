@@ -5,6 +5,8 @@ package tasty
 import scala.language.unsafeNulls
 
 import dotty.tools.tasty.{TastyFormat, TastyVersion, TastyBuffer, TastyReader, TastyHeaderUnpickler, UnpicklerConfig}
+import dotty.tools.tasty.besteffort.BestEffortTastyHeaderUnpickler
+
 import TastyFormat.NameTags.*, TastyFormat.nameTagToString
 import TastyBuffer.NameRef
 
@@ -63,10 +65,11 @@ object TastyUnpickler {
 
 import TastyUnpickler.*
 
-class TastyUnpickler(protected val reader: TastyReader) {
+class TastyUnpickler(protected val reader: TastyReader, isBestEffortTasty: Boolean = false) {
   import reader.*
 
-  def this(bytes: Array[Byte]) = this(new TastyReader(bytes))
+  def this(bytes: Array[Byte]) = this(new TastyReader(bytes), false)
+  def this(bytes: Array[Byte], isBestEffortTasty: Boolean) = this(new TastyReader(bytes), isBestEffortTasty)
 
   private val sectionReader = new mutable.HashMap[String, TastyReader]
   val nameAtRef: NameTable = new NameTable
@@ -123,8 +126,9 @@ class TastyUnpickler(protected val reader: TastyReader) {
     result
   }
 
-  val header: TastyHeader =
-    new TastyHeaderUnpickler(scala3CompilerConfig, reader).readFullHeader()
+  val header =
+    if isBestEffortTasty then new BestEffortTastyHeaderUnpickler(scala3CompilerConfig, reader).readFullHeader()
+    else new TastyHeaderUnpickler(reader).readFullHeader()
 
   def readNames(): Unit =
     until(readEnd()) { nameAtRef.add(readNameContents()) }

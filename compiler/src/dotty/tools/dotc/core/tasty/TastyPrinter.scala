@@ -22,9 +22,9 @@ import dotty.tools.dotc.core.Names.TermName
 object TastyPrinter:
 
   def showContents(bytes: Array[Byte], noColor: Boolean): String =
-    showContents(bytes, noColor, testPickler = false)
+    showContents(bytes, noColor, testPickler = false, isBestEffortTasty = false)
 
-  def showContents(bytes: Array[Byte], noColor: Boolean, testPickler: Boolean = false): String =
+  def showContents(bytes: Array[Byte], noColor: Boolean, testPickler: Boolean = false, isBestEffortTasty: Boolean = false): String =
     val printer =
       if noColor then new TastyPrinter(bytes, testPickler)
       else new TastyAnsiiPrinter(bytes, testPickler)
@@ -32,24 +32,27 @@ object TastyPrinter:
 
   def main(args: Array[String]): Unit = {
     // TODO: Decouple CliCommand from Context and use CliCommand.distill?
+    val betastyOpt = "-Ywith-best-effort-tasty"
     val lineWidth = 80
     val line = "-" * lineWidth
     val noColor = args.contains("-color:never")
+    val allowBetasty = args.contains(betastyOpt)
     var printLastLine = false
-    def printTasty(fileName: String, bytes: Array[Byte]): Unit =
+    def printTasty(fileName: String, bytes: Array[Byte], isBestEffortTasty: Boolean = false): Unit =
       println(line)
       println(fileName)
       println(line)
-      println(showContents(bytes, noColor))
+      println(showContents(bytes, noColor, isBestEffortTasty))
       println()
       printLastLine = true
     for arg <- args do
       if arg == "-color:never" then () // skip
+      else if arg == betastyOpt then () // skip
       else if arg.startsWith("-") then println(s"bad option '$arg' was ignored")
-      else if arg.endsWith(".tasty") then
+      else if arg.endsWith(".tasty") || (allowBetasty && arg.endsWith(".betasty")) then
         val path = Paths.get(arg)
         if Files.exists(path) then
-          printTasty(arg, Files.readAllBytes(path).nn)
+          printTasty(arg, Files.readAllBytes(path).nn, arg.endsWith(".betasty"))
         else
           println("File not found: " + arg)
           System.exit(1)
@@ -67,11 +70,11 @@ object TastyPrinter:
       println(line)
   }
 
-class TastyPrinter(bytes: Array[Byte], val testPickler: Boolean) {
+class TastyPrinter(bytes: Array[Byte], val testPickler: Boolean, isBestEffortTasty: Boolean = false) {
 
-  def this(bytes: Array[Byte]) = this(bytes, testPickler = false)
+  def this(bytes: Array[Byte]) = this(bytes, testPickler = false, isBestEffortTasty = false)
 
-  class TastyPrinterUnpickler extends TastyUnpickler(bytes) {
+  class TastyPrinterUnpickler extends TastyUnpickler(bytes, isBestEffortTasty) {
     var namesStart: Addr = uninitialized
     var namesEnd: Addr = uninitialized
     override def readNames() = {
