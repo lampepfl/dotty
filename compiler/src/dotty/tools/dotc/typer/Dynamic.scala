@@ -179,10 +179,10 @@ trait Dynamic {
   def handleStructural(tree: Tree)(using Context): Tree = {
     val fun @ Select(qual, name) = funPart(tree): @unchecked
     val vargss = termArgss(tree)
-    val isRepeated = vargss.flatten.exists(_.tpe.widen.isRepeatedParam)
 
     def handleRepeated(args: List[List[Tree]]) =
-      if isRepeated then List(untpd.TypedSplice(tpd.repeated(args.flatten, TypeTree(defn.AnyType))))
+      val isRepeated = args.flatten.exists(_.tpe.widen.isRepeatedParam)
+      if isRepeated then List(untpd.TypedSplice(tpd.repeatedSeq(args.flatten, TypeTree(defn.AnyType))))
       else args.flatten.map { t =>
         val clzSym = t.tpe.resultType.classSymbol.asClass
         if ValueClasses.isDerivedValueClass(clzSym) then
