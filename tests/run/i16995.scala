@@ -2,6 +2,12 @@ class Foo(val i: Int) extends AnyVal
 class Argument(val x: String) extends AnyVal
 class Reflective extends reflect.Selectable
 
+class ScalaSelectable(values: Map[String, Any], methods: Map[String, (Int, Seq[Foo]) => Int]) extends Selectable {
+  def selectDynamic(name: String): Any = values(name)
+
+  def applyDynamic(name: String)(i: Int, foos: Foo*): Int = methods(name)(i, foos)
+}
+
 @main def Test: Unit =
   val reflective = new Reflective {
     def bar(foo: Foo) = foo.i
@@ -38,3 +44,15 @@ class Reflective extends reflect.Selectable
   val seq = Seq(arg1, arg1, arg1)
   val p = reflective.letsHaveSeq(seq)
   println(p)
+
+  val cont2values = Map.empty[String, Any]
+
+  val cont2methods = Map[String, (Int, Seq[Foo]) => Int](
+    "varargs" -> { (i: Int, foos: Seq[Foo]) => foos.map(_.i).sum + i }
+  )
+
+  val cont2 = ScalaSelectable(cont2values, cont2methods).asInstanceOf[ScalaSelectable {
+    def varargs(i: Int, foos: Foo*): Int
+  }]
+
+  println(cont2.varargs(1, Foo(1), Foo(1)))

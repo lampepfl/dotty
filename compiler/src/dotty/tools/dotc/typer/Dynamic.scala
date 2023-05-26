@@ -182,7 +182,8 @@ trait Dynamic {
 
     def handleRepeated(args: List[List[Tree]]) =
       val isRepeated = args.flatten.exists(_.tpe.widen.isRepeatedParam)
-      if isRepeated then List(untpd.TypedSplice(tpd.repeatedSeq(args.flatten, TypeTree(defn.AnyType))))
+      if isRepeated && qual.tpe <:< defn.ReflectSelectableTypeRef then
+        List(untpd.TypedSplice(tpd.repeatedSeq(args.flatten, TypeTree(defn.AnyType))))
       else args.flatten.map { t =>
         val clzSym = t.tpe.resultType.classSymbol.asClass
         if ValueClasses.isDerivedValueClass(clzSym) then
