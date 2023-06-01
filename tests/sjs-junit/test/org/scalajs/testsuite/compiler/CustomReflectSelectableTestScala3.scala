@@ -36,6 +36,18 @@ class CustomReflectSelectableTestScala3 {
     }]
     assertEquals(3, cont.varargs(1, Bar(1), Bar(1)))
   }
+
+  @Test def callSelectableWithVarargsExpansion(): Unit = {
+    val cont2values = Map.empty[String, Any]
+    val cont2methods = Map[String, (Int, Seq[Bar]) => Int](
+      "varargs" -> { (i: Int, bars: Seq[Bar]) => bars.map(_.x).sum + i }
+    )
+    val cont = ScalaSelectable(cont2values, cont2methods).asInstanceOf[ScalaSelectable {
+      def varargs(i: Int, foos: Bar*): Int
+    }]
+    val args = Seq(Bar(1), Bar(1))
+    assertEquals(3, cont.varargs(1, args:_*))
+  }
 }
 
 object CustomReflectSelectableTestScala3 {
