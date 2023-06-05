@@ -72,6 +72,7 @@ object Inlines:
       && (
         ctx.phase == Phases.inliningPhase
         || (ctx.phase == Phases.typerPhase && needsTransparentInlining(tree))
+        || (ctx.phase == Phases.specializeInlineTraitsPhase && !tree.symbol.is(Macro))
       )
       && !ctx.typer.hasInliningErrors
       && !ctx.base.stopInlining
