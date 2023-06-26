@@ -26,6 +26,7 @@ object StdNames {
     inline val LOCALDUMMY_PREFIX        = "<local "       // owner of local blocks
     inline val ANON_CLASS               = "$anon"
     inline val ANON_FUN                 = "$anonfun"
+    inline val INLINE_TRAIT_INNER_CLASS_SUFFIX = "$trait"
 
     inline val REPL_SESSION_LINE  = "rs$line$"
     inline val REPL_ASSIGN_SUFFIX = "$assign"

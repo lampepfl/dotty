@@ -226,7 +226,7 @@ class Constructors extends MiniPhase with IdentityDenotTransformer { thisPhase =
               constrStats += intoConstr(stat, sym)
             } else
               dropped += sym
-          case stat @ DefDef(name, _, tpt, _) if stat.symbol.isGetter && !stat.symbol.is(Lazy) =>
+          case stat @ DefDef(name, _, tpt, _) if stat.symbol.isGetter && !stat.symbol.is(Lazy) && !stat.symbol.owner.isInlineTrait =>
             val sym = stat.symbol
             assert(isRetained(sym), sym)
             if sym.isConstExprFinalVal then

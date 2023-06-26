@@ -1,0 +1,170 @@
+[
+    {
+        "jmhVersion" : "1.32",
+        "benchmark" : "dotty.tools.benchmarks.inlinetraits.Boxing.noUnboxing",
+        "mode" : "thrpt",
+        "threads" : 3,
+        "forks" : 3,
+        "jvm" : "C:\\Program Files\\Eclipse Adoptium\\jdk-8.0.362.9-hotspot\\jre\\bin\\java.exe",
+        "jvmArgs" : [
+            "-XX:MaxJavaStackTraceDepth=1000000",
+            "-DBENCH_COMPILER_CLASS_PATH=D:\\Bureau\\dotty\\scala3-bootstrapped\\..\\out\\bootstrap\\scala3-bootstrapped\\scala-3.3.2-RC1-bin-SNAPSHOT-nonbootstrapped\\classes;D:\\Bureau\\dotty\\tasty\\..\\out\\bootstrap\\tasty-core-bootstrapped\\scala-3.3.2-RC1-bin-SNAPSHOT-nonbootstrapped\\classes;D:\\Bureau\\dotty\\library\\..\\out\\bootstrap\\scala3-library-bootstrapped\\scala-3.3.2-RC1-bin-SNAPSHOT-nonbootstrapped\\classes;D:\\Bureau\\dotty\\compiler\\..\\out\\bootstrap\\scala3-compiler-bootstrapped\\scala-3.3.2-RC1-bin-SNAPSHOT-nonbootstrapped\\classes;D:\\Bureau\\dotty\\interfaces\\target\\classes;C:\\Users\\Tim\\AppData\\Local\\Coursier\\Cache\\v1\\https\\repo1.maven.org\\maven2\\org\\scala-lang\\modules\\scala-asm\\9.5.0-scala-1\\scala-asm-9.5.0-scala-1.jar;C:\\Users\\Tim\\AppData\\Local\\Coursier\\Cache\\v1\\https\\repo1.maven.org\\maven2\\org\\scala-sbt\\compiler-interface\\1.3.5\\compiler-interface-1.3.5.jar;C:\\Users\\Tim\\AppData\\Local\\Coursier\\Cache\\v1\\https\\repo1.maven.org\\maven2\\org\\jline\\jline-reader\\3.19.0\\jline-reader-3.19.0.jar;C:\\Users\\Tim\\AppData\\Local\\Coursier\\Cache\\v1\\https\\repo1.maven.org\\maven2\\org\\jline\\jline-terminal\\3.19.0\\jline-terminal-3.19.0.jar;C:\\Users\\Tim\\AppData\\Local\\Coursier\\Cache\\v1\\https\\repo1.maven.org\\maven2\\org\\jline\\jline-terminal-jna\\3.19.0\\jline-terminal-jna-3.19.0.jar;C:\\Users\\Tim\\AppData\\Local\\Coursier\\Cache\\v1\\https\\repo1.maven.org\\maven2\\org\\scala-lang\\scala-library\\2.13.10\\scala-library-2.13.10.jar;C:\\Users\\Tim\\AppData\\Local\\Coursier\\Cache\\v1\\https\\repo1.maven.org\\maven2\\com\\google\\protobuf\\protobuf-java\\3.7.0\\protobuf-java-3.7.0.jar;C:\\Users\\Tim\\AppData\\Local\\Coursier\\Cache\\v1\\https\\repo1.maven.org\\maven2\\org\\scala-sbt\\util-interface\\1.3.0\\util-interface-1.3.0.jar;C:\\Users\\Tim\\AppData\\Local\\Coursier\\Cache\\v1\\https\\repo1.maven.org\\maven2\\net\\java\\dev\\jna\\jna\\5.3.1\\jna-5.3.1.jar",
+            "-DBENCH_CLASS_PATH=D:\\Bureau\\dotty\\library\\..\\out\\bootstrap\\scala3-library-bootstrapped\\scala-3.3.2-RC1-bin-SNAPSHOT-nonbootstrapped\\classes;C:\\Users\\Tim\\AppData\\Local\\Coursier\\Cache\\v1\\https\\repo1.maven.org\\maven2\\org\\scala-lang\\scala-library\\2.13.10\\scala-library-2.13.10.jar"
+        ],
+        "jdkVersion" : "1.8.0_362",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "25.362-b09",
+        "warmupIterations" : 5,
+        "warmupTime" : "10 s",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 10,
+        "measurementTime" : "10 s",
+        "measurementBatchSize" : 1,
+        "primaryMetric" : {
+            "score" : 162.88061150250263,
+            "scoreError" : 2.990266993200497,
+            "scoreConfidence" : [
+                159.89034450930214,
+                165.87087849570312
+            ],
+            "scorePercentiles" : {
+                "0.0" : 158.3581373751091,
+                "50.0" : 160.28885591739254,
+                "90.0" : 169.6676632568476,
+                "95.0" : 169.8869985658039,
+                "99.0" : 170.04377291450956,
+                "99.9" : 170.04377291450956,
+                "99.99" : 170.04377291450956,
+                "99.999" : 170.04377291450956,
+                "99.9999" : 170.04377291450956,
+                "100.0" : 170.04377291450956
+            },
+            "scoreUnit" : "ops/s",
+            "rawData" : [
+                [
+                    159.9577132559345,
+                    160.820849607922,
+                    158.3581373751091,
+                    159.13670149401082,
+                    159.90507319387544,
+                    159.35157415269947,
+                    161.04014712956862,
+                    158.97091563147922,
+                    159.68412981003686,
+                    159.10201035759437
+                ],
+                [
+                    169.69816685647166,
+                    169.75872864413566,
+                    169.3931308602309,
+                    168.84567408425647,
+                    168.68752669939073,
+                    168.01393345352642,
+                    168.43396265824845,
+                    169.24873341905266,
+                    168.1437959438598,
+                    170.04377291450956
+                ],
+                [
+                    159.42176813732596,
+                    159.85707946987995,
+                    160.5072331177505,
+                    160.07047871703455,
+                    159.7747397173151,
+                    159.29500433917917,
+                    159.32565316619957,
+                    161.0217732116697,
+                    160.02757657473384,
+                    160.5223610820771
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    },
+    {
+        "jmhVersion" : "1.32",
+        "benchmark" : "dotty.tools.benchmarks.inlinetraits.Boxing.withUnboxing",
+        "mode" : "thrpt",
+        "threads" : 3,
+        "forks" : 3,
+        "jvm" : "C:\\Program Files\\Eclipse Adoptium\\jdk-8.0.362.9-hotspot\\jre\\bin\\java.exe",
+        "jvmArgs" : [
+            "-XX:MaxJavaStackTraceDepth=1000000",
+            "-DBENCH_COMPILER_CLASS_PATH=D:\\Bureau\\dotty\\scala3-bootstrapped\\..\\out\\bootstrap\\scala3-bootstrapped\\scala-3.3.2-RC1-bin-SNAPSHOT-nonbootstrapped\\classes;D:\\Bureau\\dotty\\tasty\\..\\out\\bootstrap\\tasty-core-bootstrapped\\scala-3.3.2-RC1-bin-SNAPSHOT-nonbootstrapped\\classes;D:\\Bureau\\dotty\\library\\..\\out\\bootstrap\\scala3-library-bootstrapped\\scala-3.3.2-RC1-bin-SNAPSHOT-nonbootstrapped\\classes;D:\\Bureau\\dotty\\compiler\\..\\out\\bootstrap\\scala3-compiler-bootstrapped\\scala-3.3.2-RC1-bin-SNAPSHOT-nonbootstrapped\\classes;D:\\Bureau\\dotty\\interfaces\\target\\classes;C:\\Users\\Tim\\AppData\\Local\\Coursier\\Cache\\v1\\https\\repo1.maven.org\\maven2\\org\\scala-lang\\modules\\scala-asm\\9.5.0-scala-1\\scala-asm-9.5.0-scala-1.jar;C:\\Users\\Tim\\AppData\\Local\\Coursier\\Cache\\v1\\https\\repo1.maven.org\\maven2\\org\\scala-sbt\\compiler-interface\\1.3.5\\compiler-interface-1.3.5.jar;C:\\Users\\Tim\\AppData\\Local\\Coursier\\Cache\\v1\\https\\repo1.maven.org\\maven2\\org\\jline\\jline-reader\\3.19.0\\jline-reader-3.19.0.jar;C:\\Users\\Tim\\AppData\\Local\\Coursier\\Cache\\v1\\https\\repo1.maven.org\\maven2\\org\\jline\\jline-terminal\\3.19.0\\jline-terminal-3.19.0.jar;C:\\Users\\Tim\\AppData\\Local\\Coursier\\Cache\\v1\\https\\repo1.maven.org\\maven2\\org\\jline\\jline-terminal-jna\\3.19.0\\jline-terminal-jna-3.19.0.jar;C:\\Users\\Tim\\AppData\\Local\\Coursier\\Cache\\v1\\https\\repo1.maven.org\\maven2\\org\\scala-lang\\scala-library\\2.13.10\\scala-library-2.13.10.jar;C:\\Users\\Tim\\AppData\\Local\\Coursier\\Cache\\v1\\https\\repo1.maven.org\\maven2\\com\\google\\protobuf\\protobuf-java\\3.7.0\\protobuf-java-3.7.0.jar;C:\\Users\\Tim\\AppData\\Local\\Coursier\\Cache\\v1\\https\\repo1.maven.org\\maven2\\org\\scala-sbt\\util-interface\\1.3.0\\util-interface-1.3.0.jar;C:\\Users\\Tim\\AppData\\Local\\Coursier\\Cache\\v1\\https\\repo1.maven.org\\maven2\\net\\java\\dev\\jna\\jna\\5.3.1\\jna-5.3.1.jar",
+            "-DBENCH_CLASS_PATH=D:\\Bureau\\dotty\\library\\..\\out\\bootstrap\\scala3-library-bootstrapped\\scala-3.3.2-RC1-bin-SNAPSHOT-nonbootstrapped\\classes;C:\\Users\\Tim\\AppData\\Local\\Coursier\\Cache\\v1\\https\\repo1.maven.org\\maven2\\org\\scala-lang\\scala-library\\2.13.10\\scala-library-2.13.10.jar"
+        ],
+        "jdkVersion" : "1.8.0_362",
+        "vmName" : "OpenJDK 64-Bit Server VM",
+        "vmVersion" : "25.362-b09",
+        "warmupIterations" : 5,
+        "warmupTime" : "10 s",
+        "warmupBatchSize" : 1,
+        "measurementIterations" : 10,
+        "measurementTime" : "10 s",
+        "measurementBatchSize" : 1,
+        "primaryMetric" : {
+            "score" : 107.78403619364975,
+            "scoreError" : 0.7631272570198755,
+            "scoreConfidence" : [
+                107.02090893662988,
+                108.54716345066963
+            ],
+            "scorePercentiles" : {
+                "0.0" : 105.14904049054749,
+                "50.0" : 107.85612745984966,
+                "90.0" : 109.30252744044898,
+                "95.0" : 109.61946698757238,
+                "99.0" : 109.70077420709083,
+                "99.9" : 109.70077420709083,
+                "99.99" : 109.70077420709083,
+                "99.999" : 109.70077420709083,
+                "99.9999" : 109.70077420709083,
+                "100.0" : 109.70077420709083
+            },
+            "scoreUnit" : "ops/s",
+            "rawData" : [
+                [
+                    109.00953072990166,
+                    108.50140704365302,
+                    106.79159035965387,
+                    108.1089641435479,
+                    106.46136711927547,
+                    105.9937398934388,
+                    105.8401380001939,
+                    106.14651450645843,
+                    105.14904049054749,
+                    106.49817456001642
+                ],
+                [
+                    107.86202723477766,
+                    109.70077420709083,
+                    108.86938534959998,
+                    109.11877547416185,
+                    108.08157275978294,
+                    108.2784106655475,
+                    107.83824225340533,
+                    109.55294289887547,
+                    108.43692033784615,
+                    107.63180718013086
+                ],
+                [
+                    108.00700643350362,
+                    107.04263353261555,
+                    107.51463533491946,
+                    108.36206364754942,
+                    109.322944325592,
+                    107.80799535416462,
+                    107.76136941477469,
+                    107.39985168504745,
+                    108.58103318849845,
+                    107.85022768492168
+                ]
+            ]
+        },
+        "secondaryMetrics" : {
+        }
+    }
+]
+
+

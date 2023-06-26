@@ -3,8 +3,9 @@ package dotc
 package inlines
 
 import ast.*, core.*
-import Flags.*, Symbols.*, Types.*, Decorators.*, Constants.*, Contexts.*
-import StdNames.tpnme
+import Flags.*, Symbols.*, Types.*, Decorators.*, Constants.*, Contexts.*, TypeOps.*
+import Names.Name
+import StdNames.{str, nme, tpnme}
 import transform.SymUtils._
 import typer.*
 import NameKinds.BodyRetainerName
@@ -18,7 +19,8 @@ import staging.StagingLevel
 
 import collection.mutable
 import reporting.{NotConstant, trace}
-import util.Spans.Span
+import util.Spans.{Span, spanCoord}
+import NameOps.expandedName
 
 /** Support for querying inlineable methods and for inlining calls to such methods */
 object Inlines:
@@ -32,7 +34,7 @@ object Inlines:
   /** `sym` is an inline method with a known body to inline.
    */
   def hasBodyToInline(sym: SymDenotation)(using Context): Boolean =
-    sym.isInlineMethod && sym.hasAnnotation(defn.BodyAnnot)
+    (sym.isInlineMethod || sym.isInlineTrait) && sym.hasAnnotation(defn.BodyAnnot)
 
   /** The body to inline for method `sym`, or `EmptyTree` if none exists.
    *  @pre  hasBodyToInline(sym)
@@ -43,27 +45,68 @@ object Inlines:
     else
       EmptyTree
 
+  def defsToInline(traitSym: SymDenotation)(using Context): List[Tree] =
+    bodyToInline(traitSym) match
+      case Block(defs, _) if traitSym.isInlineTrait => defs
+      case _ => Nil
+
   /** Are we in an inline method body? */
   def inInlineMethod(using Context): Boolean =
     ctx.owner.ownersIterator.exists(_.isInlineMethod)
 
+  def inInlineContext(using Context): Boolean =
+    ctx.owner.ownersIterator.exists(sym => sym.isInlineMethod || sym.isInlineTrait)
+
   /** Can a call to method `meth` be inlined? */
   def isInlineable(meth: Symbol)(using Context): Boolean =
-    meth.is(Inline) && meth.hasAnnotation(defn.BodyAnnot) && !inInlineMethod
+    meth.isInlineMethod && meth.hasAnnotation(defn.BodyAnnot) && !inInlineMethod
+
+  def isInlineableFromInlineTrait(inlinedTraitSym: ClassSymbol, member: tpd.Tree)(using Context): Boolean =
+    !(member.isInstanceOf[tpd.TypeDef] && inlinedTraitSym.typeParams.contains(member.symbol))
+    && !member.symbol.isAllOf(Inline)
 
   /** Should call be inlined in this context? */
-  def needsInlining(tree: Tree)(using Context): Boolean = tree match {
-    case Block(_, expr) => needsInlining(expr)
-    case _ =>
-      isInlineable(tree.symbol)
-      && !tree.tpe.widenTermRefExpr.isInstanceOf[MethodOrPoly]
-      && StagingLevel.level == 0
+  def needsInlining(tree: Tree)(using Context): Boolean =
+    def isInlineableInCtx =
+      StagingLevel.level == 0
       && (
         ctx.phase == Phases.inliningPhase
         || (ctx.phase == Phases.typerPhase && needsTransparentInlining(tree))
+        || (ctx.phase == Phases.specializeInlineTraitsPhase && !tree.symbol.is(Macro))
       )
       && !ctx.typer.hasInliningErrors
       && !ctx.base.stopInlining
+      && !ctx.owner.ownersIterator.exists(_.isInlineTrait)
+
+    tree match
+      case Block(_, expr) =>
+        needsInlining(expr)
+      case tdef @ TypeDef(_, impl: Template) =>
+        impl.parents.map(symbolFromParent).exists(_.isInlineTrait) && isInlineableInCtx
+      case _ =>
+        isInlineable(tree.symbol) && !tree.tpe.widenTermRefExpr.isInstanceOf[MethodOrPoly] && isInlineableInCtx
+
+  private[dotc] def symbolFromParent(parent: Tree)(using Context): Symbol =
+    if parent.symbol.isConstructor then parent.symbol.owner else parent.symbol
+
+  private def inlineTraitAncestors(cls: TypeDef)(using Context): List[Tree] = cls match {
+    case tpd.TypeDef(_, tmpl: Template) =>
+      val parentTrees: Map[Symbol, Tree] = tmpl.parents.map(par => symbolFromParent(par) -> par).toMap.filter(_._1.isInlineTrait)
+      val ancestors: List[ClassSymbol] = cls.tpe.baseClasses.filter(sym => sym.isInlineTrait && sym != cls.symbol)
+      ancestors.flatMap(ancestor =>
+        def baseTree =
+          cls.tpe.baseType(ancestor) match
+            case AppliedType(tycon, targs) =>
+              Some(AppliedTypeTree(TypeTree(tycon), targs.map(TypeTree(_))))
+            case tref: TypeRef =>
+              Some(Ident(tref))
+            case baseTpe =>
+              report.error(s"unknown base type ${baseTpe.show} for ancestor ${ancestor.show} of ${cls.symbol.show}")
+              None
+        parentTrees.get(ancestor).orElse(baseTree.map(_.withSpan(cls.span)))
+      )
+    case _ =>
+      Nil
   }
 
   private def needsTransparentInlining(tree: Tree)(using Context): Boolean =
@@ -168,6 +211,26 @@ object Inlines:
         // reset so that further inline calls can be expanded
     tree2
   end inlineCall
+
+  def inlineParentInlineTraits(cls: Tree)(using Context): Tree =
+    cls match {
+      case cls @ tpd.TypeDef(_, impl: Template) =>
+        val clsOverriddenSyms = cls.symbol.info.decls.toList.flatMap(_.allOverriddenSymbols).toSet
+        val newDefs = inContext(ctx.withOwner(cls.symbol)) {
+          inlineTraitAncestors(cls).foldLeft((List.empty[Tree], impl.body)){
+            case ((inlineDefs, childDefs), parent) =>
+              val parentTraitInliner = InlineParentTrait(parent)
+              val overriddenSymbols = clsOverriddenSyms ++ inlineDefs.flatMap(_.symbol.allOverriddenSymbols)
+              val inlinedDefs1 = inlineDefs ::: parentTraitInliner.expandDefs(overriddenSymbols)
+              val childDefs1 = parentTraitInliner.adaptDefs(childDefs)  // TODO do this outside of inlining: we need to adapt ALL references to inlined stuff
+              (inlinedDefs1, childDefs1)
+          }
+        }
+        val impl1 = cpy.Template(impl)(body = newDefs._1 ::: newDefs._2)
+        cpy.TypeDef(cls)(rhs = impl1)
+      case _ =>
+        cls
+    }
 
   /** Try to inline a pattern with an inline unapply method. Fail with error if the maximal
    *  inline depth is exceeded.
@@ -459,4 +522,246 @@ object Inlines:
           // the opaque type itself. An example is in pos/opaque-inline1.scala.
     end expand
   end InlineCall
+
+  private class InlineParentTrait(parent: tpd.Tree)(using Context) extends Inliner(parent):
+    import tpd._
+    import Inlines.*
+
+    private val parentSym = symbolFromParent(parent)
+    private val paramAccessorsMapper = ParamAccessorsMapper()
+    private val innerClassNewSyms: mutable.LinkedHashMap[Symbol, Symbol] = mutable.LinkedHashMap.empty
+
+    private val childThisType = ctx.owner.thisType
+    private val childThisTree = This(ctx.owner.asClass).withSpan(parent.span)
+
+    def expandDefs(overriddenDecls: Set[Symbol]): List[Tree] =
+      paramAccessorsMapper.registerParamValuesOf(parent)
+      val stats = Inlines.defsToInline(parentSym).filterNot(stat => overriddenDecls.contains(stat.symbol))
+      stats.map{
+        case member: MemberDef => Left((member, inlinedSym(member.symbol))) // Private symbols must be entered before the RHSs are inlined
+        case stat => Right(stat)
+      }.map{
+        case Left((tree, inlinedSym)) => expandStat(tree, inlinedSym)
+        case Right(tree) => inlinedRhs(tree)
+      }
+    end expandDefs
+
+    def adaptDefs(definitions: List[Tree]): List[Tree] = definitions.mapconserve(defsAdapter(_))
+
+    protected class InlineTraitTypeMap extends InlinerTypeMap {
+      override def apply(t: Type) = super.apply(t) match {
+        case t: ThisType if t.cls == parentSym => childThisType
+        case t => mapOver(t)
+      }
+    }
+
+    protected class InlineTraitTreeMap extends InlinerTreeMap {
+      override def apply(tree: Tree) = super.apply(tree) match {
+        case tree: This if tree.symbol == parentSym =>
+          Inlined(EmptyTree, Nil, childThisTree).withSpan(parent.span)
+        case tree: This =>
+          tree.tpe match {
+            case thisTpe: ThisType if thisTpe.cls.isInlineTrait =>
+              integrate(This(ctx.owner.asClass).withSpan(parent.span), thisTpe.cls)
+            case _ =>
+              tree
+          }
+        case Select(qual, name) =>
+          paramAccessorsMapper.getParamAccessorName(qual.symbol, name) match {
+            case Some(newName) => Select(this(qual), newName).withSpan(parent.span)
+            case None => Select(this(qual), name)
+          }
+        case tree =>
+          tree
+      }
+    }
+
+    override protected val inlinerTypeMap: InlinerTypeMap = InlineTraitTypeMap()
+    override protected val inlinerTreeMap: InlinerTreeMap = InlineTraitTreeMap()
+
+    override protected def substFrom: List[Symbol] = innerClassNewSyms.keys.toList
+    override protected def substTo: List[Symbol] = innerClassNewSyms.values.toList
+    override protected def inlineCopier: tpd.TreeCopier = new TypedTreeCopier() {
+      // FIXME it feels weird... Is this correct?
+      override def Apply(tree: Tree)(fun: Tree, args: List[Tree])(using Context): Apply =
+        untpd.cpy.Apply(tree)(fun, args).withTypeUnchecked(tree.tpe)
+    }
+
+    override protected def computeThisBindings(): Unit = ()
+    override protected def canElideThis(tpe: ThisType): Boolean = true
+
+    override protected def inlineCtx(inlineTyper: InlineTyper)(using Context): Context =
+      ctx.fresh.setTyper(inlineTyper).setNewScope
+
+    extension (sym: Symbol)
+      private def isTermParamAccessor: Boolean = !sym.isType && sym.is(ParamAccessor)
+
+    private def expandStat(stat: tpd.Tree, inlinedSym: Symbol)(using Context): tpd.Tree = stat match
+      case stat: ValDef =>
+        inlinedValDef(stat, inlinedSym)
+      case stat: DefDef =>
+        inlinedDefDef(stat, inlinedSym)
+      case stat @ TypeDef(_, _: Template) =>
+        inlinedClassDef(stat, inlinedSym.asClass)
+      case stat: TypeDef =>
+        inlinedTypeDef(stat, inlinedSym)
+
+    private def inlinedSym(sym: Symbol, withoutFlags: FlagSet = EmptyFlags)(using Context): Symbol =
+      if sym.isClass then inlinedClassSym(sym.asClass, withoutFlags) else inlinedMemberSym(sym, withoutFlags)
+
+    private def inlinedClassSym(sym: ClassSymbol, withoutFlags: FlagSet = EmptyFlags)(using Context): ClassSymbol =
+      sym.info match {
+        case clsInfo: ClassInfo =>
+          val typeParams: List[Type] = sym.primaryConstructor.info match {
+            case poly: PolyType => poly.paramRefs
+            case _ => Nil
+          }
+          // Extend inner class from inline trait to preserve typing
+          val newParent = ctx.owner.thisType.select(sym).appliedTo(typeParams)
+          val inlinedSym = newClassSymbol(
+            ctx.owner,
+            sym.name,
+            (sym.flags | Synthetic) &~ withoutFlags,
+            newCls => {
+              val ClassInfo(prefix, _, parents, _, selfInfo) = inlinerTypeMap.mapClassInfo(clsInfo)
+              ClassInfo(prefix, newCls, parents :+ newParent, Scopes.newScope, selfInfo) // TODO fix selfInfo (what to use?)
+            },
+            sym.privateWithin,
+            spanCoord(parent.span)
+          )
+          inlinedSym.setTargetName(sym.name ++ str.NAME_JOIN ++ ctx.owner.name)
+          innerClassNewSyms.put(sym, inlinedSym)
+          inlinedSym.entered
+        case _ =>
+          report.error(s"Class symbol ${sym.show} does not have class info")
+          sym
+      }
+
+    private def inlinedMemberSym(sym: Symbol, withoutFlags: FlagSet = EmptyFlags)(using Context): Symbol =
+      var name = sym.name
+      var flags = sym.flags | Synthetic
+      if sym.isType || !sym.is(Private) then flags |= Override
+      if sym.isTermParamAccessor then
+        flags &~= ParamAccessor
+        if sym.is(Local) && sym.owner.isInlineTrait then
+          name = paramAccessorsMapper.registerNewName(sym)
+      sym.copy(
+        owner = ctx.owner,
+        name = name,
+        flags = flags &~ withoutFlags,
+        info = inlinerTypeMap(sym.info),
+        coord = spanCoord(parent.span)).entered
+
+    private def inlinedValDef(vdef: ValDef, inlinedSym: Symbol)(using Context): ValDef =
+      val rhs =
+        paramAccessorsMapper
+          .getParamAccessorRhs(vdef.symbol.owner, vdef.symbol.name)
+          .getOrElse(inlinedRhs(vdef, inlinedSym))
+      tpd.ValDef(inlinedSym.asTerm, rhs).withSpan(parent.span)
+
+    private def inlinedDefDef(ddef: DefDef, inlinedSym: Symbol)(using Context): DefDef =
+      val rhsFun: List[List[Tree]] => Tree =
+        if ddef.symbol.isSetter then
+          _ => unitLiteral
+        else
+          paramss =>
+            val oldParamSyms = ddef.paramss.flatten.map(_.symbol)
+            val newParamSyms = paramss.flatten.map(_.symbol)
+            val ddef1 = cpy.DefDef(ddef)(rhs = ddef.rhs.subst(oldParamSyms, newParamSyms))
+            inlinedRhs(ddef1, inlinedSym)
+      tpd.DefDef(inlinedSym.asTerm, rhsFun).withSpan(parent.span)
+
+    private def inlinedPrimaryConstructorDefDef(ddef: DefDef)(using Context): DefDef =
+      // TODO check if symbol must be copied
+      val inlinedSym = inlinedMemberSym(ddef.symbol, withoutFlags = Override)
+      val constr = inlinedDefDef(ddef, inlinedSym)
+      cpy.DefDef(constr)(tpt = TypeTree(defn.UnitType), rhs = EmptyTree)
+
+    private def inlinedClassDef(clsDef: TypeDef, inlinedCls: ClassSymbol)(using Context): Tree =
+      val TypeDef(_, tmpl: Template) = clsDef: @unchecked
+      val (constr, body) = inContext(ctx.withOwner(inlinedCls)) {
+        val inlinedConstr = inlinedPrimaryConstructorDefDef(tmpl.constr)
+        val inlinedTmpl = tmpl.body.map {
+          case stat: TypeDef if stat.symbol.isAllOf(PrivateLocal | Param) =>
+            expandStat(stat, inlinedSym(stat.symbol, withoutFlags = Override))
+          case stat =>
+            expandStat(stat, inlinedSym(stat.symbol))
+        }
+        (inlinedConstr, inlinedTmpl)
+      }
+      val clsDef1 = tpd.ClassDefWithParents(inlinedCls, constr, tmpl.parents, body) // TODO add correct parent tree
+      inlined(clsDef1)._2.withSpan(clsDef.span)
+
+    private def inlinedTypeDef(tdef: TypeDef, inlinedSym: Symbol)(using Context): TypeDef =
+      tpd.TypeDef(inlinedSym.asType).withSpan(parent.span)
+
+    private def inlinedRhs(vddef: ValOrDefDef, inlinedSym: Symbol)(using Context): Tree =
+      val rhs = vddef.rhs.changeOwner(vddef.symbol, inlinedSym)
+      inlinedRhs(rhs)(using ctx.withOwner(inlinedSym))
+
+    private def inlinedRhs(rhs: Tree)(using Context): Tree =
+      if rhs.isEmpty then
+        rhs
+      else
+        // TODO make version of inlined that does not return bindings?
+        Inlined(tpd.ref(parentSym), Nil, inlined(rhs)._2).withSpan(parent.span)
+
+    private val defsAdapter =
+      val typeMap = new DeepTypeMap {
+        override def apply(tp: Type): Type = tp match {
+          case TypeRef(_, sym: Symbol) if innerClassNewSyms.contains(sym) =>
+            TypeRef(childThisType, innerClassNewSyms(sym))
+          case _ =>
+            mapOver(tp)
+        }
+      }
+      def treeMap(tree: Tree) = tree match {
+        case ident: Ident if innerClassNewSyms.contains(ident.symbol) =>
+          Ident(innerClassNewSyms(ident.symbol).namedType)
+        case tdef: TypeDef if tdef.symbol.isClass =>
+          tdef.symbol.info = typeMap(tdef.symbol.info)
+          tdef
+        case tree =>
+          tree
+      }
+      new TreeTypeMap(
+        typeMap = typeMap,
+        treeMap = treeMap,
+        substFrom = substFrom,
+        substTo = substTo,
+      )
+    end defsAdapter
+
+    private class ParamAccessorsMapper:
+      private val paramAccessorsTrees: mutable.Map[Symbol, Map[Name, Tree]] = mutable.Map.empty
+      private val paramAccessorsNewNames: mutable.Map[(Symbol, Name), Name] = mutable.Map.empty
+
+      def registerParamValuesOf(parent: Tree): Unit =
+        def allArgs(tree: Tree, acc: Vector[List[Tree]]): List[List[Tree]] = tree match
+          case Apply(fun, args) => allArgs(fun, acc :+ args)
+          case TypeApply(fun, _) => allArgs(fun, acc)
+          case _ => acc.toList
+        def allParams(info: Type, acc: List[List[Name]]): List[List[Name]] = info match
+          case mt: MethodType => allParams(mt.resultType, mt.paramNames :: acc)
+          case pt: PolyType => allParams(pt.resultType, acc)
+          case _ => acc
+        val info =
+          if parent.symbol.isClass then parent.symbol.primaryConstructor.info
+          else parent.symbol.info
+        val paramAccessors = allParams(info, Nil).flatten.zip(allArgs(parent, Vector.empty).flatten).toMap
+        paramAccessorsTrees.put(symbolFromParent(parent), paramAccessors)
+
+      def registerNewName(paramAccessorSym: Symbol): paramAccessorSym.ThisName =
+        val oldName = paramAccessorSym.name
+        val newName = oldName.expandedName(parentSym)
+        paramAccessorsNewNames.put((paramAccessorSym.owner, oldName), newName)
+        newName
+
+      def getParamAccessorRhs(parent: Symbol, paramAccessorName: Name): Option[Tree] =
+        paramAccessorsTrees.get(parent).flatMap(_.get(paramAccessorName))
+
+      def getParamAccessorName(parent: Symbol, paramAccessorName: Name): Option[Name] =
+        paramAccessorsNewNames.get(parent, paramAccessorName)
+    end ParamAccessorsMapper
+  end InlineParentTrait
 end Inlines

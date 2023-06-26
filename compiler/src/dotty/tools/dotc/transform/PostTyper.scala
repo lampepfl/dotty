@@ -388,6 +388,8 @@ class PostTyper extends MacroTransform with IdentityDenotTransformer { thisPhase
           val tree1 = cpy.DefDef(tree)(rhs = normalizeErasedRhs(tree.rhs, tree.symbol))
           processValOrDefDef(superAcc.wrapDefDef(tree1)(super.transform(tree1).asInstanceOf[DefDef]))
         case tree: TypeDef =>
+          if tree.symbol.isInlineTrait then
+            ctx.compilationUnit.needsInlining = true  // Transform inner classes to traits
           registerIfHasMacroAnnotations(tree)
           val sym = tree.symbol
           if (sym.isClass)
@@ -399,6 +401,8 @@ class PostTyper extends MacroTransform with IdentityDenotTransformer { thisPhase
             tree.rhs match
               case impl: Template =>
                 for parent <- impl.parents do
+                  if Inlines.symbolFromParent(parent).isInlineTrait then
+                    ctx.compilationUnit.needsInlining = true
                   Checking.checkTraitInheritance(parent.tpe.classSymbol, sym.asClass, parent.srcPos)
                   // Constructor parameters are in scope when typing a parent.
                   // While they can safely appear in a parent tree, to preserve

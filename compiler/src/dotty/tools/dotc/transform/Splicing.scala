@@ -90,8 +90,8 @@ class Splicing extends MacroTransform:
         case tree: Quote =>
           val body1 = QuoteTransformer().transform(tree.body)(using quoteContext)
           cpy.Quote(tree)(body1, tree.tags)
-        case tree: DefDef if tree.symbol.is(Inline) =>
-          // Quotes in inlined methods are only pickled after they are inlined.
+        case _: DefDef | _: TypeDef if tree.symbol.is(Inline) =>
+          // Quotes in inlined methods and traits are only pickled after they are inlined.
           tree
         case _ =>
           super.transform(tree)

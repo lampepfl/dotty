@@ -1,7 +1,6 @@
 inline object Foo // OK (error would be detected later, in PostTyper)
 inline class Bar // error: modifier(s) `inline' incompatible with type definition
 inline abstract class Baz // error: modifier(s) `inline' incompatible with type definition
-inline trait Qux // error: modifier(s) `inline' incompatible with type definition
 
 object Quux {
   inline type T // error: modifier(s) `inline' incompatible with type definition

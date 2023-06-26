@@ -81,9 +81,9 @@ class PickleQuotes extends MacroTransform {
   override def checkPostCondition(tree: Tree)(using Context): Unit =
     tree match
       case tree: Quote =>
-        assert(Inlines.inInlineMethod)
+        assert(Inlines.inInlineContext)
       case tree: Splice =>
-        assert(Inlines.inInlineMethod)
+        assert(Inlines.inInlineContext)
       case _ =>
 
   override def run(using Context): Unit =

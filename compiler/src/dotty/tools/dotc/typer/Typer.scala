@@ -2705,6 +2705,29 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
       val dummy = localDummy(cls, impl)
       val body1 = addAccessorDefs(cls, typedStats(impl.body, dummy)(using ctx.inClassContext(self1.symbol))._1)
 
+      if !ctx.isAfterTyper && cls.isInlineTrait then
+        body1.map(_.symbol).filter(_.isInlineTrait).foreach(innerInlTrait =>
+          report.error(
+            em"Implementation restriction: an inline trait cannot be defined inside of another inline trait",
+            innerInlTrait.srcPos
+          )
+        )
+        val membersToInline = body1.filter(member => Inlines.isInlineableFromInlineTrait(cls, member))
+        membersToInline.foreach {
+          case tdef: TypeDef if tdef.symbol.isClass =>
+            def rec(paramss: List[List[Symbol]]): Unit = paramss match {
+              case (param :: _) :: _ if param.isTerm =>
+                report.error(em"Implementation restriction: inline traits cannot have term parameters", param.srcPos)
+              case _ :: paramss =>
+                rec(paramss)
+              case _ =>
+            }
+            rec(tdef.symbol.primaryConstructor.paramSymss)
+          case _ =>
+        }
+        val wrappedMembersToInline = Block(membersToInline, unitLiteral).withSpan(cdef.span)
+        PrepareInlineable.registerInlineInfo(cls, wrappedMembersToInline)
+
       checkNoDoubleDeclaration(cls)
       val impl1 = cpy.Template(impl)(constr1, parents1, Nil, self1, body1)
         .withType(dummy.termRef)

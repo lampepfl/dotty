@@ -1012,6 +1012,9 @@ object SymDenotations {
     def isInlineMethod(using Context): Boolean =
       isAllOf(InlineMethod, butNot = Accessor)
 
+    def isInlineTrait(using Context): Boolean =
+      isAllOf(InlineTrait)
+
     /** Does this method or field need to be retained at runtime */
     def isRetainedInline(using Context): Boolean =
       is(Inline, butNot = Deferred)
