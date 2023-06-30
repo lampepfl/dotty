@@ -561,7 +561,6 @@ object TypeErasure {
     case tp: TypeProxy => hasStableErasure(tp.translucentSuperType)
     case tp: AndType => hasStableErasure(tp.tp1) && hasStableErasure(tp.tp2)
     case tp: OrType  => hasStableErasure(tp.tp1) && hasStableErasure(tp.tp2)
-    case _: FlexibleType => false
     case _ => false
   }
 
