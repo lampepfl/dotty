@@ -25,6 +25,7 @@ import reporting.trace
 import annotation.constructorOnly
 import cc.{CapturingType, derivedCapturingType, CaptureSet, stripCapturing, isBoxedCapturing, boxed, boxedUnlessFun, boxedIfTypeParam, isAlwaysPure}
 import NameKinds.WildcardParamName
+import NullOpsDecorator.stripFlexible
 
 /** Provides methods to compare types.
  */
@@ -2496,15 +2497,18 @@ class TypeComparer(@constructorOnly initctx: Context) extends ConstraintHandling
         NoType
     }
 
-  private def andTypeGen(tp1: Type, tp2: Type, op: (Type, Type) => Type,
-      original: (Type, Type) => Type = _ & _, isErased: Boolean = ctx.erasedTypes): Type = trace(s"andTypeGen(${tp1.show}, ${tp2.show})", subtyping, show = true) {
-    val t1 = distributeAnd(tp1, tp2)
-    if (t1.exists) t1
-    else {
-      val t2 = distributeAnd(tp2, tp1)
-      if (t2.exists) t2
-      else if (isErased) erasedGlb(tp1, tp2)
-      else liftIfHK(tp1, tp2, op, original, _ | _)
+  private def andTypeGen(tp1orig: Type, tp2orig: Type, op: (Type, Type) => Type,
+      original: (Type, Type) => Type = _ & _, isErased: Boolean = ctx.erasedTypes): Type = trace(s"andTypeGen(${tp1orig.show}, ${tp2orig.show})", subtyping, show = true) {
+    val tp1 = tp1orig.stripFlexible
+    val tp2 = tp2orig.stripFlexible
+    val ret = {
+      val t1 = distributeAnd(tp1, tp2)
+      if (t1.exists) t1
+      else {
+        val t2 = distributeAnd(tp2, tp1)
+        if (t2.exists) t2
+        else if (isErased) erasedGlb(tp1, tp2)
+        else liftIfHK(tp1, tp2, op, original, _ | _)
         // The ` | ` on variances is needed since variances are associated with bounds
         // not lambdas. Example:
         //
@@ -2514,7 +2518,9 @@ class TypeComparer(@constructorOnly initctx: Context) extends ConstraintHandling
         //
         // Here, `F` is treated as bivariant in `O`. That is, only bivariant implementation
         // of `F` are allowed. See neg/hk-variance2s.scala test.
+      }
     }
+    if(tp1orig.isInstanceOf[FlexibleType] && tp2orig.isInstanceOf[FlexibleType]) FlexibleType(ret) else ret
   }
 
   /** Form a normalized conjunction of two types.
@@ -2587,72 +2593,52 @@ class TypeComparer(@constructorOnly initctx: Context) extends ConstraintHandling
   /** Try to distribute `&` inside type, detect and handle conflicts
    *  @pre !(tp1 <: tp2) && !(tp2 <:< tp1) -- these cases were handled before
    */
-  private def distributeAnd(tp1: Type, tp2: Type): Type = {
-    var ft1 = false
-    var ft2 = false
-    def recur(tp1: Type, tp2: Type): Type = tp1 match {
-      case tp1 @ FlexibleType(tp) =>
-        // Hack -- doesn't generalise to other intersection/union types
-        // but covers a common special case for pattern matching
-        ft1 = true
-        recur(tp, tp2)
-      case tp1 @ AppliedType(tycon1, args1) =>
-        tp2 match {
-          case AppliedType(tycon2, args2)
-          if tycon1.typeSymbol == tycon2.typeSymbol && tycon1 =:= tycon2 =>
-            val jointArgs = glbArgs(args1, args2, tycon1.typeParams)
-            if (jointArgs.forall(_.exists)) (tycon1 & tycon2).appliedTo(jointArgs)
-            else {
-              NoType
-            }
-          case FlexibleType(tp) =>
-            // Hack from above
-            ft2 = true
-            recur(tp1, tp)
-          case _ =>
+  private def distributeAnd(tp1: Type, tp2: Type): Type = tp1 match {
+    case tp1 @ AppliedType(tycon1, args1) =>
+      tp2 match {
+        case AppliedType(tycon2, args2)
+        if tycon1.typeSymbol == tycon2.typeSymbol && tycon1 =:= tycon2 =>
+          val jointArgs = glbArgs(args1, args2, tycon1.typeParams)
+          if (jointArgs.forall(_.exists)) (tycon1 & tycon2).appliedTo(jointArgs)
+          else NoType
+        case _ =>
+          NoType
+      }
+    case tp1: RefinedType =>
+      // opportunistically merge same-named refinements
+      // this does not change anything semantically (i.e. merging or not merging
+      // gives =:= types), but it keeps the type smaller.
+      tp2 match {
+        case tp2: RefinedType if tp1.refinedName == tp2.refinedName =>
+          val jointInfo = Denotations.infoMeet(tp1.refinedInfo, tp2.refinedInfo, safeIntersection = false)
+          if jointInfo.exists then
+            tp1.derivedRefinedType(tp1.parent & tp2.parent, tp1.refinedName, jointInfo)
+          else
             NoType
-        }
-
-      // if result exists and is not notype, maybe wrap result in flex based on whether seen flex on both sides
-      case tp1: RefinedType =>
-        // opportunistically merge same-named refinements
-        // this does not change anything semantically (i.e. merging or not merging
-        // gives =:= types), but it keeps the type smaller.
-        tp2 match {
-          case tp2: RefinedType if tp1.refinedName == tp2.refinedName =>
-            val jointInfo = Denotations.infoMeet(tp1.refinedInfo, tp2.refinedInfo, safeIntersection = false)
-            if jointInfo.exists then
-              tp1.derivedRefinedType(tp1.parent & tp2.parent, tp1.refinedName, jointInfo)
-            else
-              NoType
-          case _ =>
-            NoType
-        }
-      case tp1: RecType =>
-        tp1.rebind(recur(tp1.parent, tp2))
-      case ExprType(rt1) =>
-        tp2 match {
-          case ExprType(rt2) =>
-            ExprType(rt1 & rt2)
-          case _ =>
-            NoType
-        }
-      case tp1: TypeVar if tp1.isInstantiated =>
-        tp1.underlying & tp2
-      case CapturingType(parent1, refs1) =>
+        case _ =>
+          NoType
+      }
+    case tp1: RecType =>
+      tp1.rebind(distributeAnd(tp1.parent, tp2))
+    case ExprType(rt1) =>
+      tp2 match {
+        case ExprType(rt2) =>
+          ExprType(rt1 & rt2)
+        case _ =>
+          NoType
+      }
+    case tp1: TypeVar if tp1.isInstantiated =>
+      tp1.underlying & tp2
+    case CapturingType(parent1, refs1) =>
       val refs2 = tp2.captureSet
       if subCaptures(refs2, refs1, frozen = true).isOK
-          && tp1.isBoxedCapturing == tp2.isBoxedCapturing
+        && tp1.isBoxedCapturing == tp2.isBoxedCapturing
       then (parent1 & tp2).capturing(refs2)
       else tp1.derivedCapturingType(parent1 & tp2, refs1)
-      case tp1: AnnotatedType if !tp1.isRefining =>
-        tp1.underlying & tp2
-      case _ =>
-        NoType
-    }
-    // if flex on both sides, return flex type
-    val ret = recur(tp1, tp2)
-    if (ft1 && ft2) then FlexibleType(ret) else ret
+    case tp1: AnnotatedType if !tp1.isRefining =>
+      tp1.underlying & tp2
+    case _ =>
+      NoType
   }
 
   /** Try to distribute `|` inside type, detect and handle conflicts
