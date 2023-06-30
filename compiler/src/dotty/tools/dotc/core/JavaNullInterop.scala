@@ -63,26 +63,29 @@ object JavaNullInterop {
       // Don't nullify the return type of the `toString` method.
       // Don't nullify the return type of constructors.
       // Don't nullify the return type of methods with a not-null annotation.
-      nullifyExceptReturnType(tp, sym.owner.isClass)
+      nullifyExceptReturnType(tp)
     else
       // Otherwise, nullify everything
-      nullifyType(tp, sym.owner.isClass)
+      nullifyType(tp)
   }
 
   private def hasNotNullAnnot(sym: Symbol)(using Context): Boolean =
     ctx.definitions.NotNullAnnots.exists(nna => sym.unforcedAnnotation(nna).isDefined)
+
+  private def javaNullMap(outermostLevelAlreadyNullable: Boolean)(using Context): TypeMap =
+    if ctx.flexibleTypes then new JavaFlexibleMap(outermostLevelAlreadyNullable) else new JavaNullMap(outermostLevelAlreadyNullable)
 
   /** If tp is a MethodType, the parameters and the inside of return type are nullified,
    *  but the result return type is not nullable.
    *  If tp is a type of a field, the inside of the type is nullified,
    *  but the result type is not nullable.
    */
-  private def nullifyExceptReturnType(tp: Type, ownerIsClass: Boolean)(using Context): Type =
-    if ctx.flexibleTypes /*&& ownerIsClass*/ then new JavaFlexibleMap(true)(tp) else new JavaNullMap(true)(tp) // FLEX PARAMS
+  private def nullifyExceptReturnType(tp: Type)(using Context): Type =
+    javaNullMap(outermostLevelAlreadyNullable = true)(tp)
 
   /** Nullifies a Java type by adding `| Null` in the relevant places. */
-  private def nullifyType(tp: Type, ownerIsClass: Boolean)(using Context): Type =
-    if ctx.flexibleTypes /*&& ownerIsClass*/ then new JavaFlexibleMap(false)(tp) else new JavaNullMap(false)(tp) // FLEX PARAMS
+  private def nullifyType(tp: Type)(using Context): Type =
+    javaNullMap(outermostLevelAlreadyNullable = false)(tp)
 
   /** A type map that implements the nullification function on types. Given a Java-sourced type, this adds `| Null`
    *  in the right places to make the nulls explicit in Scala.
