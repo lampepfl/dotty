@@ -310,23 +310,58 @@ object tpd extends Trees.Instance[Type] with TypedTreeInfo {
   def TypeDef(sym: TypeSymbol)(using Context): TypeDef =
     ta.assignType(untpd.TypeDef(sym.name, TypeTree(sym.info)), sym)
 
-  def ClassDef(cls: ClassSymbol, constr: DefDef, body: List[Tree], superArgs: List[Tree] = Nil)(using Context): TypeDef = {
+  def ClassDef(cls: ClassSymbol, constrDef: DefDef, body: List[Tree])(using Context): TypeDef = {
     val firstParent :: otherParents = cls.info.parents: @unchecked
     val superRef =
       if (cls.is(Trait)) TypeTree(firstParent)
       else {
-        def isApplicable(ctpe: Type): Boolean = ctpe match {
-          case ctpe: PolyType =>
-            isApplicable(ctpe.instantiate(firstParent.argTypes))
-          case ctpe: MethodType =>
-            (superArgs corresponds ctpe.paramInfos)(_.tpe <:< _)
+        def fromRepeated(tpe: Type): Type = tpe match {
+          case AnnotatedType(AppliedType(base, List(tparam)), annot) if annot.symbol == defn.RepeatedAnnot =>
+            tparam
           case _ =>
-            false
+            NoType
         }
-        val constr = firstParent.decl(nme.CONSTRUCTOR).suchThat(constr => isApplicable(constr.info))
-        New(firstParent, constr.symbol.asTerm, superArgs)
+
+        def canConstructMethod(constrSym: Symbol): Boolean = constrSym.info match {
+          case ctpe: MethodOrPoly =>
+            constrSym.paramSymss.flatten.filter(_.isTerm).forall { paramSym =>
+              paramSym.flags.is(Flags.HasDefault) || (fromRepeated(paramSym.info) != NoType)
+            }
+          case _ => false
+        }
+
+        def constructParent(constr: Tree): Tree = {
+          constr.symbol.paramSymss.filter(!_.exists(_.isType)).foldLeft(constr) { (acc, paramList) =>
+            acc.appliedToTermArgs(paramList.zipWithIndex.collect {
+              case (paramSym, idx) if paramSym.flags.is(Flags.HasDefault) =>
+                typer.Applications.defaultArgument(acc, idx, false)
+              case (paramSym, idx) if fromRepeated(paramSym.info) != NoType =>
+                tpd.ref(defn.NilModule)
+            })
+          }
+        }
+
+        val tycon = firstParent.typeConstructor
+        val newTree = New(tycon)
+          .withSpan(cls.span)
+        val constr = firstParent
+          .decl(nme.CONSTRUCTOR)
+          .suchThat{ constr =>
+            canConstructMethod(constr)
+          }
+
+        if constr.exists then
+          constructParent(
+            newTree
+              .select(TermRef(tycon, constr.symbol.asTerm))
+              .appliedToTypes(firstParent.argTypes)
+          )
+        else
+          val msg = em"not enough arguments for constructor ${firstParent.dealias.typeSymbol.primaryConstructor.info}"
+          report.error(msg, cls.sourcePos)
+          EmptyTree
       }
-    ClassDefWithParents(cls, constr, superRef :: otherParents.map(TypeTree(_)), body)
+    ClassDefWithParents(cls, constrDef, superRef :: otherParents.map(TypeTree(_)), body)
   }
 
   def ClassDefWithParents(cls: ClassSymbol, constr: DefDef, parents: List[Tree], body: List[Tree])(using Context): TypeDef = {
