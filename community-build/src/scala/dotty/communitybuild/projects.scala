@@ -150,6 +150,8 @@ object SbtCommunityProject:
   def scalacOptions = List(
     "-Xcheck-macros",
     "-Ysafe-init",
+    "-Yexplicit-nulls",
+    "-Yflexible-types",
   )
 
 object projects:
