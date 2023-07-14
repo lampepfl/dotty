@@ -201,6 +201,16 @@ object Nullables:
     // TODO: Add constant pattern if the constant type is not nullable
     case _ => false
 
+  def matchesNull(cdef: CaseDef)(using Context): Boolean =
+    cdef.guard.isEmpty && patMatchesNull(cdef.pat)
+
+  private def patMatchesNull(pat: Tree)(using Context): Boolean = pat match
+    case Literal(Constant(null)) => true
+    case Bind(_, pat) => patMatchesNull(pat)
+    case Alternative(trees) => trees.exists(patMatchesNull)
+    case _ if isVarPattern(pat) => true
+    case _ => false
+
   extension (infos: List[NotNullInfo])
 
     /** Do the current not-null infos imply that `ref` is not null?
