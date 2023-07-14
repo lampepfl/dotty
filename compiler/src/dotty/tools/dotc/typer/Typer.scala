@@ -4192,10 +4192,11 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
       }
 
       // convert function literal to SAM closure
+      val pt1 = pt.stripFlexible
       tree match {
         case closure(Nil, id @ Ident(nme.ANON_FUN), _)
-        if defn.isFunctionNType(wtp) && !defn.isFunctionNType(pt) =>
-          pt match {
+        if defn.isFunctionNType(wtp) && !defn.isFunctionNType(pt1) =>
+          pt1 match {
             case SAMType(samMeth, samParent)
             if wtp <:< samMeth.toFunctionType(isJava = samParent.classSymbol.is(JavaDefined)) =>
               // was ... && isFullyDefined(pt, ForceDegree.flipBottom)
