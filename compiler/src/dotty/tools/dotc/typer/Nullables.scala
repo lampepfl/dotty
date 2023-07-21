@@ -38,7 +38,7 @@ object Nullables:
       if ctx.flexibleTypes then FlexibleType(hi) else OrType(hi, defn.NullType, soft = false)
     else hi
 
-/** Create a nullable type bound
+  /** Create a nullable type bound
    *  If lo is `Null`, `| Null` is added to hi
    */
   def createNullableTypeBounds(lo: Type, hi: Type)(using Context): TypeBounds =
