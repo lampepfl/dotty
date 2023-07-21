@@ -277,6 +277,8 @@ object Types {
           tp.bound.derivesFrom(cls) || tp.reduced.derivesFrom(cls)
         case tp: TypeProxy =>
           loop(tp.underlying)
+        case tp: FlexibleType =>
+          loop(tp.underlying)
         case tp: AndType =>
           loop(tp.tp1) || loop(tp.tp2)
         case tp: OrType =>
