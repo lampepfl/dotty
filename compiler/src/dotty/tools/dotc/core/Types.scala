@@ -2472,7 +2472,6 @@ object Types {
     private def argDenot(param: TypeSymbol)(using Context): Denotation = {
       val cls = param.owner
       val args = prefix.baseType(cls).argInfos
-      //throw new RuntimeException("")
       val typeParams = cls.typeParams
 
       def concretize(arg: Type, tparam: TypeSymbol) = arg match {
@@ -2499,7 +2498,6 @@ object Types {
       }
       else {
         if (!ctx.reporter.errorsReported)
-          //throw RuntimeException("")
           throw TypeError(
             em"""bad parameter reference $this at ${ctx.phase}
                 |the parameter is ${param.showLocated} but the prefix $prefix
