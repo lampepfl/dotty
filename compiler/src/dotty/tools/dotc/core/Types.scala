@@ -734,8 +734,7 @@ object Types {
           })
         case tp: TypeRef =>
           tp.denot match {
-            case d: ClassDenotation =>
-              d.findMember(name, pre, required, excluded)
+            case d: ClassDenotation => d.findMember(name, pre, required, excluded)
             case d => go(d.info)
           }
         case tp: FlexibleType =>
