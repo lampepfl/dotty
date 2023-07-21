@@ -742,8 +742,7 @@ object Types {
         case tp: AppliedType =>
           tp.tycon match {
             case tc: TypeRef =>
-              if (tc.symbol.isClass) then
-                go(tc)
+              if (tc.symbol.isClass) go(tc)
               else {
                 val normed = tp.tryNormalize
                 go(if (normed.exists) normed else tp.superType)
