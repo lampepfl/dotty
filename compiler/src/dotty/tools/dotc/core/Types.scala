@@ -3377,9 +3377,6 @@ object Types {
 
   // --- AndType/OrType ---------------------------------------------------------------
 
-  // -Vprint:all, -Vprint:typer, -Xprint-types
-  // use obj.show to pretty-print struct
-
   abstract class AndOrType extends CachedGroundType with ValueType {
     def isAnd: Boolean
     def tp1: Type
