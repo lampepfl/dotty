@@ -52,6 +52,7 @@ object TypeOps:
         Stats.record("asSeenFrom skolem prefix required")
       case _ =>
     }
+    
     new AsSeenFromMap(pre, cls).apply(tp)
   }
 
