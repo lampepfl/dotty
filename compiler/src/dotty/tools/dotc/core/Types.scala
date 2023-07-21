@@ -3382,7 +3382,7 @@ object Types {
       if this.tp eq under then this else FlexibleType(under)
     override def computeHash(bs: Binders): Int = doHash(bs, tp)
     override def toString = "FlexibleType(%s)".format(tp)
-    //override def hash = NotCached
+    override final def baseClasses(using Context): List[ClassSymbol] = underlying.baseClasses
   }
 
   // --- AndType/OrType ---------------------------------------------------------------
