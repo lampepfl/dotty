@@ -3361,19 +3361,12 @@ object Types {
 
   // --- FlexibleType -----------------------------------------------------------------
 
-  case class FlexibleType(tp: Type) extends CachedGroundType with ValueType {
-    def hi(using Context) = {
-      this.tp
-    }
-    def lo(using Context) = {
-      OrNull(this.tp)
-    }
-    override def show(using Context) = "FlexibleType("+tp.show+")"
-    def underlying(using Context) : Type = this.tp
+  case class FlexibleType(underlying: Type) extends CachedGroundType with ValueType {
+    def lo(using Context): Type = OrNull(underlying)
+    override def show(using Context) = i"FlexibleType($underlying)"
     def derivedFlexibleType(under: Type)(using Context): Type =
-      if this.tp eq under then this else FlexibleType(under)
-    override def computeHash(bs: Binders): Int = doHash(bs, tp)
-    override def toString = "FlexibleType(%s)".format(tp)
+      if this.underlying eq under then this else FlexibleType(under)
+    override def computeHash(bs: Binders): Int = doHash(bs, underlying)
     override final def baseClasses(using Context): List[ClassSymbol] = underlying.baseClasses
   }
 
