@@ -321,7 +321,8 @@ object projects:
     project       = "scala-xml",
     sbtTestCommand = "xml/test",
     sbtPublishCommand = "xml/publishLocal",
-    sbtDocCommand = "xml/doc"
+    sbtDocCommand = "xml/doc",
+    scalacOptions = SbtCommunityProject.scalacOptions.filter(_ != "-Yexplicit-nulls").filter(_ != "-Yflexible-types"),
   )
 
   lazy val scalap = SbtCommunityProject(
