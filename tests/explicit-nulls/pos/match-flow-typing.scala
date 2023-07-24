@@ -6,3 +6,16 @@ def m(): String = {
   if(x == null) "foo"
   else x
 }
+
+def m2(): String = {
+  var x: String|Null = "foo"
+  try {
+    x = x
+  } catch {
+    case e => x = x
+  } finally {
+    x = x
+  }
+  if(x == null) "foo"
+  else x
+}

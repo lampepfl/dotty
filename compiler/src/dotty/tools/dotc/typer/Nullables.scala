@@ -470,7 +470,7 @@ object Nullables:
                 else candidates -= name
               case None =>
             traverseChildren(tree)
-          case _: (If | WhileDo | Typed | Match | CaseDef) =>
+          case _: (If | WhileDo | Typed | Match | CaseDef | untpd.ParsedTry) =>
             traverseChildren(tree)      // assignments to candidate variables are OK here ...
           case _ =>
             reachable = Set.empty       // ... but not here
