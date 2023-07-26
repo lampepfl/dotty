@@ -292,7 +292,8 @@ object projects:
     // Problem parsing scalatest.dotty/target/scala-3.0.0-M2/src_managed/main/org/scalatest/concurrent/ConductorFixture.scala:[602..624..3843], documentation may not be generated.
     // dotty.tools.dotc.core.MissingType:
     dependencies = List(scalaXml),
-    testOnlyDependencies = () => List(scalatestplusJunit, scalatestplusTestNG)
+    testOnlyDependencies = () => List(scalatestplusJunit, scalatestplusTestNG),
+    scalacOptions = SbtCommunityProject.scalacOptions.filter(_ != "-Yexplicit-nulls").filter(_ != "-Yflexible-types"),
   )
 
   lazy val scalatestplusScalacheck = SbtCommunityProject(
