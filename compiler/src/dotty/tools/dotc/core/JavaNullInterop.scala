@@ -122,7 +122,7 @@ object JavaNullInterop {
         // We don't make the outmost levels of type arguments nullable if tycon is Java-defined.
         // This is because Java classes are _all_ nullified, so both `java.util.List[String]` and
         // `java.util.List[String|Null]` contain nullable elements.
-        outermostLevelAlreadyNullable = tp.classSymbol.is(JavaDefined)
+        outermostLevelAlreadyNullable = tp.classSymbol.is(JavaDefined) && !ctx.flexibleTypes
         val targs2 = targs map this
         outermostLevelAlreadyNullable = oldOutermostNullable
         val appTp2 = derivedAppliedType(appTp, tycon, targs2)
