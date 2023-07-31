@@ -33,20 +33,24 @@ object Nullables:
     && hi.isValueType
     // We cannot check if hi is nullable, because it can cause cyclic reference.
 
+  private def nullifiedHi(lo: Type, hi: Type)(using Context): Type =
+    if needNullifyHi(lo, hi) then
+      if ctx.flexibleTypes then FlexibleType(hi) else OrType(hi, defn.NullType, soft = false)
+    else hi
+
   /** Create a nullable type bound
    *  If lo is `Null`, `| Null` is added to hi
    */
   def createNullableTypeBounds(lo: Type, hi: Type)(using Context): TypeBounds =
-    val newHi = if needNullifyHi(lo, hi) then OrType(hi, defn.NullType, soft = false) else hi
-    TypeBounds(lo, newHi)
+    TypeBounds(lo, nullifiedHi(lo, hi))
 
   /** Create a nullable type bound tree
    *  If lo is `Null`, `| Null` is added to hi
    */
   def createNullableTypeBoundsTree(lo: Tree, hi: Tree, alias: Tree = EmptyTree)(using Context): TypeBoundsTree =
-    val hiTpe = hi.typeOpt
-    val newHi = if needNullifyHi(lo.typeOpt, hiTpe) then TypeTree(OrType(hiTpe, defn.NullType, soft = false)) else hi
-    TypeBoundsTree(lo, newHi, alias)
+    val hiTpe = nullifiedHi(lo.typeOpt, hi.typeOpt)
+    val hiTree = if(hiTpe eq hi.typeOpt) hi else TypeTree(hiTpe)
+    TypeBoundsTree(lo, hiTree, alias)
 
   /** A set of val or var references that are known to be not null, plus a set of
    *  variable references that are not known (anymore) to be not null
@@ -199,6 +203,16 @@ object Nullables:
     case _: Typed | _: UnApply => true
     case Alternative(pats) => pats.forall(matchesNotNull)
     // TODO: Add constant pattern if the constant type is not nullable
+    case _ => false
+
+  def matchesNull(cdef: CaseDef)(using Context): Boolean =
+    cdef.guard.isEmpty && patMatchesNull(cdef.pat)
+
+  private def patMatchesNull(pat: Tree)(using Context): Boolean = pat match
+    case Literal(Constant(null)) => true
+    case Bind(_, pat) => patMatchesNull(pat)
+    case Alternative(trees) => trees.exists(patMatchesNull)
+    case _ if isVarPattern(pat) => true
     case _ => false
 
   extension (infos: List[NotNullInfo])
@@ -456,7 +470,7 @@ object Nullables:
                 else candidates -= name
               case None =>
             traverseChildren(tree)
-          case _: (If | WhileDo | Typed) =>
+          case _: (If | WhileDo | Typed | Match | CaseDef | untpd.ParsedTry) =>
             traverseChildren(tree)      // assignments to candidate variables are OK here ...
           case _ =>
             reachable = Set.empty       // ... but not here

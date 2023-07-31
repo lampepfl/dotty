@@ -78,11 +78,11 @@ object JavaNullInterop {
    *  but the result type is not nullable.
    */
   private def nullifyExceptReturnType(tp: Type)(using Context): Type =
-    new JavaNullMap(true)(tp)
+    new JavaNullMap(outermostLevelAlreadyNullable = true)(tp)
 
   /** Nullifies a Java type by adding `| Null` in the relevant places. */
   private def nullifyType(tp: Type)(using Context): Type =
-    new JavaNullMap(false)(tp)
+    new JavaNullMap(outermostLevelAlreadyNullable = false)(tp)
 
   /** A type map that implements the nullification function on types. Given a Java-sourced type, this adds `| Null`
    *  in the right places to make the nulls explicit in Scala.
@@ -96,6 +96,8 @@ object JavaNullInterop {
    *                                       to `(A & B) | Null`, instead of `(A | Null & B | Null) | Null`.
    */
   private class JavaNullMap(var outermostLevelAlreadyNullable: Boolean)(using Context) extends TypeMap {
+    def nullify(tp: Type): Type = if ctx.flexibleTypes then FlexibleType(tp) else OrNull(tp)
+
     /** Should we nullify `tp` at the outermost level? */
     def needsNull(tp: Type): Boolean =
       !outermostLevelAlreadyNullable && (tp match {
@@ -114,17 +116,17 @@ object JavaNullInterop {
       })
 
     override def apply(tp: Type): Type = tp match {
-      case tp: TypeRef if needsNull(tp) => OrNull(tp)
+      case tp: TypeRef if needsNull(tp) => nullify(tp)
       case appTp @ AppliedType(tycon, targs) =>
         val oldOutermostNullable = outermostLevelAlreadyNullable
         // We don't make the outmost levels of type arguments nullable if tycon is Java-defined.
         // This is because Java classes are _all_ nullified, so both `java.util.List[String]` and
         // `java.util.List[String|Null]` contain nullable elements.
-        outermostLevelAlreadyNullable = tp.classSymbol.is(JavaDefined)
+        outermostLevelAlreadyNullable = tp.classSymbol.is(JavaDefined) && !ctx.flexibleTypes
         val targs2 = targs map this
         outermostLevelAlreadyNullable = oldOutermostNullable
         val appTp2 = derivedAppliedType(appTp, tycon, targs2)
-        if needsNull(tycon) then OrNull(appTp2) else appTp2
+        if needsNull(tycon) then nullify(appTp2) else appTp2
       case ptp: PolyType =>
         derivedLambdaType(ptp)(ptp.paramInfos, this(ptp.resType))
       case mtp: MethodType =>
@@ -138,8 +140,8 @@ object JavaNullInterop {
         // nullify(A & B) = (nullify(A) & nullify(B)) | Null, but take care not to add
         // duplicate `Null`s at the outermost level inside `A` and `B`.
         outermostLevelAlreadyNullable = true
-        OrNull(derivedAndType(tp, this(tp.tp1), this(tp.tp2)))
-      case tp: TypeParamRef if needsNull(tp) => OrNull(tp)
+        nullify(derivedAndType(tp, this(tp.tp1), this(tp.tp2)))
+      case tp: TypeParamRef if needsNull(tp) => nullify(tp)
       // In all other cases, return the type unchanged.
       // In particular, if the type is a ConstantType, then we don't nullify it because it is the
       // type of a final non-nullable field.

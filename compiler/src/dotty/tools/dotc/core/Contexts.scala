@@ -463,6 +463,9 @@ object Contexts {
     /** Is the explicit nulls option set? */
     def explicitNulls: Boolean = base.settings.YexplicitNulls.value
 
+    /** Is the flexible types option set? */
+    def flexibleTypes: Boolean = base.settings.YflexibleTypes.value
+
     /** A fresh clone of this context embedded in this context. */
     def fresh: FreshContext = freshOver(this)
 

@@ -92,6 +92,8 @@ object TestConfiguration {
   /** Enables explicit nulls */
   val explicitNullsOptions = defaultOptions and "-Yexplicit-nulls"
 
+  val flexibleTypesOptions = explicitNullsOptions and "-Yflexible-types"
+
   /** Default target of the generated class files */
   private def defaultTarget: String = {
     import scala.util.Properties.isJavaAtLeast

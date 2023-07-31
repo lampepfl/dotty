@@ -585,6 +585,7 @@ object TastyFormat {
   final val MATCHtype = 190
   final val MATCHtpt = 191
   final val MATCHCASEtype = 192
+  final val FLEXIBLEtype = 193
 
   final val HOLE = 255
 

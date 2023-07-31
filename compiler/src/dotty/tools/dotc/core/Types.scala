@@ -277,6 +277,8 @@ object Types {
           tp.bound.derivesFrom(cls) || tp.reduced.derivesFrom(cls)
         case tp: TypeProxy =>
           loop(tp.underlying)
+        case tp: FlexibleType =>
+          loop(tp.underlying)
         case tp: AndType =>
           loop(tp.tp1) || loop(tp.tp2)
         case tp: OrType =>
@@ -368,6 +370,7 @@ object Types {
       case AppliedType(tycon, args) => tycon.unusableForInference || args.exists(_.unusableForInference)
       case RefinedType(parent, _, rinfo) => parent.unusableForInference || rinfo.unusableForInference
       case TypeBounds(lo, hi) => lo.unusableForInference || hi.unusableForInference
+      case FlexibleType(underlying) => underlying.unusableForInference
       case tp: AndOrType => tp.tp1.unusableForInference || tp.tp2.unusableForInference
       case tp: LambdaType => tp.resultType.unusableForInference || tp.paramInfos.exists(_.unusableForInference)
       case WildcardType(optBounds) => optBounds.unusableForInference
@@ -736,6 +739,8 @@ object Types {
             case d: ClassDenotation => d.findMember(name, pre, required, excluded)
             case d => go(d.info)
           }
+        case tp: FlexibleType =>
+          go(tp.underlying)
         case tp: AppliedType =>
           tp.tycon match {
             case tc: TypeRef =>
@@ -943,6 +948,8 @@ object Types {
         if (keepOnly(pre, tp.refinedName)) ns + tp.refinedName else ns
       case tp: TypeProxy =>
         tp.superType.memberNames(keepOnly, pre)
+      case tp: FlexibleType =>
+        tp.underlying.memberNames(keepOnly, pre)
       case tp: AndType =>
         tp.tp1.memberNames(keepOnly, pre) | tp.tp2.memberNames(keepOnly, pre)
       case tp: OrType =>
@@ -1400,6 +1407,7 @@ object Types {
         case tp: ExprType => tp.resType.atoms
         case tp: OrType => tp.atoms // `atoms` overridden in OrType
         case tp: AndType => tp.tp1.atoms & tp.tp2.atoms
+        case tp: FlexibleType => tp.underlying.atoms
         case tp: TypeRef if tp.symbol.is(ModuleClass) =>
           // The atom of a module class is the module itself,
           // this corresponds to the special case in TypeComparer
@@ -3351,6 +3359,23 @@ object Types {
       val rt = this(parentExp)
       if (rt.isReferredToBy(rt.parent)) rt else rt.parent
     }
+  }
+
+  // --- FlexibleType -----------------------------------------------------------------
+
+  object FlexibleType {
+    def apply(underlying: Type) = underlying match {
+      case ft: FlexibleType => ft
+      case _ => new FlexibleType(underlying)
+    }
+  }
+  case class FlexibleType(underlying: Type) extends CachedGroundType with ValueType {
+    def lo(using Context): Type = OrNull(underlying)
+    override def show(using Context) = i"FlexibleType($underlying)"
+    def derivedFlexibleType(under: Type)(using Context): Type =
+      if this.underlying eq under then this else FlexibleType(under)
+    override def computeHash(bs: Binders): Int = doHash(bs, underlying)
+    override final def baseClasses(using Context): List[ClassSymbol] = underlying.baseClasses
   }
 
   // --- AndType/OrType ---------------------------------------------------------------
@@ -5584,11 +5609,15 @@ object Types {
                 foldOver(vmap, t)
           val vmap = accu(VarianceMap.empty, samMeth.info)
           val tparams = tycon.typeParamSymbols
+          def boundFollowingVariance(lo: Type, hi: Type, tparam: TypeSymbol) =
+            val v = vmap.computedVariance(tparam)
+            if v.uncheckedNN < 0 then lo
+            else hi
           val args1 = args.zipWithConserve(tparams):
             case (arg @ TypeBounds(lo, hi), tparam) =>
-              val v = vmap.computedVariance(tparam)
-              if v.uncheckedNN < 0 then lo
-              else hi
+              boundFollowingVariance(lo, hi, tparam)
+            case (arg @ FlexibleType(hi), tparam) =>
+              boundFollowingVariance(arg.lo, hi, tparam)
             case (arg, _) => arg
           tp.derivedAppliedType(tycon, args1)
         case _ =>
@@ -5619,6 +5648,8 @@ object Types {
       case tp: TypeVar =>
         samClass(tp.underlying)
       case tp: AnnotatedType =>
+        samClass(tp.underlying)
+      case tp: FlexibleType =>
         samClass(tp.underlying)
       case _ =>
         NoSymbol
@@ -5757,6 +5788,8 @@ object Types {
       tp.derivedJavaArrayType(elemtp)
     protected def derivedExprType(tp: ExprType, restpe: Type): Type =
       tp.derivedExprType(restpe)
+    protected def derivedFlexibleType(tp: FlexibleType, under: Type): Type =
+      tp.derivedFlexibleType(under)
     // note: currying needed  because Scala2 does not support param-dependencies
     protected def derivedLambdaType(tp: LambdaType)(formals: List[tp.PInfo], restpe: Type): Type =
       tp.derivedLambdaType(tp.paramNames, formals, restpe)
@@ -5877,6 +5910,9 @@ object Types {
 
         case tp: OrType =>
           derivedOrType(tp, this(tp.tp1), this(tp.tp2))
+
+        case tp: FlexibleType =>
+          derivedFlexibleType(tp, this(tp.underlying))
 
         case tp: MatchType =>
           val bound1 = this(tp.bound)
@@ -6166,6 +6202,14 @@ object Types {
           if (underlying.isExactlyNothing) underlying
           else tp.derivedAnnotatedType(underlying, annot)
       }
+    override protected def derivedFlexibleType(tp: FlexibleType, underlying: Type): Type =
+      underlying match {
+        case Range(lo, hi) =>
+          range(tp.derivedFlexibleType(lo), tp.derivedFlexibleType(hi))
+        case _ =>
+          if (underlying.isExactlyNothing) underlying
+          else tp.derivedFlexibleType(underlying)
+      }
     override protected def derivedCapturingType(tp: Type, parent: Type, refs: CaptureSet): Type =
       parent match // TODO ^^^ handle ranges in capture sets as well
         case Range(lo, hi) =>
@@ -6305,6 +6349,9 @@ object Types {
         if stopBecauseStaticOrLocal(tp) then x else applyToPrefix(x, tp)
 
       case tp: TypeVar =>
+        this(x, tp.underlying)
+
+      case tp: FlexibleType =>
         this(x, tp.underlying)
 
       case ExprType(restpe) =>
