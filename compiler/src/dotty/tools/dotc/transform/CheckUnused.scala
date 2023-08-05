@@ -25,7 +25,6 @@ import dotty.tools.dotc.core.Definitions
 import dotty.tools.dotc.core.NameKinds.WildcardParamName
 import dotty.tools.dotc.core.Symbols.Symbol
 import dotty.tools.dotc.core.StdNames.nme
-import scala.math.Ordering
 
 
 /**
@@ -87,15 +86,15 @@ class CheckUnused private (phaseMode: CheckUnused.PhaseMode, suffix: String, _ke
       val prefixes = LazyList.iterate(tree.typeOpt.normalizedPrefix)(_.normalizedPrefix).takeWhile(_ != NoType)
         .take(10) // Failsafe for the odd case if there was an infinite cycle
       for prefix <- prefixes do
-        unusedDataApply(_.registerUsed(prefix.classSymbol, None))
-      unusedDataApply(_.registerUsed(tree.symbol, Some(tree.name)))
+        unusedDataApply(_.registerUsed(prefix.classSymbol, None, Some(tree.srcPos)))
+      unusedDataApply(_.registerUsed(tree.symbol, Some(tree.name), Some(tree.srcPos)))
     else if tree.hasType then
-      unusedDataApply(_.registerUsed(tree.tpe.classSymbol, Some(tree.name)))
+      unusedDataApply(_.registerUsed(tree.tpe.classSymbol, Some(tree.name), Some(tree.srcPos)))
     else
       ctx
 
   override def prepareForSelect(tree: tpd.Select)(using Context): Context =
-    unusedDataApply(_.registerUsed(tree.symbol, Some(tree.name)))
+    unusedDataApply(_.registerUsed(tree.symbol, Some(tree.name), Some(tree.srcPos)))
 
   override def prepareForBlock(tree: tpd.Block)(using Context): Context =
     pushInBlockTemplatePackageDef(tree)
@@ -114,7 +113,7 @@ class CheckUnused private (phaseMode: CheckUnused.PhaseMode, suffix: String, _ke
         ud.registerDef(tree)
       if tree.name.mangledString.startsWith(nme.derived.mangledString + "$")
           && tree.typeOpt != NoType then
-        ud.registerUsed(tree.typeOpt.typeSymbol, None, true)
+        ud.registerUsed(tree.typeOpt.typeSymbol, None, Some(tree.srcPos), true)
       ud.addIgnoredUsage(tree.symbol)
     }
 
@@ -265,10 +264,10 @@ class CheckUnused private (phaseMode: CheckUnused.PhaseMode, suffix: String, _ke
   /** This is a type traverser which catch some special Types not traversed by the term traverser above */
   private def typeTraverser(dt: (UnusedData => Any) => Unit)(using Context) = new TypeTraverser:
     override def traverse(tp: Type): Unit =
-      if tp.typeSymbol.exists then dt(_.registerUsed(tp.typeSymbol, Some(tp.typeSymbol.name)))
+      if tp.typeSymbol.exists then dt(_.registerUsed(tp.typeSymbol, Some(tp.typeSymbol.name), None))
       tp match
         case AnnotatedType(_, annot) =>
-          dt(_.registerUsed(annot.symbol, None))
+          dt(_.registerUsed(annot.symbol, None, None))
           traverseChildren(tp)
         case _ =>
           traverseChildren(tp)
@@ -353,7 +352,7 @@ object CheckUnused:
      *
      * See the `isAccessibleAsIdent` extension method below in the file
      */
-    private val usedInScope = MutStack(MutSet[(Symbol,Boolean, Option[Name], Boolean)]())
+    private val usedInScope = MutStack(MutSet[(Symbol,Boolean, Option[Name], Boolean, Option[SrcPos])]())
     private val usedInPosition = MutSet[(SrcPos, Name)]()
     /* unused import collected during traversal */
     private val unusedImport = MutSet[ImportSelector]()
@@ -396,14 +395,14 @@ object CheckUnused:
      * The optional name will be used to target the right import
      * as the same element can be imported with different renaming
      */
-    def registerUsed(sym: Symbol, name: Option[Name], isDerived: Boolean = false)(using Context): Unit =
+    def registerUsed(sym: Symbol, name: Option[Name], srcPos: Option[SrcPos], isDerived: Boolean = false)(using Context): Unit =
       if !isConstructorOfSynth(sym) && !doNotRegister(sym) then
         if sym.isConstructor && sym.exists then
-          registerUsed(sym.owner, None) // constructor are "implicitly" imported with the class
+          registerUsed(sym.owner, None, srcPos) // constructor are "implicitly" imported with the class
         else
-          usedInScope.top += ((sym, sym.isAccessibleAsIdent, name, isDerived))
-          usedInScope.top += ((sym.companionModule, sym.isAccessibleAsIdent, name, isDerived))
-          usedInScope.top += ((sym.companionClass, sym.isAccessibleAsIdent, name, isDerived))
+          usedInScope.top += ((sym, sym.isAccessibleAsIdent, name, isDerived, srcPos))
+          usedInScope.top += ((sym.companionModule, sym.isAccessibleAsIdent, name, isDerived, srcPos))
+          usedInScope.top += ((sym.companionClass, sym.isAccessibleAsIdent, name, isDerived, srcPos))
           if sym.sourcePos.exists then
             name.map(n => usedInPosition += ((sym.sourcePos, n)))
 
@@ -465,21 +464,24 @@ object CheckUnused:
       val used = usedInScope.pop().toSet
       // used imports in this scope
       val imports = impInScope.pop()
-      val kept = used.filterNot { (sym, isAccessible, optName, isDerived) =>
+      val kept = used.filterNot { (sym, isAccessible, optName, isDerived, usageSymPosOpt) =>
         // keep the symbol for outer scope, if it matches **no** import
         // This is the first matching wildcard selector
         var selWildCard: Option[ImportSelector] = None
 
         val matchedExplicitImport = imports.exists { imp =>
-          sym.isInImport(imp, isAccessible, optName, isDerived) match
-            case None => false
-            case optSel@Some(sel) if sel.isWildcard =>
-              if selWildCard.isEmpty then selWildCard = optSel
-              // We keep wildcard symbol for the end as they have the least precedence
-              false
-            case Some(sel) =>
-              unusedImport -= sel
-              true
+          if usageSymPosOpt.map(pos => pos.isStartBefore(imp.srcPos)).getOrElse(false) then
+            false
+          else 
+            sym.isInImport(imp, isAccessible, optName, isDerived) match
+              case None => false
+              case optSel@Some(sel) if sel.isWildcard =>
+                if selWildCard.isEmpty then selWildCard = optSel
+                // We keep wildcard symbol for the end as they have the least precedence
+                false
+              case Some(sel) =>
+                unusedImport -= sel
+                true
         }
         if !matchedExplicitImport && selWildCard.isDefined then
           unusedImport -= selWildCard.get
@@ -764,6 +766,13 @@ object CheckUnused:
     extension (thisName: Name)
       private def isWildcard: Boolean =
         thisName == StdNames.nme.WILDCARD || thisName.is(WildcardParamName)
+
+    extension (thiz: SrcPos)
+      /** if `thiz` start position line (and then column) is before `that` */
+      private def isStartBefore(that: SrcPos)(using Context) = 
+        (thiz.startPos.line < that.startPos.line) || 
+        (thiz.startPos.line == that.startPos.line && thiz.startPos.column <= that.startPos.column)
+
 
   end UnusedData
 
