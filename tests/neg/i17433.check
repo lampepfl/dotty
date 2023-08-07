@@ -1,0 +1,8 @@
+-- [E049] Reference Error: tests/neg/i17433.scala:9:10 -----------------------------------------------------------------
+9 |  def g = f(42) // error
+  |          ^
+  |          Reference to f is ambiguous.
+  |          It is both defined in package <empty>
+  |          and inherited subsequently in class D
+  |
+  | longer explanation available when compiling with `-explain`

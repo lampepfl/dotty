@@ -40,4 +40,24 @@ val global = 0
 class C:
   val global = 1
 object D extends C:
-  println(global)    // OK, since global is defined in package
+  println(global)    // error
+
+package p:
+  class T
+  trait P { trait T }
+  class C extends P:
+    def t = new T { } // error
+
+package scala:
+  trait P { trait Option[+A] }
+  class C extends P:
+    def t = new Option[String] { } // OK, competing scala.Option is not defined in the same compilation unit
+
+object test5:
+  class Mu // generates a synthetic companion object with an apply method
+  trait A {
+    val Mu = 1
+  }
+  trait B extends A {
+    def t = Mu // don't warn about synthetic companion
+  }

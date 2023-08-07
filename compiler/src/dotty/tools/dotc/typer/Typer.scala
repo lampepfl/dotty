@@ -412,12 +412,17 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
           // Does reference `tp` refer only to inherited symbols?
           def isInherited(denot: Denotation) =
             def isCurrent(mbr: SingleDenotation): Boolean =
-              !mbr.symbol.exists || mbr.symbol.owner == ctx.owner
+              !mbr.symbol.exists || mbr.symbol.owner == ctx.owner || ctx.owner.is(Package)
             denot match
               case denot: SingleDenotation => !isCurrent(denot)
               case denot => !denot.hasAltWith(isCurrent)
 
-          def checkNoOuterDefs(denot: Denotation, last: Context, prevCtx: Context): Unit =
+          /* It is an error if an identifier x is available as an inherited member in an inner scope
+           * and the same name x is defined in an outer scope in the same source file, unless
+           * the inherited member (has an overloaded alternative that) coincides with
+           * (an overloaded alternative of) the definition x.
+           */
+          def checkNoOuterDefs(denot: Denotation, ctx: Context, origCtx: Context): Unit =
             def sameTermOrType(d1: SingleDenotation, d2: Denotation) =
               d2.containsSym(d1.symbol) || d2.hasUniqueSym && {
                 val sym1 = d1.symbol
@@ -429,27 +434,39 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
                 else
                   (sym1.isAliasType || sym2.isAliasType) && d1.info =:= d2.info
               }
-            val outer = last.outer
-            val owner = outer.owner
-            if (owner eq last.owner) && (outer.scope eq last.scope) then
-              checkNoOuterDefs(denot, outer, prevCtx)
-            else if !owner.is(Package) then
-              val scope = if owner.isClass then owner.info.decls else outer.scope
-              val competing = scope.denotsNamed(name).filterWithFlags(required, excluded)
+            val outerCtx = ctx.outer
+            val outerOwner = outerCtx.owner
+            if (outerOwner eq ctx.owner) && (outerCtx.scope eq ctx.scope) then
+              checkNoOuterDefs(denot, outerCtx, origCtx)
+            else if !outerOwner.isRoot then
+              val found =
+                if outerOwner.is(Package) then
+                  def notInPackageObject(sym: Symbol) =
+                    sym.owner == outerOwner || // sym.owner.isPackageObject is false if sym is defined in a parent of the package object
+                      sym.owner.isPackageObject && sym.owner.name.endsWith(str.TOPLEVEL_SUFFIX) // top-level definitions
+                  outerOwner.denot.asClass.membersNamed(name)
+                    .filterWithPredicate(d => !d.symbol.is(Package)
+                      && notInPackageObject(d.symbol)
+                      && d.symbol.source.exists
+                      && isDefinedInCurrentUnit(d))
+                else
+                  val scope = if outerOwner.isClass then outerOwner.info.decls else outerCtx.scope
+                  scope.denotsNamed(name)
+              val competing = found.filterWithFlags(required, excluded | Synthetic)
               if competing.exists then
                 val symsMatch = competing
                   .filterWithPredicate(sd => sameTermOrType(sd, denot))
                   .exists
                 if !symsMatch && !suppressErrors then
                   report.errorOrMigrationWarning(
-                    AmbiguousReference(name, Definition, Inheritance, prevCtx)(using outer),
+                    AmbiguousReference(name, Definition, Inheritance, origCtx)(using outerCtx),
                     pos, from = `3.0`)
                   if migrateTo3 then
                     patch(Span(pos.span.start),
-                      if prevCtx.owner == refctx.owner.enclosingClass then "this."
-                      else s"${prevCtx.owner.name}.this.")
+                      if origCtx.owner == refctx.owner.enclosingClass then "this."
+                      else s"${origCtx.owner.name}.this.")
               else
-                checkNoOuterDefs(denot, outer, prevCtx)
+                checkNoOuterDefs(denot, outerCtx, origCtx)
 
           if isNewDefScope then
             val defDenot = ctx.denotNamed(name, required, excluded)

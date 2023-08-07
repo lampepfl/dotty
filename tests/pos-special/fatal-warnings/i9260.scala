@@ -10,7 +10,7 @@ end AstImpl
 
 object untpd extends AstImpl[Null]:
 
-  def DefDef(ast: Ast): DefDef = ast match
+  def DefDef(ast: this.Ast): DefDef = ast match
     case ast: DefDef => ast
 
 end untpd

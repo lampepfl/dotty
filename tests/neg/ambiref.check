@@ -30,3 +30,19 @@
    |                and inherited subsequently in class E
    |
    | longer explanation available when compiling with `-explain`
+-- [E049] Reference Error: tests/neg/ambiref.scala:43:10 ---------------------------------------------------------------
+43 |  println(global)    // error
+   |          ^^^^^^
+   |          Reference to global is ambiguous.
+   |          It is both defined in package <empty>
+   |          and inherited subsequently in object D
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E049] Reference Error: tests/neg/ambiref.scala:49:16 ---------------------------------------------------------------
+49 |    def t = new T { } // error
+   |                ^
+   |                Reference to T is ambiguous.
+   |                It is both defined in package p
+   |                and inherited subsequently in class C
+   |
+   | longer explanation available when compiling with `-explain`

@@ -134,7 +134,7 @@ package p {
 
     abstract class X[T] extends PolyA[T] {
 
-      trait Inner extends B {
+      trait Inner extends this.B {
         def self: T;
         def self2: Node;
         def getB: Inner;
