@@ -7,6 +7,7 @@ import java.nio.file.Path;
 
 /* User code should not implement this interface, it is intended to be a wrapper around xsbti.AnalysisCallback. */
 public interface IncrementalCallback {
+
   default void api(SourceFile sourceFile, xsbti.api.ClassLike classApi) {
   }
 
@@ -35,5 +36,11 @@ public interface IncrementalCallback {
 
   default void generatedNonLocalClass(SourceFile source, Path classFile, String binaryClassName,
       String srcClassName) {
+  }
+
+  default void apiPhaseCompleted() {
+  }
+
+  default void dependencyPhaseCompleted() {
   }
 }

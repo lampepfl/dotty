@@ -15,12 +15,15 @@ import Trees.*
 import Types.*
 import Symbols.*
 import Names.*
+import StdNames.str
 import NameOps.*
 import inlines.Inlines
 import transform.ValueClasses
-import dotty.tools.io.{File, FileExtension}
+import dotty.tools.io.{File, FileExtension, JarArchive}
+import util.{Property, SourceFile}
 import java.io.PrintWriter
 
+import ExtractAPI.NonLocalClassSymbolsInCurrentUnits
 
 import scala.collection.mutable
 import scala.util.hashing.MurmurHash3
@@ -64,13 +67,59 @@ class ExtractAPI extends Phase {
   // definitions, and `PostTyper` does not change definitions).
   override def runsAfter: Set[String] = Set(transform.PostTyper.name)
 
+  override def runOn(units: List[CompilationUnit])(using Context): List[CompilationUnit] =
+    val nonLocalClassSymbols = new mutable.HashSet[Symbol]
+    val ctx0 = ctx.withProperty(NonLocalClassSymbolsInCurrentUnits, Some(nonLocalClassSymbols))
+    val units0 = super.runOn(units)(using ctx0)
+    ctx.withIncCallback(recordNonLocalClasses(nonLocalClassSymbols, _))
+    units0
+  end runOn
+
+  private def recordNonLocalClasses(nonLocalClassSymbols: mutable.HashSet[Symbol], cb: interfaces.IncrementalCallback)(using Context): Unit =
+    for cls <- nonLocalClassSymbols do
+      val sourceFile = cls.source
+      if sourceFile.exists && cls.isDefinedInCurrentRun then
+        recordNonLocalClass(cls, sourceFile, cb)
+    cb.apiPhaseCompleted()
+    cb.dependencyPhaseCompleted()
+
+  private def recordNonLocalClass(cls: Symbol, sourceFile: SourceFile, cb: interfaces.IncrementalCallback)(using Context): Unit =
+    def registerProductNames(fullClassName: String, binaryClassName: String) =
+      val pathToClassFile = s"${binaryClassName.replace('.', java.io.File.separatorChar)}.class"
+
+      val classFile = {
+        ctx.settings.outputDir.value match {
+          case jar: JarArchive =>
+            new java.io.File(s"$jar!$pathToClassFile")
+          case outputDir =>
+            new java.io.File(outputDir.file, pathToClassFile)
+        }
+      }
+
+      cb.generatedNonLocalClass(sourceFile, classFile.toPath(), binaryClassName, fullClassName)
+    end registerProductNames
+
+    val fullClassName = atPhase(sbtExtractDependenciesPhase) {
+      ExtractDependencies.classNameAsString(cls)
+    }
+    val binaryClassName = cls.binaryClassName
+    registerProductNames(fullClassName, binaryClassName)
+
+    // Register the names of top-level module symbols that emit two class files
+    val isTopLevelUniqueModule =
+      cls.owner.is(PackageClass) && cls.is(ModuleClass) && cls.companionClass == NoSymbol
+    if isTopLevelUniqueModule then
+      registerProductNames(fullClassName, binaryClassName.stripSuffix(str.MODULE_SUFFIX))
+  end recordNonLocalClass
+
   override def run(using Context): Unit = {
     val unit = ctx.compilationUnit
     val sourceFile = unit.source
     ctx.withIncCallback: cb =>
       cb.startSource(sourceFile)
 
-    val apiTraverser = new ExtractAPICollector
+    val nonLocalClassSymbols = ctx.property(NonLocalClassSymbolsInCurrentUnits).get
+    val apiTraverser = ExtractAPICollector(nonLocalClassSymbols)
     val classes = apiTraverser.apiSource(unit.tpdTree)
     val mainClasses = apiTraverser.mainClasses
 
@@ -93,6 +142,8 @@ class ExtractAPI extends Phase {
 object ExtractAPI:
   val name: String = "sbt-api"
   val description: String = "sends a representation of the API of classes to sbt"
+
+  private val NonLocalClassSymbolsInCurrentUnits: Property.Key[mutable.HashSet[Symbol]] = Property.Key()
 
 /** Extracts full (including private members) API representation out of Symbols and Types.
  *
@@ -136,7 +187,7 @@ object ExtractAPI:
  *  without going through an intermediate representation, see
  *  http://www.scala-sbt.org/0.13/docs/Understanding-Recompilation.html#Hashing+an+API+representation
  */
-private class ExtractAPICollector(using Context) extends ThunkHolder {
+private class ExtractAPICollector(nonLocalClassSymbols: mutable.HashSet[Symbol])(using Context) extends ThunkHolder {
   import tpd.*
   import xsbti.api
 
@@ -254,6 +305,8 @@ private class ExtractAPICollector(using Context) extends ThunkHolder {
       childrenOfSealedClass, topLevel, tparams)
 
     allNonLocalClassesInSrc += cl
+    if !sym.isLocal then
+      nonLocalClassSymbols += sym
 
     if (sym.isStatic && !sym.is(Trait) && ctx.platform.hasMainMethod(sym)) {
        // If sym is an object, all main methods count, otherwise only @static ones count.

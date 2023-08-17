@@ -71,4 +71,14 @@ public final class OldIncrementalCallback implements dotty.tools.dotc.sbt.interf
   public void generatedNonLocalClass(SourceFile source, java.nio.file.Path classFile, String binaryClassName, String srcClassName) {
     delegate.generatedNonLocalClass(asJavaFile(source), classFile.toFile(), binaryClassName, srcClassName);
   }
+
+  @Override
+  public void apiPhaseCompleted() {
+    delegate.apiPhaseCompleted();
+  }
+
+  @Override
+  public void dependencyPhaseCompleted() {
+    delegate.dependencyPhaseCompleted();
+  }
 }

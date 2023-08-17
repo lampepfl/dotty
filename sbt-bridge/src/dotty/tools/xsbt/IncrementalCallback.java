@@ -57,4 +57,14 @@ public final class IncrementalCallback implements dotty.tools.dotc.sbt.interface
   public void generatedNonLocalClass(SourceFile source, java.nio.file.Path classFile, String binaryClassName, String srcClassName) {
     delegate.generatedNonLocalClass(asVirtualFile.apply(source), classFile, binaryClassName, srcClassName);
   }
+
+  @Override
+  public void apiPhaseCompleted() {
+    delegate.apiPhaseCompleted();
+  }
+
+  @Override
+  public void dependencyPhaseCompleted() {
+    delegate.dependencyPhaseCompleted();
+  }
 }
