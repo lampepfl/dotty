@@ -308,8 +308,8 @@ object Settings:
     def MultiStringSetting(name: String, helpArg: String, descr: String, default: List[String] = Nil, aliases: List[String] = Nil): Setting[List[String]] =
       publish(Setting(name, descr, default, helpArg, aliases = aliases))
 
-    def OutputSetting(name: String, helpArg: String, descr: String, default: AbstractFile): Setting[AbstractFile] =
-      publish(Setting(name, descr, default, helpArg))
+    def OutputSetting(name: String, helpArg: String, descr: String, default: AbstractFile, aliases: List[String] = Nil): Setting[AbstractFile] =
+      publish(Setting(name, descr, default, helpArg, aliases = aliases))
 
     def PathSetting(name: String, descr: String, default: String, aliases: List[String] = Nil): Setting[String] =
       publish(Setting(name, descr, default, aliases = aliases))

@@ -97,12 +97,15 @@ class CompilationUnit protected (val source: SourceFile, val info: CompilationUn
     // when this unit is unsuspended.
     depRecorder.clear()
     if !suspended then
-      if (ctx.settings.XprintSuspension.value)
-        report.echo(i"suspended: $this")
-      suspended = true
-      ctx.run.nn.suspendedUnits += this
-      if ctx.phase == Phases.inliningPhase then
-        suspendedAtInliningPhase = true
+      if ctx.settings.YnoSuspendedUnits.value then
+        report.error(i"Compilation unit suspended $this (-Yno-suspended-units is set)")
+      else
+        if (ctx.settings.XprintSuspension.value)
+          report.echo(i"suspended: $this")
+        suspended = true
+        ctx.run.nn.suspendedUnits += this
+        if ctx.phase == Phases.inliningPhase then
+          suspendedAtInliningPhase = true
     throw CompilationUnit.SuspendException()
 
   private var myAssignmentSpans: Map[Int, List[Span]] | Null = null

@@ -375,6 +375,7 @@ private sealed trait YSettings:
   val YprintPos: Setting[Boolean] = BooleanSetting("-Yprint-pos", "Show tree positions.")
   val YprintPosSyms: Setting[Boolean] = BooleanSetting("-Yprint-pos-syms", "Show symbol definitions positions.")
   val YnoDeepSubtypes: Setting[Boolean] = BooleanSetting("-Yno-deep-subtypes", "Throw an exception on deep subtyping call stacks.")
+  val YnoSuspendedUnits: Setting[Boolean] = BooleanSetting("-Yno-suspended-units", "Do not suspend units, e.g. when calling a macro defined in the same run. This will error instead of suspending.")
   val YnoPatmatOpt: Setting[Boolean] = BooleanSetting("-Yno-patmat-opt", "Disable all pattern matching optimizations.")
   val YplainPrinter: Setting[Boolean] = BooleanSetting("-Yplain-printer", "Pretty-print using a plain printer.")
   val YprintSyms: Setting[Boolean] = BooleanSetting("-Yprint-syms", "When printing trees print info in symbols instead of corresponding info in trees.")
@@ -436,7 +437,7 @@ private sealed trait YSettings:
   val YdebugMacros: Setting[Boolean] = BooleanSetting("-Ydebug-macros", "Show debug info when quote pattern match fails")
 
   // Pipeline compilation options
-  val YjavaTasty: Setting[Boolean] = BooleanSetting("-Yjava-tasty", "Pickler phase should compute pickles for .java defined symbols for use by build tools")
-  val YjavaTastyOutput: Setting[AbstractFile] = OutputSetting("-Yjava-tasty-output", "directory|jar", "(Internal use only!) destination for generated .tasty files containing Java type signatures.", NoAbstractFile)
+  val YjavaTasty: Setting[Boolean] = BooleanSetting("-Yjava-tasty", "Pickler phase should compute pickles for .java defined symbols for use by build tools", aliases = List("-Ypickle-java"))
+  val YearlyTastyOutput: Setting[AbstractFile] = OutputSetting("-Yearly-tasty-output", "directory|jar", "Destination for generated .tasty files containing possibly outline type signatures.", NoAbstractFile, aliases = List("-Ypickle-write"))
   val YallowOutlineFromTasty: Setting[Boolean] = BooleanSetting("-Yallow-outline-from-tasty", "Allow outline TASTy to be loaded with the -from-tasty option.")
 end YSettings

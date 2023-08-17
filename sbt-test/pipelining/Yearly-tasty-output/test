@@ -1,0 +1,5 @@
+> a/compile
+# same as a but with a directory output
+> b/compile
+# c uses the early output jar of a and b
+> c/compile

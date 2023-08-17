@@ -1063,6 +1063,7 @@ class Definitions {
   @tu lazy val PublicInBinaryAnnot: ClassSymbol = requiredClass("scala.annotation.publicInBinary")
 
   @tu lazy val JavaRepeatableAnnot: ClassSymbol = requiredClass("java.lang.annotation.Repeatable")
+  @tu lazy val JavaAnnotationAnnot: ClassSymbol = requiredClass("java.lang.annotation.Annotation")
 
   // Initialization annotations
   @tu lazy val InitModule: Symbol = requiredModule("scala.annotation.init")
