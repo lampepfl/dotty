@@ -97,7 +97,11 @@ val experimentalDefinitionInLibrary = Set(
   "scala.Tuple$.Helpers$",
   "scala.Tuple$.Helpers$.ReverseImpl",
   "scala.Tuple$.Reverse",
-  "scala.runtime.Tuples$.reverse"
+  "scala.runtime.Tuples$.reverse",
+
+  // New feature: functions with erased parameters.
+  // Need quotedPatternsWithPolymorphicFunctions enabled.
+  "scala.quoted.runtime.Patterns$.higherOrderHoleWithTypes"
 )
 
 

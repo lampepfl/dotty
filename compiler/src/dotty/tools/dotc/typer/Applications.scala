@@ -1114,6 +1114,8 @@ trait Applications extends Compatibility {
         }
       else {
         val app = tree.fun match
+          case untpd.TypeApply(_: untpd.SplicePattern, _) if Feature.quotedPatternsWithPolymorphicFunctionsEnabled =>
+            typedAppliedSpliceWithTypes(tree, pt)
           case _: untpd.SplicePattern => typedAppliedSplice(tree, pt)
           case _ => realApply
         app match {
@@ -1164,9 +1166,16 @@ trait Applications extends Compatibility {
     if (ctx.mode.is(Mode.Pattern))
       return errorTree(tree, em"invalid pattern")
 
+    tree.fun match {
+      case _: untpd.SplicePattern if Feature.quotedPatternsWithPolymorphicFunctionsEnabled =>
+        return errorTree(tree, em"Implementation restriction: A higher-order pattern must carry value arguments")
+      case _ =>
+    }
+
     val isNamed = hasNamedArg(tree.args)
     val typedArgs = if (isNamed) typedNamedArgs(tree.args) else tree.args.mapconserve(typedType(_))
     record("typedTypeApply")
+
     typedExpr(tree.fun, PolyProto(typedArgs, pt)) match {
       case fun: TypeApply if !ctx.isAfterTyper =>
         val function = fun.fun

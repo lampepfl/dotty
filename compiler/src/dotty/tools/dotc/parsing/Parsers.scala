@@ -1802,7 +1802,7 @@ object Parsers {
           syntaxError(em"$msg\n\nHint: $hint", Span(start, in.lastOffset))
           Ident(nme.ERROR.toTypeName)
         else if inPattern then
-          SplicePattern(expr, Nil)
+          SplicePattern(expr, Nil, Nil)
         else
           Splice(expr)
       }

@@ -98,6 +98,14 @@ object language:
     @compileTimeOnly("`relaxedExtensionImports` can only be used at compile time in import statements")
     @deprecated("The experimental.relaxedExtensionImports language import is no longer needed since the feature is now standard", since = "3.4")
     object relaxedExtensionImports
+
+    /** Experimental support for quote pattern matching with polymorphic functions
+     *
+     *  @see [[https://dotty.epfl.ch/docs/reference/experimental/quoted-patterns-with-polymorphic-functions]]
+     */
+    @compileTimeOnly("`quotedPatternsWithPolymorphicFunctions` can only be used at compile time in import statements")
+    object quotedPatternsWithPolymorphicFunctions
+
   end experimental
 
   /** The deprecated object contains features that are no longer officially suypported in Scala.
