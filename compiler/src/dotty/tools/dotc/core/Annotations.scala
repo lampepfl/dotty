@@ -2,7 +2,7 @@ package dotty.tools
 package dotc
 package core
 
-import Symbols._, Types._, Contexts._, Constants._, Phases.*
+import StdNames.*, Symbols.*, Types.*, Contexts.*, Constants.*, Phases.*
 import ast.tpd, tpd.*
 import util.Spans.Span
 import printing.{Showable, Printer}
@@ -42,6 +42,12 @@ object Annotations {
 
     def argumentConstantString(i: Int)(using Context): Option[String] =
       for (case Constant(s: String) <- argumentConstant(i)) yield s
+
+    def argumentAdaptedConstantString(i: Int)(using Context): Option[String] =
+      argument(i) match
+        case Some(Literal(Constant(s: String))) => Some(s)
+        case Some(TypeApply(Select(Literal(Constant(s: String)), n), _)) if n == nme.asInstanceOf_ => Some(s)
+        case _ => None
 
     /** The tree evaluaton is in progress. */
     def isEvaluating: Boolean = false

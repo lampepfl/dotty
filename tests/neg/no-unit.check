@@ -1,0 +1,4 @@
+-- Error: tests/neg/no-unit.scala:1:8 ----------------------------------------------------------------------------------
+1 |val u = Unit // error
+  |        ^^^^
+  |        `Unit` companion object is not allowed in source; instead, use `()` for the unit value
