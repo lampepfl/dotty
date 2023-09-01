@@ -210,7 +210,7 @@ object Contexts {
     private var implicitsCache: ContextualImplicits | Null = null
     def implicits: ContextualImplicits = {
       if (implicitsCache == null)
-        implicitsCache = {
+        implicitsCache = {d
           val implicitRefs: List[ImplicitRef] =
             if (isClassDefContext)
               try owner.thisType.implicitMembers
@@ -356,6 +356,8 @@ object Contexts {
     /** Is current phase after TyperPhase? */
     final def isAfterTyper = base.isAfterTyper(phase)
     final def isTyper = base.isTyper(phase)
+
+    final def eventLog: EventLog = compilationUnit.eventLog
 
     /** Is this a context for the members of a class definition? */
     def isClassDefContext: Boolean =

@@ -52,6 +52,7 @@ import Nullables._
 import NullOpsDecorator._
 import cc.CheckCaptures
 import config.Config
+import EventLog._
 
 import scala.annotation.constructorOnly
 import dotty.tools.dotc.rewrites.Rewrites
@@ -257,7 +258,6 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
        *  @param using_Context the outer context of `precCtx`
        */
       def checkImportAlternatives(previous: Type, prevPrec: BindingPrec, prevCtx: Context)(using Context): Type =
-
         def addAltImport(altImp: TermRef) =
           if !TypeComparer.isSameRef(previous, altImp)
               && !altImports.uncheckedNN.exists(TypeComparer.isSameRef(_, altImp))
@@ -330,6 +330,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
               val other = recur(selectors.tail)
               if other.exists && found.exists && found != other then
                 fail(em"reference to `$name` is ambiguous; it is imported twice")
+              ctx.eventLog.appendEntry(MatchedImportSelector(imp.importSym, selector))
               found
 
             if selector.rename == termName && !selector.isUnimport then
@@ -521,7 +522,9 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
       loop(NoContext)
     }
 
-    findRefRecur(NoType, BindingPrec.NothingBound, NoContext)
+    val result = findRefRecur(NoType, BindingPrec.NothingBound, NoContext)
+    ctx.eventLog.appendEntry(FindRefFinished)
+    result
   }
 
   /** If `tree`'s type is a `TermRef` identified by flow typing to be non-null, then

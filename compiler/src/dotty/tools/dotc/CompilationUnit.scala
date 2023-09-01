@@ -28,6 +28,8 @@ class CompilationUnit protected (val source: SourceFile) {
 
   var tpdTree: tpd.Tree = tpd.EmptyTree
 
+  val eventLog: EventLog = new EventLog
+
   /** Is this the compilation unit of a Java file */
   def isJava: Boolean = source.file.name.endsWith(".java")
 

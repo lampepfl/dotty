@@ -45,7 +45,7 @@ object Implicits:
   /** An implicit definition `implicitRef` that is visible under a different name, `alias`.
    *  Gets generated if an implicit ref is imported via a renaming import.
    */
-  class RenamedImplicitRef(val underlyingRef: TermRef, val alias: TermName) extends ImplicitRef {
+  class RenamedImplicitRef(val underlyingRef: TermRef, val alias: TermName, val fromImport: Option[ImportInfo] = None) extends ImplicitRef {
     def implicitName(using Context): TermName = alias
   }
 
@@ -426,7 +426,7 @@ object Implicits:
    *  @param isExtension Whether the result is an extension method application
    *  @param tstate The typer state to be committed if this alternative is chosen
    */
-  case class SearchSuccess(tree: Tree, ref: TermRef, level: Int, isExtension: Boolean = false)(val tstate: TyperState, val gstate: GadtConstraint)
+  case class SearchSuccess(tree: Tree, ref: TermRef, level: Int, isExtension: Boolean = false, fromCandidate: Option[Candidate] = None)(val tstate: TyperState, val gstate: GadtConstraint)
   extends SearchResult with RefAndLevel with Showable
 
   /** A failed search */
@@ -881,7 +881,7 @@ trait Implicits:
         val inferred = inferImplicit(adjust(to), from, from.span)
 
         inferred match {
-          case SearchSuccess(_, ref, _, false) if isOldStyleFunctionConversion(ref.underlying) =>
+          case SearchSuccess(_, ref, _, false, _) if isOldStyleFunctionConversion(ref.underlying) =>
             report.migrationWarning(
               em"The conversion ${ref} will not be applied implicitly here in Scala 3 because only implicit methods and instances of Conversion class will continue to work as implicit views.",
               from
@@ -1211,7 +1211,7 @@ trait Implicits:
         ctx.reporter.removeBufferedMessages
         res
       else
-        SearchSuccess(adapted, ref, cand.level, cand.isExtension)(ctx.typerState, ctx.gadt)
+        SearchSuccess(adapted, ref, cand.level, cand.isExtension, Some(cand))(ctx.typerState, ctx.gadt)
     }
 
   /** An implicit search; parameters as in `inferImplicit` */
@@ -1590,11 +1590,15 @@ trait Implicits:
       // effectively in a more inner context than any other definition provided by
       // explicit definitions. Consequently these terms have the highest priority and no
       // other candidates need to be considered.
-      recursiveRef match
+      val result = recursiveRef match
         case ref: TermRef =>
           SearchSuccess(tpd.ref(ref).withSpan(span.startPos), ref, 0)(ctx.typerState, ctx.gadt)
         case _ =>
           searchImplicit(contextual = true)
+      result.fromCandidate.foreach { cand =>
+        ctx.eventLog.appendLog(cand.)
+      }
+      result
     end bestImplicit
 
     def implicitScope(tp: Type): OfTypeImplicits = ctx.run.nn.implicitScope(tp)

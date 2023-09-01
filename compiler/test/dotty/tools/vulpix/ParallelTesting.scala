@@ -291,7 +291,7 @@ trait ParallelTesting extends RunnerOrchestration { self =>
     /** This callback is executed once the compilation of this test source finished */
     private final def onComplete(testSource: TestSource, reportersOrCrash: Try[Seq[TestReporter]], logger: LoggedRunnable): Unit =
       reportersOrCrash match {
-        case TryFailure(exn) => onFailure(testSource, Nil, logger, Some(s"Fatal compiler crash when compiling: ${testSource.title}:\n${exn.getMessage}${exn.getStackTrace.map("\n\tat " + _).mkString}"))
+        case TryFailure(exn) => onFailure(testSource, Nil, logger, Some(s"Fatal compiler crash when compiling: ${testSource.title}:\n ${exn.toString()} ${exn.getMessage}${exn.getStackTrace.map("\n\tat " + _).mkString}"))
         case TrySuccess(reporters) if !reporters.exists(_.skipped) =>
           maybeFailureMessage(testSource, reporters) match {
             case Some(msg) => onFailure(testSource, reporters, logger, Option(msg).filter(_.nonEmpty))

@@ -143,7 +143,7 @@ class ImportInfo(symf: Context ?=> Symbol,
             if isEligible && ref.denot.asSingleDenotation.matchesImportBound(bound) then ref :: Nil
             else Nil
           else if renamed == ref.name then ref :: Nil
-          else RenamedImplicitRef(ref, renamed) :: Nil
+          else RenamedImplicitRef(ref, renamed, Some(this)) :: Nil
       }
     else
       for
@@ -153,7 +153,7 @@ class ImportInfo(symf: Context ?=> Symbol,
         val original = reverseMapping(renamed).nn
         val ref = TermRef(pre, original, denot)
         if renamed == original then ref
-        else RenamedImplicitRef(ref, renamed)
+        else RenamedImplicitRef(ref, renamed, Some(this))
 
   /** The root import symbol hidden by this symbol, or NoSymbol if no such symbol is hidden.
    *  Note: this computation needs to work even for un-initialized import infos, and
