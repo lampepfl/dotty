@@ -34,8 +34,6 @@ object Feature:
   val captureChecking = experimental("captureChecking")
   val into = experimental("into")
 
-  val globalOnlyImports: Set[TermName] = Set(pureFunctions, captureChecking)
-
   /** Is `feature` enabled by by a command-line setting? The enabling setting is
    *
    *       -language:<prefix>feature

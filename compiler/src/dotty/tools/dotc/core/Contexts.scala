@@ -16,6 +16,8 @@ import ast.untpd
 import util.{NoSource, SimpleIdentityMap, SourceFile, HashSet, ReusableInstance}
 import typer.{Implicits, ImportInfo, SearchHistory, SearchRoot, TypeAssigner, Typer, Nullables}
 import inlines.Inliner
+import ast.{tpd, untpd}
+import config.Feature
 import Nullables._
 import Implicits.ContextualImplicits
 import config.Settings._
@@ -687,6 +689,14 @@ object Contexts {
         case Some(false) if ctx.settings.YexplicitNulls.value =>
           setMode(this.mode | Mode.SafeNulls)
         case _ =>
+
+      importInfo.qualifier match
+        case ref: untpd.RefTree =>
+          val prefix = ref.name.asTermName
+          for case untpd.ImportSelector(untpd.Ident(imported), untpd.EmptyTree, _) <- importInfo.selectors do
+            Feature.handleGlobalLanguageImport(prefix, imported)
+        case _ => ()
+
       updateStore(importInfoLoc, importInfo)
     def setTypeAssigner(typeAssigner: TypeAssigner): this.type = updateStore(typeAssignerLoc, typeAssigner)
 
