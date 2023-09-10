@@ -6,6 +6,8 @@ class ScalaSelectable(values: Map[String, Any], methods: Map[String, (Int, Seq[F
   def selectDynamic(name: String): Any = values(name)
 
   def applyDynamic(name: String)(i: Int, foos: Foo*): Int = methods(name)(i, foos)
+
+  def applyDynamic(name: String)(foo: Foo)(argument: Argument)(someInt: Int): Int = foo.i + argument.x.length + someInt
 }
 
 @main def Test: Unit =
@@ -15,6 +17,7 @@ class ScalaSelectable(values: Map[String, Any], methods: Map[String, (Int, Seq[F
     def manyArgs(argument: Argument, foo: Foo, someInt: Int) = foo.i + someInt + argument.x.length
     def varargs(x: Int, foo: Foo*) = foo.map(_.i).sum + x
     def letsHaveSeq(args: Seq[Argument]) = args.map(_.x.length).sum
+    def curried(foo: Foo)(arg1: Argument)(someInt: Int): Int = foo.i + arg1.x.length + someInt
   }
   
   val i = reflective.bar(Foo(1))
@@ -53,6 +56,9 @@ class ScalaSelectable(values: Map[String, Any], methods: Map[String, (Int, Seq[F
 
   val cont2 = ScalaSelectable(cont2values, cont2methods).asInstanceOf[ScalaSelectable {
     def varargs(i: Int, foos: Foo*): Int
+    def curried(foo: Foo)(argument: Argument)(someInt: Int): Int
   }]
 
   println(cont2.varargs(1, Foo(1), Foo(1)))
+
+  println(cont2.curried(Foo(1))(Argument("123"))(3))

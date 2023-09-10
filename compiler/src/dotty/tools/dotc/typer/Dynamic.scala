@@ -3,8 +3,7 @@ package dotc
 package typer
 
 import dotty.tools.dotc.ast.Trees.*
-import dotty.tools.dotc.ast.tpd
-import dotty.tools.dotc.ast.untpd
+import dotty.tools.dotc.ast.{tpd, untpd}
 import dotty.tools.dotc.core.Constants.Constant
 import dotty.tools.dotc.core.Contexts.*
 import dotty.tools.dotc.core.Names.{Name, TermName}
@@ -180,18 +179,20 @@ trait Dynamic {
     val fun @ Select(qual, name) = funPart(tree): @unchecked
     val vargss = termArgss(tree)
 
-    def handleRepeated(args: List[List[Tree]]) =
-      val isRepeated = args.flatten.exists(_.tpe.widen.isRepeatedParam)
-      if isRepeated && qual.tpe <:< defn.ReflectSelectableTypeRef then
-        List(untpd.TypedSplice(tpd.repeatedSeq(args.flatten, TypeTree(defn.AnyType))))
-      else args.flatten.map { t =>
-        val clzSym = t.tpe.resultType.classSymbol.asClass
-        if ValueClasses.isDerivedValueClass(clzSym) then
-          val underlying = ValueClasses.valueClassUnbox(clzSym).asTerm
-          tpd.Select(t, underlying.name)
-        else
-          t
-      }.map(untpd.TypedSplice(_))
+    def handleRepeated(base: Tree, possiblyCurried: List[List[Tree]]) =
+      possiblyCurried.map { args =>
+        val isRepeated = args.exists(_.tpe.widen.isRepeatedParam)
+        if isRepeated && qual.tpe <:< defn.ReflectSelectableTypeRef then
+          List(untpd.TypedSplice(tpd.repeatedSeq(args, TypeTree(defn.AnyType))))
+        else args.map { t =>
+          val clzSym = t.tpe.resultType.classSymbol.asClass
+          if ValueClasses.isDerivedValueClass(clzSym) && qual.tpe <:< defn.ReflectSelectableTypeRef then
+            val underlying = ValueClasses.valueClassUnbox(clzSym).asTerm
+            tpd.Select(t, underlying.name)
+          else
+            t
+        }.map(untpd.TypedSplice(_))
+      }.foldLeft(base)((base, args) => untpd.Apply(base, args))
 
     def structuralCall(selectorName: TermName, classOfs: => List[Tree]) = {
       val selectable = adapt(qual, defn.SelectableClass.typeRef | defn.DynamicClass.typeRef)
@@ -204,7 +205,7 @@ trait Dynamic {
 
       val scall =
         if (vargss.isEmpty) base
-        else untpd.Apply(base, handleRepeated(vargss))
+        else handleRepeated(base, vargss)
 
       // If function is an `applyDynamic` that takes a Class* parameter,
       // add `classOfs`.
