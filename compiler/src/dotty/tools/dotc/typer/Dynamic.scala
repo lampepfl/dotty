@@ -175,11 +175,11 @@ trait Dynamic {
    *  It's an error if U is neither a value nor a method type, or a dependent method
    *  type
    */
-  def handleStructural(tree: Tree)(using Context): Tree = {
+  def handleStructural(tree: Tree)(using Context) = {
     val fun @ Select(qual, name) = funPart(tree): @unchecked
     val vargss = termArgss(tree)
 
-    def handleRepeated(base: Tree, possiblyCurried: List[List[Tree]]) =
+    def handleRepeated(base: untpd.Tree, possiblyCurried: List[List[Tree]]) =
       possiblyCurried.map { args =>
         val isRepeated = args.exists(_.tpe.widen.isRepeatedParam)
         if isRepeated && qual.tpe <:< defn.ReflectSelectableTypeRef then
