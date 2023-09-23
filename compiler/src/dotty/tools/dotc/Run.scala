@@ -245,7 +245,7 @@ class Run(comp: Compiler, ictx: Context) extends ImplicitRunInfo with Constraint
             val profileBefore = profiler.beforePhase(phase)
             units = phase.runOn(units)
             profiler.afterPhase(phase, profileBefore)
-            if (ctx.settings.Xprint.value.containsPhase(phase))
+            for (printAt <- ctx.settings.Xprint.userValue if printAt.containsPhase(phase))
               for (unit <- units)
                 def printCtx(unit: CompilationUnit) = phase.printingContext(
                   ctx.fresh.setPhase(phase.next).setCompilationUnit(unit))
