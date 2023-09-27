@@ -324,6 +324,15 @@ object Symbols {
       }
       else if (denot.isPrimaryConstructor)
         denot.owner.sourceSymbol
+      else if (
+        denot.is(TypeParam) &&
+        denot.maybeOwner.maybeOwner.isAllOf(EnumCase) &&
+        denot.maybeOwner.isPrimaryConstructor
+      ) then
+        val enclosingEnumCase = denot.maybeOwner.maybeOwner
+        val enumClass = enclosingEnumCase.maybeOwner.linkedClass
+        val sourceTypeParam = enumClass.typeParams.find(_.name == denot.name)
+        sourceTypeParam.getOrElse(this)
       else this
 
     /** The position of this symbol, or NoSpan if the symbol was not loaded
