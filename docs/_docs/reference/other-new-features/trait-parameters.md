@@ -53,13 +53,19 @@ The correct way to write `E` is to extend both `Greeting` and
 class E extends Greeting("Bob"), FormalGreeting
 ```
 
-## Traits With Context Parameters
+## Default values and implicit parameters
 
-This "explicit extension required" rule is relaxed if the missing trait contains only
-[context parameters](../contextual/using-clauses.md). In that case the trait reference is
-implicitly inserted as an additional parent with inferred arguments. For instance,
-here's a variant of greetings where the addressee is a context parameter of type
-`ImpliedName`:
+If the trait `T` is parametrised such that `new T{}` would be a legal annonymous class creation, the "explicit extension required" rule does not apply, the parameters filled in as for the annonymous class:
+* Parameters with default values are set to their default value.
+* [Context parameters](../contextual/using-clauses.md) are set to the value present in the implicit scope. Notably from class parameters or other traits.
+
+```scala
+trait withLastName(val lastName: String = "")
+
+case class Person() extends withLastName
+// identical to
+case class Person extends withLastName("")
+```
 
 ```scala
 case class ImpliedName(name: String):
@@ -83,6 +89,33 @@ class F(using iname: ImpliedName) extends
 ```
 Note the inserted reference to the super trait `ImpliedGreeting`, which was not mentioned explicitly.
 
+In the above context, the following is also valid:
+```scala
+given iname: ImpliedName
+class F2() extends ImpliedFormalGreeting
+```
+And expands to:
+```scala
+class F2() extends
+  Object,
+  ImpliedGreeting(using iname),
+  ImpliedFormalGreeting
+```
+
+Forms of ommission can be combined:
+```scala
+trait SuperTrait(using Char)(val name: String = "")(using Int)
+
+given c: Char = 'X'
+class SuperClass(using i: Int) extends SuperTrait
+```
+The last line expands to:
+
+```scala
+class SuperClass(using i: Int) extends SuperTrait(using c)("")(using i)
+```
+
 ## Reference
 
 For more information, see [Scala SIP 25](http://docs.scala-lang.org/sips/pending/trait-parameters.html).
+TODO: Find which PR changed the behaviour, as this was changed between 3.2.2 and 3.2.1
