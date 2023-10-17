@@ -18,6 +18,7 @@ import dotty.tools.dotc.util.Spans._
 import dotty.tools.dotc.util.{ParsedComment, Property, SourceFile}
 import dotty.tools.dotc.{CompilationUnit, Compiler, Run}
 import dotty.tools.repl.results._
+import dotty.tools.repl.transform._
 
 import scala.collection.mutable
 import scala.util.chaining.given

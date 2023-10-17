@@ -1,4 +1,4 @@
-scala> object A { def f = 1 }
+scala> object A { def f = 1; def t = 2 }
 // defined object A
 
 scala> object B { def f = 2 }
@@ -25,3 +25,73 @@ def f: Int
 
 scala> val x3 = f
 val x3: Int = 1
+
+scala> import A._; def f = 5
+def f: Int
+
+scala> val x4 = f
+val x4: Int = 5
+
+scala> def f = 6; println(f); import A._; println(f); // import shadowing should only work on toplevel definitions in the following runs
+6
+6
+def f: Int
+
+scala> import A._; println(f); def f = 7; println(f)  // import shadowing should only work on toplevel definitions in the following runs
+7
+7
+def f: Int
+
+scala> def f = 8; import A.f
+def f: Int
+
+scala> val x5 = f
+val x5: Int = 1
+
+scala> import A.f; def f = 9
+def f: Int
+
+scala> val x6 = f
+val x6: Int = 9
+
+scala> import A.{f => ff}; def f = 10
+def f: Int
+
+scala> val x7 = f
+val x7: Int = 10
+
+scala> val x8 = ff
+val x8: Int = 1
+
+scala> def f = 10; import A.{f => ff}
+def f: Int
+
+scala> val x9 = f
+val x9: Int = 10
+
+scala> val x10 = ff
+val x10: Int = 1
+
+scala> import A.{t, _}; def f = 11
+def f: Int
+
+scala> val x11 = f
+val x11: Int = 11
+
+scala> def f = 12; import A.{t, _}
+def f: Int
+
+scala> val x12 = f
+val x12: Int = 1
+
+scala> def f = 13; import A.{t => f}
+def f: Int
+
+scala> val x13 = f
+val x13: Int = 2
+
+scala> import A.{t => f}; def f = 14
+def f: Int
+
+scala> val x14 = f
+val x14: Int = 14
