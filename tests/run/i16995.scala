@@ -2,6 +2,14 @@ class Foo(val i: Int) extends AnyVal
 class Argument(val x: String) extends AnyVal
 class Reflective extends reflect.Selectable
 
+type ReflectiveType = {
+  def reflectiveCall(arg1: Int)(arg2: Int): Int
+}
+
+class ClassWithReflectiveCall {
+  def reflectiveCall(x: Int)(y: Int): Int = x + y
+}
+
 class ScalaSelectable(values: Map[String, Any], methods: Map[String, (Int, Seq[Foo]) => Int]) extends Selectable {
   def selectDynamic(name: String): Any = values(name)
 
@@ -48,6 +56,8 @@ class ScalaSelectable(values: Map[String, Any], methods: Map[String, (Int, Seq[F
   val p = reflective.letsHaveSeq(seq)
   println(p)
 
+  println(reflective.curried(foo1)(arg1)(1))
+
   val cont2values = Map.empty[String, Any]
 
   val cont2methods = Map[String, (Int, Seq[Foo]) => Int](
@@ -62,3 +72,12 @@ class ScalaSelectable(values: Map[String, Any], methods: Map[String, (Int, Seq[F
   println(cont2.varargs(1, Foo(1), Foo(1)))
 
   println(cont2.curried(Foo(1))(Argument("123"))(3))
+
+  {
+    import scala.reflect.Selectable.reflectiveSelectable
+    val obj = new ClassWithReflectiveCall()
+    def instantiate(): ReflectiveType = obj
+
+    val rtype = instantiate()
+    println(rtype.reflectiveCall(1)(2))
+  }
