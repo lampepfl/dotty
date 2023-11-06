@@ -15,6 +15,8 @@ class ScalaSelectable(values: Map[String, Any], methods: Map[String, (Int, Seq[F
 
   def applyDynamic(name: String)(i: Int, foos: Foo*): Int = methods(name)(i, foos)
 
+  def applyDynamic(name: String)(ints: Int*)(x: Int): Int = ints.sum + x
+
   def applyDynamic(name: String)(foo: Foo)(argument: Argument)(someInt: Int): Int = foo.i + argument.x.length + someInt
 }
 
@@ -67,9 +69,12 @@ class ScalaSelectable(values: Map[String, Any], methods: Map[String, (Int, Seq[F
   val cont2 = ScalaSelectable(cont2values, cont2methods).asInstanceOf[ScalaSelectable {
     def varargs(i: Int, foos: Foo*): Int
     def curried(foo: Foo)(argument: Argument)(someInt: Int): Int
+    def varargs2(ints: Int*)(x: Int): Int
   }]
 
   println(cont2.varargs(1, Foo(1), Foo(1)))
+
+  println(cont2.varargs2(1, 2, 3, 4)(5))
 
   println(cont2.curried(Foo(1))(Argument("123"))(3))
 
