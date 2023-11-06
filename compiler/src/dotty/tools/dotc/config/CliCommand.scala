@@ -3,6 +3,8 @@ package config
 
 import scala.language.unsafeNulls
 
+import dotty.tools.dotc.reporting.{ConsoleReporter}
+import java.io.{ BufferedReader, PrintWriter }
 import Settings._
 import core.Contexts._
 import printing.Highlighting
@@ -130,7 +132,8 @@ trait CliCommand:
       report.echo(ifErrorsMsg)
       None
     else if settings.version.value then
-      report.echo(versionMsg)
+      // ctx defaults to Console.err
+      ConsoleReporter(writer = new PrintWriter(Console.out, true)).printMessage(versionMsg)
       None
     else if isHelpFlag then
       report.echo(helpMsg)
