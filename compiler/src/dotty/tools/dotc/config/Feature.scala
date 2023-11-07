@@ -33,6 +33,7 @@ object Feature:
   val pureFunctions = experimental("pureFunctions")
   val captureChecking = experimental("captureChecking")
   val into = experimental("into")
+  val quotedPatternsWithPolymorphicFunctions = experimental("quotedPatternsWithPolymorphicFunctions")
 
   val globalOnlyImports: Set[TermName] = Set(pureFunctions, captureChecking)
 
@@ -83,6 +84,9 @@ object Feature:
   def genericNumberLiteralsEnabled(using Context) = enabled(genericNumberLiterals)
 
   def scala2ExperimentalMacroEnabled(using Context) = enabled(scala2macros)
+
+  def quotedPatternsWithPolymorphicFunctionsEnabled(using Context) =
+    enabled(quotedPatternsWithPolymorphicFunctions)
 
   /** Is pureFunctions enabled for this compilation unit? */
   def pureFunsEnabled(using Context) =

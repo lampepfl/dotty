@@ -852,7 +852,7 @@ trait TypedTreeInfo extends TreeInfo[Type] { self: Trees.Instance[Type] =>
       }
       private object quotePatVars extends TreeAccumulator[List[Symbol]] {
         def apply(syms: List[Symbol], tree: Tree)(using Context) = tree match {
-          case SplicePattern(pat, _) => outer.apply(syms, pat)
+          case SplicePattern(pat, _, _) => outer.apply(syms, pat)
           case _ => foldOver(syms, tree)
         }
       }

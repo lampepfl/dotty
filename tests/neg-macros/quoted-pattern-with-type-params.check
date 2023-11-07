@@ -1,0 +1,12 @@
+-- Error: tests/neg-macros/quoted-pattern-with-type-params.scala:6:32 --------------------------------------------------
+6 |    case '{ [A] => (x : A) => $b[A] : (A => A) } => ??? // error
+  |                              ^^^^^
+  |                              Implementation restriction: A higher-order pattern must carry value arguments
+-- Error: tests/neg-macros/quoted-pattern-with-type-params.scala:7:33 --------------------------------------------------
+7 |    case '{ [A] => (x : A) => $b(x) : (A => A) } => ??? // error
+  |                                 ^
+  |                                Type variables that this argument depends on are not captured in this hoas pattern
+-- Error: tests/neg-macros/quoted-pattern-with-type-params.scala:8:26 --------------------------------------------------
+8 |    case '{ (a:Int) => $b[Int](a) : String } => ??? // error
+  |                          ^^^
+  |                          Type arguments of a hoas pattern needs to be defined inside the quoted pattern

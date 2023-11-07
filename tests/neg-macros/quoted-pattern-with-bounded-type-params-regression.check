@@ -1,0 +1,6 @@
+-- Error: tests/neg-macros/quoted-pattern-with-bounded-type-params-regression.scala:11:48 ------------------------------
+11 |    case '{ [A <: Int, B] => (x : A, y : A) => $b[A](x, y) : A } => ??? // error
+   |                                                ^
+   |                                                Type must be fully defined.
+   |                                                Consider annotating the splice using a type ascription:
+   |                                                  (${b}: XYZ).
