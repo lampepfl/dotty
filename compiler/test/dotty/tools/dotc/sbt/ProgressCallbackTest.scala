@@ -97,7 +97,11 @@ final class ProgressCallbackTest extends DottyTest:
       locally:
         // (4) assert that the final progress recorded is at the target phase,
         //     and progress is equal to the number of phases before the target.
-        val (befores, target +: next +: _) = runnableSubPhases.span(_ != targetPhase): @unchecked
+        //
+        // (4.1) extract the real befores by looking at the runnable phases
+        val (befores, target +: _) = runnableSubPhases.span(_ != targetPhase): @unchecked
+        // (4.2) extract the predicted next phase by looking at all phases
+        val (_, `target` +: next +: _) = allSubPhases.span(_ != targetPhase): @unchecked
         // (4.1) we expect cancellation to occur *as we enter* the target phase,
         //       so no units should be visited in this phase. Therefore progress
         //       should be equal to the number of phases before the target. (as we have 1 unit)
