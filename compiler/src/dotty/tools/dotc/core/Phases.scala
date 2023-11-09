@@ -338,6 +338,7 @@ object Phases {
 
     /** skip the phase for a Java compilation unit, may depend on -Yjava-tasty */
     def skipIfJava(using Context): Boolean = true
+    def lastJavaPhase(using Context): Phase = sbtExtractAPIPhase
 
     /** @pre `isRunnable` returns true */
     def run(using Context): Unit
@@ -346,7 +347,8 @@ object Phases {
     def runOn(units: List[CompilationUnit])(using runCtx: Context): List[CompilationUnit] =
       val buf = List.newBuilder[CompilationUnit]
       // factor out typedAsJava check when not needed
-      val doSkipJava = ctx.settings.YjavaTasty.value && this <= sbtExtractAPIPhase && skipIfJava
+      val doSkipJava =
+        ctx.settings.YjavaTasty.value && skipIfJava && ctx.phase <= lastJavaPhase.next
       for unit <- units do
         given unitCtx: Context = runCtx.fresh.setPhase(this.start).setCompilationUnit(unit).withRootImports
         if ctx.run.enterUnit(unit) then

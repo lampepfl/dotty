@@ -16,7 +16,9 @@ import java.io.{ ByteArrayInputStream, ByteArrayOutputStream, InputStream, Outpu
  *
  *  ''Note:  This library is considered experimental and should not be used unless you know what you are doing.''
  */
-class VirtualFile(val name: String, override val path: String) extends AbstractFile {
+class VirtualFile(val name: String, override val path: String, val enclosingDirectory: Option[VirtualDirectory]) extends AbstractFile {
+
+  def this(name: String, path: String) = this(name, path, None)
 
   /**
    * Initializes this instance with the specified name and an
@@ -26,6 +28,7 @@ class VirtualFile(val name: String, override val path: String) extends AbstractF
    * @return     the created virtual file
    */
   def this(name: String) = this(name, name)
+
 
   /**
     * Initializes this instance with the specified path
@@ -60,7 +63,7 @@ class VirtualFile(val name: String, override val path: String) extends AbstractF
     }
   }
 
-  def container: AbstractFile = NoAbstractFile
+  def container: AbstractFile = enclosingDirectory.getOrElse(NoAbstractFile)
 
   /** Is this abstract file a directory? */
   def isDirectory: Boolean = false

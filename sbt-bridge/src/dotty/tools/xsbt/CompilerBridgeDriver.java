@@ -17,6 +17,7 @@ import dotty.tools.io.Path;
 import dotty.tools.io.Streamable;
 import scala.collection.mutable.ListBuffer;
 import scala.jdk.javaapi.CollectionConverters;
+import java.util.concurrent.ConcurrentHashMap;
 import scala.io.Codec;
 import xsbti.Problem;
 import xsbti.*;
@@ -28,6 +29,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Comparator;
 import java.util.Collections;
+import java.util.stream.Collectors;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Arrays;
@@ -62,7 +64,8 @@ public class CompilerBridgeDriver extends Driver {
   }
 
   private static VirtualFile asVirtualFile(SourceFile sourceFile, DelegatingReporter reporter,
-      HashMap<AbstractFile, VirtualFile> lookup) {
+      ConcurrentHashMap<AbstractFile, VirtualFile> lookup) {
+    // !!!! MUST BE CONCURRENT HASH MAP FOR PARALLEL OUTLINE SECOND PASS !!!!
     return lookup.computeIfAbsent(sourceFile.file(), path -> {
       reportMissingFile(reporter, sourceFile);
       if (sourceFile.file().jpath() != null)
@@ -90,7 +93,9 @@ public class CompilerBridgeDriver extends Driver {
     Arrays.sort(sortedSources, (x0, x1) -> x0.id().compareTo(x1.id()));
 
     ListBuffer<AbstractFile> sourcesBuffer = new ListBuffer<>();
-    HashMap<AbstractFile, VirtualFile> lookup = new HashMap<>(sources.length, 0.25f);
+
+    // !!!! MUST BE CONCURRENT HASH MAP FOR PARALLEL OUTLINE SECOND PASS !!!!
+    ConcurrentHashMap<AbstractFile, VirtualFile> lookup = new ConcurrentHashMap<>(sources.length, 0.25f);
 
     for (int i = 0; i < sources.length; i++) {
       VirtualFile source = sortedSources[i];
@@ -136,9 +141,8 @@ public class CompilerBridgeDriver extends Driver {
 
       if (!delegate.hasErrors()) {
         log.debug(this::prettyPrintCompilationArguments);
-        Compiler compiler = newCompiler(context);
 
-        doCompile(compiler, sourcesBuffer.toList(), context);
+        doCompile(sourcesBuffer.toList(), context);
 
         for (xsbti.Problem problem: delegate.problems()) {
           try {
@@ -202,7 +206,16 @@ public class CompilerBridgeDriver extends Driver {
 
   private String infoOnCachedCompiler() {
     String compilerId = Integer.toHexString(hashCode());
-    String compilerVersion = Properties.versionString();
+    String compilerVersion;
+    try {
+      compilerVersion = Properties.versionString();
+    } catch (Throwable t) {
+      if (scala.util.control.NonFatal.apply(t)) {
+        compilerVersion = "unknown";
+      } else {
+        throw t;
+      }
+    };
     return String.format("[zinc] Running cached compiler %s for Scala Compiler %s", compilerId, compilerVersion);
   }
 

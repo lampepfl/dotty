@@ -345,10 +345,12 @@ class TreePickler(pickler: TastyPickler, attributes: Attributes) {
           case _: Template | _: Hole => pickleTree(tpt)
           case _ if tpt.isType => pickleTpt(tpt)
         }
-        if isOutlinePickle && sym.isTerm && isJavaPickle then
-          // TODO: if we introduce outline typing for Scala definitions
-          // then we will need to update the check here
-          pickleElidedUnlessEmpty(rhs, tpt.tpe)
+        if isOutlinePickle then
+          if sym.isTerm && isJavaPickle then
+            pickleElidedUnlessEmpty(rhs, tpt.tpe)
+          else rhs match
+            case ElidedTree() => pickleElidedUnlessEmpty(rhs, tpt.tpe)
+            case _ => pickleTreeUnlessEmpty(rhs)
         else
           pickleTreeUnlessEmpty(rhs)
         pickleModifiers(sym, mdef)

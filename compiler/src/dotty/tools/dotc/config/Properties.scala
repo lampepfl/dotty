@@ -9,6 +9,7 @@ import scala.annotation.internal.sharable
 import java.io.IOException
 import java.util.jar.Attributes.{ Name => AttributeName }
 import java.nio.charset.StandardCharsets
+import scala.util.control.NonFatal
 
 /** Loads `library.properties` from the jar. */
 object Properties extends PropertiesTrait {
@@ -30,9 +31,26 @@ trait PropertiesTrait {
   /** The loaded properties */
   @sharable protected lazy val scalaProps: java.util.Properties = {
     val props = new java.util.Properties
-    val stream = pickJarBasedOn getResourceAsStream propFilename
-    if (stream ne null)
-      quietlyDispose(props load stream, stream.close)
+    val file = pickJarBasedOn.getResource(propFilename)
+    if file != null then
+      scala.util.Using.Manager { use =>
+        val stream = use(file.openStream())
+        val buffered = use(new java.io.BufferedInputStream(stream))
+        props.load(buffered)
+      }.fold(ex => (), identity) // swallow errors
+    //   catch
+    //     case ioe: IOException =>
+    //       println("swallowing " + ioe)
+    //       ioe.printStackTrace()
+    //       return props
+    //   quietlyDispose({
+    //     try props.load(stream)
+    //     catch
+    //       case ioe: IOException =>
+    //         println("swallowing " + ioe)
+    //         ioe.printStackTrace()
+    //         props
+    //   }, stream.close)
 
     props
   }
@@ -70,13 +88,19 @@ trait PropertiesTrait {
    *  or `"(unknown)"` if it cannot be determined.
    */
   val simpleVersionString: String = {
-    val v = scalaPropOrElse("version.number", "(unknown)")
-    v + (
-      if (v.contains("SNAPSHOT") || v.contains("NIGHTLY"))
-        "-git-" + scalaPropOrElse("git.hash", "(unknown)")
-      else
-        ""
-    )
+    try
+      val v = scalaPropOrElse("version.number", "(unknown)")
+      v + (
+        if (v.contains("SNAPSHOT") || v.contains("NIGHTLY"))
+          "-git-" + scalaPropOrElse("git.hash", "(unknown)")
+        else
+          ""
+      )
+    catch
+      case NonFatal(t) =>
+        println("swallowing " + t)
+        t.printStackTrace()
+        "(unknown)"
   }
 
   /** The version number of the jar this was loaded from plus `"version "` prefix,

@@ -389,7 +389,8 @@ class PostTyper extends MacroTransform with InfoTransformer { thisPhase =>
           Checking.checkPolyFunctionType(tree.tpt)
           val tree1 = cpy.ValDef(tree)(rhs = normalizeErasedRhs(tree.rhs, tree.symbol))
           if tree1.removeAttachment(desugar.UntupledParam).isDefined then
-            checkStableSelection(tree.rhs)
+            if !(ctx.isOutlineFirstPass && ElidedTree.isElided(tree.rhs)) then
+              checkStableSelection(tree.rhs)
           processValOrDefDef(super.transform(tree1))
         case tree: DefDef =>
           annotateExperimental(tree.symbol)

@@ -18,7 +18,7 @@ import dotty.tools.dotc.core.Phases.*
 import dotty.tools.dotc.core.Symbols.*
 import dotty.tools.dotc.core.Denotations.StaleSymbol
 import dotty.tools.dotc.core.Types.*
-
+import dotty.tools.dotc.transform.Pickler
 import dotty.tools.dotc.util.{SrcPos, NoSourcePosition}
 import dotty.tools.io
 import dotty.tools.io.{AbstractFile, PlainFile, ZipArchive, NoAbstractFile, FileExtension}
@@ -30,6 +30,7 @@ import scala.jdk.CollectionConverters.*
 
 import scala.collection.{Set, mutable}
 import scala.compiletime.uninitialized
+import dotty.tools.io.VirtualFile
 
 /** This phase sends information on classes' dependencies to sbt via callbacks.
  *
@@ -66,6 +67,12 @@ class ExtractDependencies extends Phase {
 
   // when `-Yjava-tasty` is set we actually want to run this phase on Java sources
   override def skipIfJava(using Context): Boolean = false
+
+  override def runOn(units: List[CompilationUnit])(using runCtx: Context): List[CompilationUnit] =
+    val units0 = super.runOn(units)
+    if ctx.isOutlineSecondPass then
+      ExtractAPI.signalPipelineCompleted()
+    units0
 
   // This phase should be run directly after `Frontend`, if it is run after
   // `PostTyper`, some dependencies will be lost because trees get simplified.
@@ -495,24 +502,27 @@ class DependencyRecorder {
     if depFile != null then {
       // Cannot ignore inheritance relationship coming from the same source (see sbt/zinc#417)
       def allowLocal = depCtx == DependencyByInheritance || depCtx == LocalDependencyByInheritance
-      val isTastyOrSig = depFile.hasTastyExtension
+      val isTasty = depFile.hasTastyExtension
+      val isZipEntry = depFile.isInstanceOf[ZipArchive#Entry]
+      val isPlainFile = depFile.isInstanceOf[PlainFile]
+      val isExternal = isZipEntry || isPlainFile
 
       def processExternalDependency() = {
         val binaryClassName = depClass.binaryClassName
-        depFile match {
-          case ze: ZipArchive#Entry => // The dependency comes from a JAR
-            ze.underlyingSource match
-              case Some(zip) if zip.jpath != null =>
-                binaryDependency(zip.jpath, binaryClassName)
-              case _ =>
-          case pf: PlainFile => // The dependency comes from a class file, Zinc handles JRT filesystem
-            binaryDependency(if isTastyOrSig then cachedSiblingClass(pf) else pf.jpath, binaryClassName)
-          case _ =>
-            internalError(s"Ignoring dependency $depFile of unknown class ${depFile.getClass}}", fromClass.srcPos)
+        if isZipEntry then {
+          depFile.underlyingSource match
+            case Some(zip) if zip.jpath != null =>
+              binaryDependency(zip.jpath, binaryClassName)
+            case _ =>
         }
+        else if isPlainFile then
+          val pf = depFile.asInstanceOf[PlainFile]
+          binaryDependency(if isTasty then cachedSiblingClass(pf) else pf.jpath, binaryClassName)
+        else
+          internalError(s"Ignoring dependency $depFile of unknown class ${depFile.getClass}}", fromClass.srcPos)
       }
 
-      if isTastyOrSig || depFile.hasClassExtension then
+      if (isTasty && isExternal) || depFile.hasClassExtension then
         processExternalDependency()
       else if allowLocal || depFile != sourceFile.file then
         // We cannot ignore dependencies coming from the same source file because

@@ -204,7 +204,7 @@ object SymbolLoaders {
     }
 
   def needCompile(bin: AbstractFile, src: AbstractFile): Boolean =
-    src.lastModified >= bin.lastModified
+    src.lastModified >= bin.lastModified && !bin.isVirtual
 
   private def nameOf(classRep: ClassRepresentation)(using Context): TermName =
     classRep.fileName.sliceToTermName(0, classRep.nameLength)

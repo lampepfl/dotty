@@ -52,7 +52,8 @@ class CheckShadowing extends MiniPhase:
   override def isRunnable(using Context): Boolean =
     super.isRunnable &&
     ctx.settings.Xlint.value.nonEmpty &&
-    !ctx.isJava
+    !ctx.isJava &&
+    !ctx.isOutlineFirstPass
 
   // Setup before the traversal
   override def prepareForUnit(tree: tpd.Tree)(using Context): Context =

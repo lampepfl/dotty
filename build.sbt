@@ -1,3 +1,5 @@
+ThisBuild / usePipelining := true
+
 val scala3 = Build.scala3
 val `scala3-bootstrapped` = Build.`scala3-bootstrapped`
 val `scala3-interfaces` = Build.`scala3-interfaces`

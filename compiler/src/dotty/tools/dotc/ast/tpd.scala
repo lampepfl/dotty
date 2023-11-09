@@ -1376,6 +1376,17 @@ object tpd extends Trees.Instance[Type] with TypedTreeInfo {
   def runtimeCall(name: TermName, args: List[Tree])(using Context): Tree =
     Ident(defn.ScalaRuntimeModule.requiredMethod(name).termRef).appliedToTermArgs(args)
 
+  object ElidedTree:
+    def from(tree: Tree)(using Context): Tree =
+      Typed(tree, TypeTree(AnnotatedType(tree.tpe, Annotation(defn.ElidedTreeAnnot, tree.span))))
+
+    def isElided(tree: Tree)(using Context): Boolean = unapply(tree)
+
+    def unapply(tree: Tree)(using Context): Boolean = tree match
+      case Typed(_, tpt) => tpt.tpe.hasAnnotation(defn.ElidedTreeAnnot)
+      case _ => false
+
+
   /** An extractor that pulls out type arguments */
   object MaybePoly:
     def unapply(tree: Tree): Option[(Tree, List[Tree])] = tree match

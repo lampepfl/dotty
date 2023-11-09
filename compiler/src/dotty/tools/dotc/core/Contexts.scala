@@ -54,8 +54,9 @@ object Contexts {
   private val (importInfoLoc,        store9) = store8.newLocation[ImportInfo | Null]()
   private val (typeAssignerLoc,     store10) = store9.newLocation[TypeAssigner](TypeAssigner)
   private val (progressCallbackLoc, store11) = store10.newLocation[ProgressCallback | Null]()
+  private val (depsFinishPromiseLoc, store12) = store11.newLocation[scala.concurrent.Promise[Unit]]()
 
-  private val initialStore = store11
+  private val initialStore = store12
 
   /** The current context */
   inline def ctx(using ctx: Context): Context = ctx
@@ -172,6 +173,16 @@ object Contexts {
     inline def withIncCallback(inline op: IncrementalCallback => Unit): Unit =
       val local = incCallback
       if local != null then op(local)
+
+    def isOutline(using Context): Boolean = settings.Youtline.value
+
+    def isOutlineFirstPass(using Context): Boolean =
+      isOutline && !settings.YsecondPass.value
+
+    def isOutlineSecondPass(using Context): Boolean =
+      isOutline && settings.YsecondPass.value
+
+    def depsFinishPromiseOpt: Option[scala.concurrent.Promise[Unit]] = Option(store(depsFinishPromiseLoc))
 
     def runZincPhases: Boolean =
       def forceRun = settings.YdumpSbtInc.value || settings.YforceSbtPhases.value
@@ -667,6 +678,12 @@ object Contexts {
       this._source = source
       this
 
+    def setCallbacks(store: Store): this.type =
+      this
+        .updateStore(compilerCallbackLoc, store(compilerCallbackLoc))
+        .updateStore(incCallbackLoc, store(incCallbackLoc))
+        .updateStore(progressCallbackLoc, store(progressCallbackLoc))
+
     private def setMoreProperties(moreProperties: Map[Key[Any], Any]): this.type =
       util.Stats.record("Context.setMoreProperties")
       this._moreProperties = moreProperties
@@ -684,6 +701,8 @@ object Contexts {
 
     def setCompilerCallback(callback: CompilerCallback): this.type = updateStore(compilerCallbackLoc, callback)
     def setIncCallback(callback: IncrementalCallback): this.type = updateStore(incCallbackLoc, callback)
+    def setDepsFinishPromise(promise: scala.concurrent.Promise[Unit]): this.type =
+      updateStore(depsFinishPromiseLoc, promise)
     def setProgressCallback(callback: ProgressCallback): this.type = updateStore(progressCallbackLoc, callback)
     def setPrinterFn(printer: Context => Printer): this.type = updateStore(printerFnLoc, printer)
     def setSettings(settingsState: SettingsState): this.type = updateStore(settingsStateLoc, settingsState)

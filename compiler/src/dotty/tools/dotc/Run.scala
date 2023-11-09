@@ -287,9 +287,10 @@ class Run(comp: Compiler, ictx: Context) extends ImplicitRunInfo with Constraint
       then ActiveProfile(ctx.settings.VprofileDetails.value.max(0).min(1000))
       else NoProfile
 
-    // If testing pickler, make sure to stop after pickling phase:
+    // If testing pickler, of outline first pass, make sure to stop after pickling phase:
     val stopAfter =
       if (ctx.settings.YtestPickler.value) List("pickler")
+      else if (ctx.isOutlineFirstPass) List("sbt-api")
       else ctx.settings.YstopAfter.value
 
     val pluginPlan = ctx.base.addPluginPhases(ctx.base.phasePlan)

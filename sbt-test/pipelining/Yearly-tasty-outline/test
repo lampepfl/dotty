@@ -1,0 +1,5 @@
+# create this file so that it is visible when
+# manually setting -Youtline-classpath from sbt
+$ touch a-early.jar
+> a/compile
+> b/compile

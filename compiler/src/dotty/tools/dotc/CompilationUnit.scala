@@ -18,6 +18,8 @@ import StdNames.nme
 import scala.annotation.internal.sharable
 import scala.util.control.NoStackTrace
 import transform.MacroAnnotations
+import dotty.tools.dotc.interfaces.AbstractFile
+import dotty.tools.io.NoAbstractFile
 
 class CompilationUnit protected (val source: SourceFile, val info: CompilationUnitInfo | Null) {
 
@@ -45,6 +47,7 @@ class CompilationUnit protected (val source: SourceFile, val info: CompilationUn
 
   /** Pickled TASTY binaries, indexed by class. */
   var pickled: Map[ClassSymbol, () => Array[Byte]] = Map()
+  var outlinePickled: Map[ClassSymbol, () => Array[Byte]] = Map()
 
   /** The fresh name creator for the current unit.
    *  FIXME(#7661): This is not fine-grained enough to enable reproducible builds,
@@ -106,6 +109,8 @@ class CompilationUnit protected (val source: SourceFile, val info: CompilationUn
         ctx.run.nn.suspendedUnits += this
         if ctx.phase == Phases.inliningPhase then
           suspendedAtInliningPhase = true
+        else if ctx.settings.YearlyTastyOutput.value != NoAbstractFile then
+          report.error(i"Compilation units may not be suspended before inlining with -Ypickle-write")
     throw CompilationUnit.SuspendException()
 
   private var myAssignmentSpans: Map[Int, List[Span]] | Null = null

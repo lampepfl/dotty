@@ -2527,6 +2527,36 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
     if filters == List(MessageFilter.None) then sup.markUsed()
     ctx.run.nn.suppressions.addSuppression(sup)
 
+
+  /** Can the body of this method be dropped and replaced by `_` without
+   *  breaking separate compilation ? This is used to generate tasty outlines. */
+  private def canDropBody(definition: untpd.ValOrDefDef, sym: Symbol)(using Context): Boolean =
+    def mayNeedSuperAccessor =
+      val inTrait = sym.enclosingClass.is(Trait)
+      val acc = new untpd.UntypedTreeAccumulator[Boolean]:
+        override def apply(x: Boolean, tree: untpd.Tree)(using Context) = x || (tree match
+          case Super(qual, mix) =>
+            // Super accessors are needed for all super calls that either
+            // appear in a trait or have as a target a member of some outer class,
+            // this is an approximation since the super call is untyped at this point.
+            inTrait || !mix.name.isEmpty
+          case _ =>
+            foldOver(x, tree)
+        )
+      acc(false, definition.rhs)
+    end mayNeedSuperAccessor
+    val bodyNeededFlags = definition match
+      case _: untpd.ValDef => Inline | Final | Erased
+      case _ => Inline | Erased
+    !(ctx.settings.scalajs.value || definition.rhs.isEmpty ||
+      // Lambdas cannot be skipped, because typechecking them may constrain type variables.
+      definition.name == nme.ANON_FUN ||
+      // The body of inline defs, and inline/final vals are part of the public API.
+      sym.isOneOf(bodyNeededFlags) || ctx.mode.is(Mode.InlineRHS) ||
+      // Super accessors are part of the public API (subclasses need to implement them).
+      mayNeedSuperAccessor)
+  end canDropBody
+
   def typedValDef(vdef: untpd.ValDef, sym: Symbol)(using Context): Tree = {
     val ValDef(name, tpt, _) = vdef
     checkNonRootName(vdef.name, vdef.nameSpan)
@@ -2536,7 +2566,14 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
     val tpt1 = checkSimpleKinded(typedType(tpt))
     val rhs1 = vdef.rhs match {
       case rhs @ Ident(nme.WILDCARD) => rhs withType tpt1.tpe
-      case rhs => typedExpr(rhs, tpt1.tpe.widenExpr)
+      case rhs =>
+        if (ctx.isOutlineFirstPass && canDropBody(vdef, sym))
+          if ctx.mode.is(Mode.InlineRHS) then
+            report.error(i"unexpected elided body in rhs of $sym", rhs.srcPos)
+          // defn.Predef_undefinedElidedTree()
+          ElidedTree.from(cpy.Ident(rhs)(nme.WILDCARD).withType(tpt1.tpe.widenExpr))
+        else
+          typedExpr(rhs, tpt1.tpe.widenExpr)
     }
     val vdef1 = assignType(cpy.ValDef(vdef)(name, tpt1, rhs1), sym)
     postProcessInfo(vdef1, sym)
@@ -2571,7 +2608,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
     if (sym.isOneOf(GivenOrImplicit)) checkImplicitConversionDefOK(sym)
     val tpt1 = checkSimpleKinded(typedType(tpt))
 
-    val rhsCtx = ctx.fresh
+    val rhsCtx: FreshContext = ctx.fresh // assert fresh
     val tparamss = paramss1.collect {
       case untpd.TypeDefs(tparams) => tparams
     }
@@ -2595,11 +2632,19 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
       else if !sym.isPrimaryConstructor then
         linkConstructorParams(sym, tparamSyms, rhsCtx)
 
-    if sym.isInlineMethod then rhsCtx.addMode(Mode.InlineableBody)
+    // if sym.isInlineMethod then rhsCtx.addMode(Mode.InlineableBody) // TODO: remove because it's unused
+    if sym.is(Inline) then rhsCtx.addMode(Mode.InlineRHS)
     if sym.is(ExtensionMethod) then rhsCtx.addMode(Mode.InExtensionMethod)
     val rhs1 = PrepareInlineable.dropInlineIfError(sym,
       if sym.isScala2Macro then typedScala2MacroBody(ddef.rhs)(using rhsCtx)
-      else typedExpr(ddef.rhs, tpt1.tpe.widenExpr)(using rhsCtx))
+      else if ctx.isOutlineFirstPass && canDropBody(ddef, sym) then
+        if ctx.mode.is(Mode.InlineRHS) then
+          report.error(i"unexpected elided body in rhs of $sym", ddef.rhs.srcPos)
+        // defn.Predef_undefinedElidedTree() // span needed?
+        ElidedTree.from(cpy.Ident(ddef.rhs)(nme.WILDCARD).withType(tpt1.tpe))
+      else
+        typedExpr(ddef.rhs, tpt1.tpe.widenExpr)(using rhsCtx)
+    )
 
     if sym.isInlineMethod then
       if StagingLevel.level > 0 then
@@ -3371,9 +3416,19 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
         val xtree = stat.removeAttachment(ExpandedTree).get
         traverse(xtree :: rest)
       case stat :: rest =>
-        val stat1 = typed(stat)(using ctx.exprContext(stat, exprOwner))
-        if !Linter.warnOnInterestingResultInStatement(stat1) then checkStatementPurity(stat1)(stat, exprOwner)
-        buf += stat1
+        def isOutlinedTemplateStat = ctx.isOutlineFirstPass && exprOwner.isLocalDummy
+
+        val stat1 =
+          if !isOutlinedTemplateStat || ctx.mode.is(Mode.InlineRHS) then
+            val stat1 = typed(stat)(using ctx.exprContext(stat, exprOwner))
+            if !Linter.warnOnInterestingResultInStatement(stat1) then checkStatementPurity(stat1)(stat, exprOwner)
+            buf += stat1
+            stat1
+          else
+            // With -Ypickle-write, we skip the statements in a class that are not definitions.
+            if ctx.mode.is(Mode.InlineRHS) then
+              report.error(i"unexpected elided statement of ${exprOwner.enclosingMethodOrClass}", stat.srcPos)
+            EmptyTree
         traverse(rest)(using stat1.nullableContext)
       case nil =>
         (buf.toList, ctx)

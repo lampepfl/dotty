@@ -274,7 +274,11 @@ abstract class AbstractFile extends Iterable[AbstractFile] {
         // a race condition in creating the entry after the failed lookup may throw
         val path = jpath.resolve(name)
         try
-          if (isDir) Files.createDirectory(path)
+          // We intentionally use `Files.createDirectories` instead of
+          // `Files.createDirectory` here because the latter throws an exception if
+          // the directory already exists, which can happen when two threads race to
+          // create the same directory.
+          if (isDir) Files.createDirectories(path)
           else Files.createFile(path)
         catch case _: FileAlreadyExistsException => ()
         new PlainFile(new File(path))

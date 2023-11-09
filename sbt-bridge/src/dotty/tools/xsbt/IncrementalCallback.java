@@ -60,11 +60,13 @@ public final class IncrementalCallback implements dotty.tools.dotc.sbt.interface
 
   @Override
   public void apiPhaseCompleted() {
+    System.out.println("!!! API PHASE COMPLETED");
     delegate.apiPhaseCompleted();
   }
 
   @Override
   public void dependencyPhaseCompleted() {
+    System.out.println("!!! DEP PHASE COMPLETED");
     delegate.dependencyPhaseCompleted();
   }
 }

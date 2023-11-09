@@ -51,96 +51,44 @@ class ExtractAPI extends Phase {
 
   override def description: String = ExtractAPI.description
 
-  override def isRunnable(using Context): Boolean = {
-    super.isRunnable && (ctx.runZincPhases || ctx.settings.YjavaTasty.value)
-  }
-
   // Check no needed. Does not transform trees
   override def isCheckable: Boolean = false
-
-  // when `-Yjava-tasty` is set we actually want to run this phase on Java sources
-  override def skipIfJava(using Context): Boolean = false
 
   // SuperAccessors need to be part of the API (see the scripted test
   // `trait-super` for an example where this matters), this is only the case
   // after `PostTyper` (unlike `ExtractDependencies`, the simplication to trees
   // done by `PostTyper` do not affect this phase because it only cares about
   // definitions, and `PostTyper` does not change definitions).
-  override def runsAfter: Set[String] = Set(transform.Pickler.name)
+  override def runsAfter: Set[String] = Set(transform.Pickler.name) // why pickler - because we need the tasty
+  override def isRunnable(using Context): Boolean =
+    super.isRunnable && (ctx.runZincPhases || ctx.settings.YjavaTasty.value) && !ctx.isOutlineSecondPass
+
+  // when `-Yjava-tasty` is set we actually want to run this phase on Java sources
+  override def skipIfJava(using Context): Boolean = false
 
   override def runOn(units: List[CompilationUnit])(using Context): List[CompilationUnit] =
-    val doZincCallback = ctx.runZincPhases
-    val sigWriter: Option[Pickler.EarlyFileWriter] = ctx.settings.YearlyTastyOutput.value match
-      case earlyOut if earlyOut.isDirectory && earlyOut.exists =>
-        Some(Pickler.EarlyFileWriter(ClassfileWriterOps(earlyOut)))
-      case _ =>
-        None
+    val doCallZinc = ctx.runZincPhases
     val nonLocalClassSymbols = new mutable.HashSet[Symbol]
-    val units0 =
-      if doZincCallback then
-        val ctx0 = ctx.withProperty(NonLocalClassSymbolsInCurrentUnits, Some(nonLocalClassSymbols))
-        super.runOn(units)(using ctx0)
-      else
-        units // still run the phase for the side effects (writing TASTy files to -Yearly-tasty-output)
-    sigWriter.foreach(writeSigFiles(units0, _))
-    if doZincCallback then
+    val ctx0 = ctx.withProperty(NonLocalClassSymbolsInCurrentUnits, Some(nonLocalClassSymbols))
+    inContext(ctx0) {
+      val units0 = super.runOn(units)
+      val scalaUnits =
+        if ctx.settings.YjavaTasty.value then
+          units0.filterNot(_.typedAsJava) // remove java sources, this is the terminal phase when `-Ypickle-java` is set
+        else
+          units0 // still run the phase for the side effects (writing TASTy files to -Yearly-tasty-output)
       ctx.withIncCallback(recordNonLocalClasses(nonLocalClassSymbols, _))
-    if ctx.settings.YjavaTasty.value then
-      units0.filterNot(_.typedAsJava) // remove java sources, this is the terminal phase when `-Yjava-tasty` is set
-    else
-      units0
+      Pickler.writeEarlyTasty(units0)
+      ExtractAPI.signalPipelineCompleted()
+      scalaUnits
+    }
   end runOn
-
-  // Why we only write to early output in the first run?
-  // ===================================================
-  // TL;DR the point of pipeline compilation is to start downstream projects early,
-  // so we don't want to wait for suspended units to be compiled.
-  //
-  // But why is it safe to ignore suspended units?
-  // If this project contains a transparent macro that is called in the same project,
-  // the compilation unit of that call will be suspended (if the macro implementation
-  // is also in this project), causing a second run.
-  // However before we do that run, we will have already requested sbt to begin
-  // early downstream compilation. This means that the suspended definitions will not
-  // be visible in *early* downstream compilation.
-  //
-  // However, sbt will by default prevent downstream compilation happening in this scenario,
-  // due to the existence of macro definitions. So we are protected from failure if user tries
-  // to use the suspended definitions.
-  //
-  // Additionally, it is recommended for the user to move macro implementations to another project
-  // if they want to force early output. In this scenario the suspensions will no longer occur, so now
-  // they will become visible in the early-output.
-  //
-  // See `sbt-test/pipelining/pipelining-scala-macro` and `sbt-test/pipelining/pipelining-scala-macro-force`
-  // for examples of this in action.
-  //
-  // Therefore we only need to write to early output in the first run. We also provide the option
-  // to diagnose suspensions with the `-Yno-suspended-units` flag.
-  private def writeSigFiles(units: List[CompilationUnit], writer: Pickler.EarlyFileWriter)(using Context): Unit = {
-    try
-      for
-        unit <- units
-        (cls, pickled) <- unit.pickled
-        if cls.isDefinedInCurrentRun
-      do
-        val binaryName = cls.binaryClassName.replace('.', java.io.File.separatorChar).nn
-        val binaryClassName = if (cls.is(Module)) binaryName.stripSuffix(str.MODULE_SUFFIX).nn else binaryName
-        writer.writeTasty(binaryClassName, pickled())
-    finally
-      writer.close()
-      if ctx.settings.verbose.value then
-        report.echo("[sig files written]")
-    end try
-  }
 
   private def recordNonLocalClasses(nonLocalClassSymbols: mutable.HashSet[Symbol], cb: interfaces.IncrementalCallback)(using Context): Unit =
     for cls <- nonLocalClassSymbols do
       val sourceFile = cls.source
       if sourceFile.exists && cls.isDefinedInCurrentRun then
         recordNonLocalClass(cls, sourceFile, cb)
-    cb.apiPhaseCompleted()
-    cb.dependencyPhaseCompleted()
 
   private def recordNonLocalClass(cls: Symbol, sourceFile: SourceFile, cb: interfaces.IncrementalCallback)(using Context): Unit =
     def registerProductNames(fullClassName: String, binaryClassName: String) =
@@ -201,6 +149,28 @@ class ExtractAPI extends Phase {
 object ExtractAPI:
   val name: String = "sbt-api"
   val description: String = "sends a representation of the API of classes to sbt"
+
+  def signalPipelineCompleted()(using Context): Unit =
+
+    ctx.withIncCallback: cb =>
+      ctx.depsFinishPromiseOpt match
+        case Some(promise) =>
+          assert(ctx.isOutlineSecondPass, "promise should only be set in the second pass")
+          // suspended units could cause this to be completed twice
+          // TODO: instead of promise, we have a stream?
+          // the problem is that suspension is not always going to be the same,
+          // so each time all promises succeed, you would then install listeners in the compilers
+          // with suspended units. Anyway this along with Pickler.writeEarlyTasty need to
+          // agree upon reentrancy of writing early-tasty/signalling to sbt, because waiting for
+          // suspended units kills the purpose, so do we warn if it occurs, or expect the user to
+          // turn on -Yno-suspended-units? (or we forbid supension in typer phase with -Ypickle-write)
+          promise.success(())
+        case _ =>
+          assert(!ctx.isOutlineSecondPass, s"in -Youtline second pass must have deps finish promise set")
+          cb.apiPhaseCompleted()
+          if !ctx.isOutline then
+            cb.dependencyPhaseCompleted() // in outlining, wait until the second pass
+  end signalPipelineCompleted
 
   private val NonLocalClassSymbolsInCurrentUnits: Property.Key[mutable.HashSet[Symbol]] = Property.Key()
 

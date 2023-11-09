@@ -437,7 +437,11 @@ private sealed trait YSettings:
   val YdebugMacros: Setting[Boolean] = BooleanSetting("-Ydebug-macros", "Show debug info when quote pattern match fails")
 
   // Pipeline compilation options
-  val YjavaTasty: Setting[Boolean] = BooleanSetting("-Yjava-tasty", "Pickler phase should compute pickles for .java defined symbols for use by build tools", aliases = List("-Ypickle-java"))
-  val YearlyTastyOutput: Setting[AbstractFile] = OutputSetting("-Yearly-tasty-output", "directory|jar", "Destination for generated .tasty files containing possibly outline type signatures.", NoAbstractFile, aliases = List("-Ypickle-write"))
+  val YjavaTasty: Setting[Boolean] = BooleanSetting("-Yjava-tasty", "Pickler phase should compute pickles for .java defined symbols for use by build tools", aliases = List("-Ypickle-java"), ignoreRepeated = true)
+  val YearlyTastyOutput: Setting[AbstractFile] = OutputSetting("-Yearly-tasty-output", "directory|jar", "Destination for generated .tasty files containing possibly outline type signatures.", NoAbstractFile, aliases = List("-Ypickle-write"), ignoreRepeated = true)
   val YallowOutlineFromTasty: Setting[Boolean] = BooleanSetting("-Yallow-outline-from-tasty", "Allow outline TASTy to be loaded with the -from-tasty option.")
+  val Youtline: Setting[Boolean] = BooleanSetting("-Yexperimental-outline", "Run typechecking in two passes, a prior outline pass, and a subsequent full pass. This may be useful in combination with pipelining.")
+  val YsecondPass: Setting[Boolean] = BooleanSetting("-Ysecond-pass", "Internal use only, signal that the compiler is in the second pass after outlining.")
+  val YoutlineClasspath: Setting[AbstractFile] = OutputSetting("-Youtline-classpath", "directory|jar", "Destination for outline classfiles.", NoAbstractFile)
+  val YmaxParallelism: Setting[Int] = IntSetting("-Ymax-parallelism", "When combined with -Youtline, maximum number of parallel threads to use, 0 means all available processors", 0)
 end YSettings

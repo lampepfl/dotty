@@ -12,6 +12,7 @@ import collection.mutable.ArrayBuffer
 import reflect.ClassTag
 import scala.util.{Success, Failure}
 import dotty.tools.dotc.config.Settings.Setting.ChoiceWithHelp
+import org.scalajs.ir.Trees.JSBinaryOp.in
 
 object Settings:
 
@@ -22,6 +23,7 @@ object Settings:
   val VersionTag: ClassTag[ScalaVersion] = ClassTag(classOf[ScalaVersion])
   val OptionTag: ClassTag[Option[?]]     = ClassTag(classOf[Option[?]])
   val OutputTag: ClassTag[AbstractFile]  = ClassTag(classOf[AbstractFile])
+  val ClasspathTag: ClassTag[IArray[AbstractFile]] = ClassTag(classOf[Array[AbstractFile]])
 
   class SettingsState(initialValues: Seq[Any]):
     private val values = ArrayBuffer(initialValues*)
@@ -63,6 +65,7 @@ object Settings:
     aliases: List[String] = Nil,
     depends: List[(Setting[?], Any)] = Nil,
     ignoreInvalidArgs: Boolean = false,
+    silentIgnoreRepeated: Boolean = false,
     propertyClass: Option[Class[?]] = None)(private[Settings] val idx: Int) {
 
     private var changed: Boolean = false
@@ -88,19 +91,23 @@ object Settings:
     def tryToSet(state: ArgsSummary): ArgsSummary = {
       val ArgsSummary(sstate, arg :: args, errors, warnings) = state: @unchecked
       def update(value: Any, args: List[String]): ArgsSummary =
-        var dangers = warnings
-        val value1 =
-          if changed && isMultivalue then
-            val value0  = value.asInstanceOf[List[String]]
-            val current = valueIn(sstate).asInstanceOf[List[String]]
-            value0.filter(current.contains).foreach(s => dangers :+= s"Setting $name set to $s redundantly")
-            current ++ value0
-          else
-            if changed then dangers :+= s"Flag $name set repeatedly"
-            value
-        changed = true
-        ArgsSummary(updateIn(sstate, value1), args, errors, dangers)
+        if changed && silentIgnoreRepeated then ignore(args)
+          var dangers = warnings
+          val value1 =
+            if changed && isMultivalue then
+              val value0  = value.asInstanceOf[List[String]]
+              val current = valueIn(sstate).asInstanceOf[List[String]]
+              value0.filter(current.contains).foreach(s => dangers :+= s"Setting $name set to $s redundantly")
+              current ++ value0
+            else
+              if changed then dangers :+= s"Flag $name set repeatedly"
+              value
+          changed = true
+          ArgsSummary(updateIn(sstate, value1), args, errors, dangers)
       end update
+
+      def ignore(args: List[String]): ArgsSummary =
+        ArgsSummary(sstate, args, errors, warnings)
 
       def fail(msg: String, args: List[String]) =
         ArgsSummary(sstate, args, errors :+ msg, warnings)
@@ -169,6 +176,17 @@ object Settings:
             val output = if (isJar) JarArchive.create(path) else new PlainDirectory(path)
             update(output, args)
           }
+        case (ClasspathTag, arg :: args) =>
+          val split: List[String] = arg.split(java.io.File.pathSeparator).nn.toList
+          val paths = split.map(Directory(_))
+          val invalid = paths.filter(path => !path.exists || !path.ext.isJar && !path.isDirectory)
+          if invalid.nonEmpty then
+            val shown = invalid.map(arg => s"'$arg'").mkString(", ")
+            fail(s"Paths $shown do not exist or are not directories or .jar files", args)
+          else
+            val asFiles = paths.map(PlainDirectory(_))
+            val settingValue: IArray[AbstractFile] = IArray.from(asFiles)
+            update(settingValue, args)
         case (IntTag, args) if argRest.nonEmpty =>
           setInt(argRest, args)
         case (IntTag, arg2 :: args2) =>
@@ -281,8 +299,8 @@ object Settings:
       setting
     }
 
-    def BooleanSetting(name: String, descr: String, initialValue: Boolean = false, aliases: List[String] = Nil): Setting[Boolean] =
-      publish(Setting(name, descr, initialValue, aliases = aliases))
+    def BooleanSetting(name: String, descr: String, initialValue: Boolean = false, aliases: List[String] = Nil, ignoreRepeated: Boolean = false): Setting[Boolean] =
+      publish(Setting(name, descr, initialValue, aliases = aliases, silentIgnoreRepeated = ignoreRepeated))
 
     def StringSetting(name: String, helpArg: String, descr: String, default: String, aliases: List[String] = Nil): Setting[String] =
       publish(Setting(name, descr, default, helpArg, aliases = aliases))
@@ -308,7 +326,11 @@ object Settings:
     def MultiStringSetting(name: String, helpArg: String, descr: String, default: List[String] = Nil, aliases: List[String] = Nil): Setting[List[String]] =
       publish(Setting(name, descr, default, helpArg, aliases = aliases))
 
-    def OutputSetting(name: String, helpArg: String, descr: String, default: AbstractFile, aliases: List[String] = Nil): Setting[AbstractFile] =
+    def OutputSetting(name: String, helpArg: String, descr: String, default: AbstractFile, aliases: List[String] = Nil, ignoreRepeated: Boolean = false): Setting[AbstractFile] =
+      publish(Setting(name, descr, default, helpArg, aliases = aliases, silentIgnoreRepeated = ignoreRepeated))
+
+    /** A setting that results in readable classpath entries */
+    def ClasspathSetting(name: String, helpArg: String, descr: String, default: IArray[AbstractFile] = IArray.empty, aliases: List[String] = Nil): Setting[IArray[AbstractFile]] =
       publish(Setting(name, descr, default, helpArg, aliases = aliases))
 
     def PathSetting(name: String, descr: String, default: String, aliases: List[String] = Nil): Setting[String] =

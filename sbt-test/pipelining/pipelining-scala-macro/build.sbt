@@ -8,6 +8,7 @@ lazy val a = project.in(file("a"))
   .settings(
     scalacOptions += "-Ycheck:all",
     scalacOptions += "-Xprint-suspension",
+    exportPipelining := false,
     Compile / incOptions := {
       val old = (Compile / incOptions).value
       val hooks = old.externalHooks

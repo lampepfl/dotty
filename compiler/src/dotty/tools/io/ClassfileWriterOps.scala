@@ -12,7 +12,7 @@ import scala.language.unsafeNulls
 import scala.annotation.constructorOnly
 
 
-class ClassfileWriterOps(outputDir: AbstractFile)(using @constructorOnly ictx: Context) {
+class ClassfileWriterOps(val outputDir: AbstractFile)(using @constructorOnly ictx: Context) {
 
   type InternalName = String
 
@@ -49,8 +49,8 @@ class ClassfileWriterOps(outputDir: AbstractFile)(using @constructorOnly ictx: C
         else throw new FileConflictException(s"${base.path}/$clsName$suffix: ${dir.path} is not a directory", dir)
       var dir = base
       val pathParts = clsName.split("[./]").toList
-      for (part <- pathParts.init) dir = ensureDirectory(dir) subdirectoryNamed part
-      ensureDirectory(dir) fileNamed pathParts.last + suffix
+      for (part <- pathParts.init) dir = ensureDirectory(dir).subdirectoryNamed(part)
+      ensureDirectory(dir).fileNamed(pathParts.last + suffix)
     }
   }
 

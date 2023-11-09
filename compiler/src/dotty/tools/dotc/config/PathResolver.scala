@@ -12,6 +12,8 @@ import PartialFunction.condOpt
 import core.Contexts.*
 import Settings.*
 import dotty.tools.io.File
+import dotty.tools.io.NoAbstractFile
+import dotty.tools.dotc.classpath.FileUtils.isJarOrZip
 
 object PathResolver {
 
@@ -208,6 +210,12 @@ class PathResolver(using c: Context) {
       if (!settings.classpath.isDefault) settings.classpath.value
       else sys.env.getOrElse("CLASSPATH", ".")
 
+    def outlineClasspath: List[dotty.tools.io.AbstractFile] =
+      if c.isOutlineFirstPass then Nil
+      else c.settings.YoutlineClasspath.value match
+        case NoAbstractFile => Nil
+        case file => file :: Nil
+
     import classPathFactory.*
 
     // Assemble the elements!
@@ -215,14 +223,15 @@ class PathResolver(using c: Context) {
       val release = Option(ctx.settings.javaOutputVersion.value).filter(_.nonEmpty)
 
       List(
-        JrtClassPath(release),                        // 1. The Java 9+ classpath (backed by the jrt:/ virtual system, if available)
-        classesInPath(javaBootClassPath),             // 2. The Java bootstrap class path.
-        contentsOfDirsInPath(javaExtDirs),            // 3. The Java extension class path.
-        classesInExpandedPath(javaUserClassPath),     // 4. The Java application class path.
-        classesInPath(scalaBootClassPath),            // 5. The Scala boot class path.
-        contentsOfDirsInPath(scalaExtDirs),           // 6. The Scala extension class path.
-        classesInExpandedPath(userClassPath),         // 7. The Scala application class path.
-        sourcesInPath(sourcePath)                     // 8. The Scala source path.
+        outlineClasspath.map(newClassPath),           // 1. The outline classpath (backed by the -Youtline-classpath option)
+        JrtClassPath(release),                        // 2. The Java 9+ classpath (backed by the jrt:/ virtual system, if available)
+        classesInPath(javaBootClassPath),             // 3. The Java bootstrap class path.
+        contentsOfDirsInPath(javaExtDirs),            // 4. The Java extension class path.
+        classesInExpandedPath(javaUserClassPath),     // 5. The Java application class path.
+        classesInPath(scalaBootClassPath),            // 6. The Scala boot class path.
+        contentsOfDirsInPath(scalaExtDirs),           // 7. The Scala extension class path.
+        classesInExpandedPath(userClassPath),         // 8. The Scala application class path.
+        sourcesInPath(sourcePath)                     // 9. The Scala source path.
       )
 
     lazy val containers: List[ClassPath] = basis.flatten.distinct
@@ -238,12 +247,13 @@ class PathResolver(using c: Context) {
       |  scalaExtDirs         = %s
       |  userClassPath        = %s
       |  sourcePath           = %s
+      |  outlineClasspath     = %s
       |}""".trim.stripMargin.format(
         scalaHome,
         ppcp(javaBootClassPath), ppcp(javaExtDirs), ppcp(javaUserClassPath),
         useJavaClassPath,
         ppcp(scalaBootClassPath), ppcp(scalaExtDirs), ppcp(userClassPath),
-        ppcp(sourcePath)
+        ppcp(sourcePath), outlineClasspath.map("\n" + _).mkString
       )
   }
 
