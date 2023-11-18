@@ -6,11 +6,11 @@ import TypeErasure.ErasedValueType
 import Types.*, Contexts.*, Symbols.*, Flags.*, Decorators.*
 import Names.Name
 
-class TypeUtils {
+class TypeUtils:
   /** A decorator that provides methods on types
    *  that are needed in the transformer pipeline.
    */
-  extension (self: Type) {
+  extension (self: Type)
 
     def isErasedValueType(using Context): Boolean =
       self.isInstanceOf[ErasedValueType]
@@ -150,5 +150,11 @@ class TypeUtils {
       case _ =>
         val cls = self.underlyingClassRef(refinementOK = false).typeSymbol
         cls.isTransparentClass && (!traitOnly || cls.is(Trait))
-  }
-}
+
+    /** Strip all outer refinements off this type */
+    def stripRefinement: Type = self match
+      case self: RefinedOrRecType => self.parent.stripRefinement
+      case seld => self
+
+end TypeUtils
+

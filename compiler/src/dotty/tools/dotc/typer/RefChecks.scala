@@ -610,8 +610,13 @@ object RefChecks {
         overrideError("is not inline, cannot implement an inline method")
       else if (other.isScala2Macro && !member.isScala2Macro) // (1.11)
         overrideError("cannot be used here - only Scala-2 macros can override Scala-2 macros")
-      else if (!compatTypes(memberTp(self), otherTp(self)) &&
-                 !compatTypes(memberTp(upwardsSelf), otherTp(upwardsSelf)))
+      else if !compatTypes(memberTp(self), otherTp(self))
+           && !compatTypes(memberTp(upwardsSelf), otherTp(upwardsSelf))
+           && !member.is(Tracked)
+           	// Tracked members need to be excluded since they are abstract type members with
+           	// singleton types. Concrete overrides usually have a wider type.
+           	// TODO: Should we exclude all refinements inherited from parents?
+      then
         overrideError("has incompatible type", compareTypes = true)
       else if (member.targetName != other.targetName)
         if (other.targetName != other.name)
@@ -620,7 +625,9 @@ object RefChecks {
           overrideError("cannot have a @targetName annotation since external names would be different")
       else if intoOccurrences(memberTp(self)) != intoOccurrences(otherTp(self)) then
         overrideError("has different occurrences of `into` modifiers", compareTypes = true)
-      else if other.is(ParamAccessor) && !isInheritedAccessor(member, other) then // (1.12)
+      else if other.is(ParamAccessor) && !isInheritedAccessor(member, other)
+           && !member.is(Tracked)
+      then // (1.12)
         report.errorOrMigrationWarning(
             em"cannot override val parameter ${other.showLocated}",
             member.srcPos,
@@ -670,6 +677,10 @@ object RefChecks {
         mbr.isType
         || mbr.isSuperAccessor // not yet synthesized
         || mbr.is(JavaDefined) && hasJavaErasedOverriding(mbr)
+        || mbr.is(Tracked)
+          // Tracked members correspond to existing val parameters, so they don't
+          // count as deferred. The val parameter could not implement the tracked
+          // refinement since it usually has a wider type.
 
       def isImplemented(mbr: Symbol) =
         val mbrDenot = mbr.asSeenFrom(clazz.thisType)

@@ -15,9 +15,14 @@ object NamerOps:
    *  @param ctor the constructor
    */
   def effectiveResultType(ctor: Symbol, paramss: List[List[Symbol]])(using Context): Type =
-    paramss match
-      case TypeSymbols(tparams) :: _ => ctor.owner.typeRef.appliedTo(tparams.map(_.typeRef))
-      case _ => ctor.owner.typeRef
+    val (resType, termParamss) = paramss match
+      case TypeSymbols(tparams) :: rest =>
+        (ctor.owner.typeRef.appliedTo(tparams.map(_.typeRef)), rest)
+      case _ =>
+        (ctor.owner.typeRef, paramss)
+    termParamss.flatten.foldLeft(resType): (rt, param) =>
+      if param.is(Tracked) then RefinedType(rt, param.name, param.termRef)
+      else rt
 
   /** Split dependent class refinements off parent type. Add them to `refinements`,
    *  unless it is null.

@@ -98,6 +98,7 @@ object language:
      *   - ability to merge exported types in intersections
      *
      *  @see [[https://dotty.epfl.ch/docs/reference/experimental/modularity]]
+     *  @see [[https://dotty.epfl.ch/docs/reference/experimental/typeclasses]]
      */
     @compileTimeOnly("`modularity` can only be used at compile time in import statements")
     object modularity

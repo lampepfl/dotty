@@ -1517,8 +1517,9 @@ class Namer { typer: Typer =>
           core match
             case Select(New(tpt), nme.CONSTRUCTOR) =>
               val targs1 = targs map (typedAheadType(_))
-              val ptype = typedAheadType(tpt).tpe appliedTo targs1.tpes
-              if (ptype.typeParams.isEmpty) ptype
+              val ptype = typedAheadType(tpt).tpe.appliedTo(targs1.tpes)
+              if ptype.typeParams.isEmpty && !ptype.dealias.typeSymbol.is(Dependent) then
+                ptype
               else
                 if (denot.is(ModuleClass) && denot.sourceModule.isOneOf(GivenOrImplicit))
                   missingType(denot.symbol, "parent ")(using creationContext)
@@ -1599,7 +1600,8 @@ class Namer { typer: Typer =>
         for (name, tp) <- refinements do
           if decls.lookupEntry(name) == null then
             val flags = tp match
-              case tp: MethodOrPoly => Method | Synthetic | Deferred
+              case tp: MethodOrPoly => Method | Synthetic | Deferred | Tracked
+              case _ if name.isTermName => Synthetic | Deferred | Tracked
               case _ => Synthetic | Deferred
             refinedSyms += newSymbol(cls, name, flags, tp, coord = original.rhs.span.startPos).entered
         if refinedSyms.nonEmpty then

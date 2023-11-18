@@ -3146,6 +3146,7 @@ object Parsers {
           case nme.open => Mod.Open()
           case nme.transparent => Mod.Transparent()
           case nme.infix => Mod.Infix()
+          case nme.tracked => Mod.Tracked()
         }
     }
 
@@ -3212,7 +3213,8 @@ object Parsers {
      *                  |  AccessModifier
      *                  |  override
      *                  |  opaque
-     *  LocalModifier  ::= abstract | final | sealed | open | implicit | lazy | inline | transparent | infix | erased
+     *  LocalModifier  ::= abstract | final | sealed | open | implicit | lazy | erased |
+     *                     inline | transparent
      */
     def modifiers(allowed: BitSet = modifierTokens, start: Modifiers = Modifiers()): Modifiers = {
       @tailrec
@@ -3365,8 +3367,8 @@ object Parsers {
     /** ClsTermParamClause    ::=  ‘(’ ClsParams ‘)’ | UsingClsTermParamClause
      *  UsingClsTermParamClause::= ‘(’ ‘using’ [‘erased’] (ClsParams | ContextTypes) ‘)’
      *  ClsParams         ::=  ClsParam {‘,’ ClsParam}
-     *  ClsParam          ::=  {Annotation} [{Modifier} (‘val’ | ‘var’)] Param
-     *
+     *  ClsParam          ::=  {Annotation}
+     *                         [{Modifier | ‘tracked’} (‘val’ | ‘var’)] Param
      *  TypelessClause    ::= DefTermParamClause
      *                      | UsingParamClause
      *
@@ -3402,6 +3404,8 @@ object Parsers {
         if isErasedKw then
           mods = addModifier(mods)
         if paramOwner.isClass then
+          if isIdent(nme.tracked) && in.featureEnabled(Feature.modularity) && !in.lookahead.isColon then
+            mods = addModifier(mods)
           mods = addFlag(modifiers(start = mods), ParamAccessor)
           mods =
             if in.token == VAL then
@@ -3473,7 +3477,8 @@ object Parsers {
                   val isParams =
                     !impliedMods.is(Given)
                     || startParamTokens.contains(in.token)
-                    || isIdent && (in.name == nme.inline || in.lookahead.isColon)
+                    || isIdent
+                        && (in.name == nme.inline || in.name == nme.tracked || in.lookahead.isColon)
                   (mods, isParams)
               (if isParams then commaSeparated(() => param())
               else contextTypes(paramOwner, numLeadParams, impliedMods)) match {
@@ -4053,8 +4058,8 @@ object Parsers {
       def adjustDefParams(paramss: List[ParamClause]): List[ParamClause] =
         paramss.nestedMap: param =>
           if !param.mods.isAllOf(PrivateLocal) then
-            syntaxError(em"method parameter ${param.name} may not be `a val`", param.span)
-          param.withMods(param.mods &~ (AccessFlags | ParamAccessor | Mutable) | Param)
+            syntaxError(em"method parameter ${param.name} may not be a `val`", param.span)
+          param.withMods(param.mods &~ (AccessFlags | ParamAccessor | Tracked | Mutable) | Param)
         .asInstanceOf[List[ParamClause]]
 
       val gdef =
