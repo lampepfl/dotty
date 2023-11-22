@@ -38,6 +38,8 @@ class YCheckPositions extends Phase {
             // Recursively check children while keeping track of current source
             reporting.trace(i"check pos ${tree.getClass} ${tree.source} ${sources.head} $tree") {
               tree match {
+                case _ if isMacroAnnotatedDefinition(tree) =>
+                  () // FIXME macro annotated definitions can drop Inlined nodes. As with macro defs, they should be reinserted after macro expansion
                 case tree @ Inlined(_, bindings, expansion) if tree.inlinedFromOuterScope =>
                   assert(bindings.isEmpty)
                   val old = sources
@@ -58,6 +60,12 @@ class YCheckPositions extends Phase {
         checker.traverse(tree)
       case _ =>
     }
+
+  private def isMacroAnnotatedDefinition(tree: tpd.Tree)(using Context) =
+    tree match
+      case tree: TypeDef => tree.isClassDef && MacroAnnotations.hasMacroAnnotation(tree.symbol)
+      case tree: ValOrDefDef => MacroAnnotations.hasMacroAnnotation(tree.symbol)
+      case _ => false
 
   private def isMacro(call: Tree)(using Context) =
     call.symbol.is(Macro) ||
