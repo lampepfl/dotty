@@ -8,4 +8,6 @@ object Test {
   val sym: 'sym = 'sym // error: an identifier expected, but quoted identifier found
 
   val foo: s"abc" = "abc"  // error: not a legal singleton type
+
+  def path(x: String, z: x.length.type) = ??? // error: Int is not a valid singleton type, since it is not an immutable path
 }

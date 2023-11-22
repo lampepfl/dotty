@@ -29,6 +29,11 @@ class E {
   lazy val x: F#T = ???
 }
 
+object CyclicAnnotation {
+  class local(num: Int) extends annotation.StaticAnnotation
+  def f(x: Int @local(x ++ x)) = ??? // error: Cyclic reference involving val x
+}
+
 class T1 {
   type X = (U, U) // error: cycle
   type U = X & Int
