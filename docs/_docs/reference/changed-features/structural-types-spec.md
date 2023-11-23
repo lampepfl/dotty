@@ -55,6 +55,18 @@ Both versions are passed the actual arguments in the `args` parameter. The secon
 if `applyDynamic` is implemented using Java reflection, but it could be
 useful in other cases as well. `selectDynamic` and `applyDynamic` can also take additional context parameters in using clauses. These are resolved in the normal way at the callsite.
 
+Typically, vararg arguments of a function at callsite are represented as an `Array(elems)`. But in case of `scala.Selectable` implementation relied on Java reflection `scala.reflect.Selectable` when vararg arguments passed to `applyDynamic` method, they get interpreted as single parameter instead of multiple.
+To overcome this they should be wrapped in `Seq(elems)` to be considered as multiple parameters at callsite of `scala.reflect.Selectable.applyDynamic`.
+```scala
+class Reflective extends reflect.Selectable
+class Foo(val i: Int) extends AnyVal
+val reflective = new Reflective  {
+  def varargs(x: Int, foo: Foo*) = foo.map(_.i).sum + x
+}
+val varargs = List(Foo(1), Foo(2), Foo(3))
+reflective.varargs(1, varargs:_*)
+```
+
 Given a value `v` of type `C { Rs }`, where `C` is a class reference
 and `Rs` are structural refinement declarations, and given `v.a` of type `U`, we consider three distinct cases:
 

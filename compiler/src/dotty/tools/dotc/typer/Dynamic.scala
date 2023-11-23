@@ -3,8 +3,7 @@ package dotc
 package typer
 
 import dotty.tools.dotc.ast.Trees.*
-import dotty.tools.dotc.ast.tpd
-import dotty.tools.dotc.ast.untpd
+import dotty.tools.dotc.ast.{tpd, untpd}
 import dotty.tools.dotc.core.Constants.Constant
 import dotty.tools.dotc.core.Contexts.*
 import dotty.tools.dotc.core.Flags.*
@@ -150,6 +149,9 @@ trait Dynamic {
     untpd.Apply(selectWithTypes, Literal(Constant(name.toString)))
   }
 
+  extension (tpe: Type)
+    def isReflectSelectableTypeRef(using Context): Boolean = tpe <:< defn.ReflectSelectableTypeRef
+
   /** Handle reflection-based dispatch for members of structural types.
    *
    *  Given `x.a`, where `x` is of (widened) type `T` (a value type or a nullary method type),
@@ -179,9 +181,29 @@ trait Dynamic {
    *  It's an error if U is neither a value nor a method type, or a dependent method
    *  type
    */
-  def handleStructural(tree: Tree)(using Context): Tree = {
+  def handleStructural(tree: Tree)(using Context) = {
     val fun @ Select(qual, name) = funPart(tree): @unchecked
     val vargss = termArgss(tree)
+
+    def handleRepeated(base: untpd.Tree, possiblyCurried: List[List[Tree]], isReflectSelectable: Boolean) = {
+      val handled = possiblyCurried.map { args =>
+        val isRepeated = args.exists(_.tpe.widen.isRepeatedParam)
+        if isRepeated && isReflectSelectable then
+          List(untpd.TypedSplice(tpd.repeatedSeq(args, TypeTree(defn.AnyType))))
+        else args.map { t =>
+          val clzSym = t.tpe.resultType.classSymbol.asClass
+          if ValueClasses.isDerivedValueClass(clzSym) && isReflectSelectable then
+            val underlying = ValueClasses.valueClassUnbox(clzSym).asTerm
+            tpd.Select(t, underlying.name)
+          else
+            t
+        }.map(untpd.TypedSplice(_))
+      }
+
+      if isReflectSelectable
+      then untpd.Apply(base, handled.flatten)
+      else handled.foldLeft(base)((base, args) => untpd.Apply(base, args))
+    }
 
     def structuralCall(selectorName: TermName, classOfs: => List[Tree]) = {
       val selectable = adapt(qual, defn.SelectableClass.typeRef | defn.DynamicClass.typeRef)
@@ -194,7 +216,11 @@ trait Dynamic {
 
       val scall =
         if (vargss.isEmpty) base
-        else untpd.Apply(base, vargss.flatten.map(untpd.TypedSplice(_)))
+        else handleRepeated(
+          base,
+          vargss,
+          qual.tpe.isReflectSelectableTypeRef || selectable.tpe.isReflectSelectableTypeRef
+        )
 
       // If function is an `applyDynamic` that takes a Class* parameter,
       // add `classOfs`.
@@ -240,7 +266,7 @@ trait Dynamic {
        */
       def maybeBoxingCast(tpe: Type) =
         val maybeBoxed =
-          if ValueClasses.isDerivedValueClass(tpe.classSymbol) && qual.tpe <:< defn.ReflectSelectableTypeRef then
+          if ValueClasses.isDerivedValueClass(tpe.classSymbol) && qual.tpe.isReflectSelectableTypeRef then
             val genericUnderlying = ValueClasses.valueClassUnbox(tpe.classSymbol.asClass)
             val underlying = tpe.select(genericUnderlying).widen.resultType
             New(tpe.widen, tree.cast(underlying) :: Nil)
@@ -269,7 +295,12 @@ trait Dynamic {
             if tpe.paramInfoss.nestedExists(!TypeErasure.hasStableErasure(_)) then
               fail(i"has a parameter type with an unstable erasure") :: Nil
             else
-              TypeErasure.erasure(tpe).asInstanceOf[MethodType].paramInfos.map(clsOf(_))
+              TypeErasure.erasure(tpe).asInstanceOf[MethodType].paramInfos.map { tpe =>
+                if ValueClasses.isDerivedValueClass(tpe.widen.classSymbol) then
+                  clsOf(ValueClasses.valueClassUnbox(tpe.classSymbol.asClass).info)
+                else
+                  clsOf(tpe)
+              }
           structuralCall(nme.applyDynamic, classOfs).maybeBoxingCast(tpe.finalResultType)
         }
 
