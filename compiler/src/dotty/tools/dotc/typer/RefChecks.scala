@@ -836,16 +836,21 @@ object RefChecks {
         }
       }
 
-      /** Check that inheriting a case class does not constitute a variant refinement
+      /** Check that inheriting a case class or a sealed trait (or sealed class) does not constitute a variant refinement
        *  of a base type of the case class. It is because of this restriction that we
-       *  can assume invariant refinement for case classes in `constrainPatternType`.
+       *  can assume invariant refinement for these classes in `constrainSimplePatternType`.
        */
-      def checkCaseClassInheritanceInvariant() =
-        for (caseCls <- clazz.info.baseClasses.tail.find(_.is(Case)))
-          for (baseCls <- caseCls.info.baseClasses.tail)
-            if (baseCls.typeParams.exists(_.paramVarianceSign != 0))
-              for (problem <- variantInheritanceProblems(baseCls, caseCls, "non-variant", "case "))
-                report.errorOrMigrationWarning(problem, clazz.srcPos, from = `3.0`)
+      def checkVariantInheritanceProblems() =
+        for
+          middle <- clazz.info.baseClasses.tail
+          if middle.isOneOf(CaseOrSealed)
+          baseCls <- middle.info.baseClasses.tail
+          if baseCls.typeParams.exists(_.paramVarianceSign != 0)
+          middleStr = if middle.is(Case) then "case " else if middle.is(Sealed) then "sealed " else ""
+          problem <- variantInheritanceProblems(baseCls, middle, "non-variant", middleStr)
+        do
+          report.errorOrMigrationWarning(problem, clazz.srcPos, from = `3.0`)
+
       checkNoAbstractMembers()
       if (abstractErrors.isEmpty)
         checkNoAbstractDecls(clazz)
@@ -854,7 +859,7 @@ object RefChecks {
         report.error(abstractErrorMessage, clazz.srcPos)
 
       checkMemberTypesOK()
-      checkCaseClassInheritanceInvariant()
+      checkVariantInheritanceProblems()
     }
 
     if (!clazz.is(Trait) && checker.checkInheritedTraitParameters) {

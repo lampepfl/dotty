@@ -552,6 +552,8 @@ object Flags {
   val JavaOrPrivateOrSynthetic: FlagSet      = Artifact | JavaDefined | Private | Synthetic
   val PrivateOrSynthetic: FlagSet            = Artifact | Private | Synthetic
   val EnumCase: FlagSet                      = Case | Enum
+  val CaseOrFinalOrSealed: FlagSet           = Case | Final | Sealed
+  val CaseOrSealed: FlagSet                  = Case | Sealed
   val CovariantLocal: FlagSet                = Covariant | Local                              // A covariant type parameter
   val ContravariantLocal: FlagSet            = Contravariant | Local                          // A contravariant type parameter
   val EffectivelyErased                      = ConstructorProxy | Erased
