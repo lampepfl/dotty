@@ -56,32 +56,8 @@ trait ClassPath {
   private[dotty] def list(inPackage: PackageName): ClassPathEntries
 
   /**
-    * Returns the class file and / or source file for a given external name, e.g., "java.lang.String".
-    * If there is both a class file and source file, the compiler can decide whether to read the
-    * class file or compile the source file.
-    *
-    * Internally this seems to be used only by `ScriptRunner`, but only to call `.isDefined`. That
-    * could probably be implemented differently.
-    *
-    * Externally, it is used by sbt's compiler interface:
-    * https://github.com/sbt/sbt/blob/v0.13.15/compile/interface/src/main/scala/xsbt/CompilerInterface.scala#L249
-    * Jason has some improvements for that in the works (https://github.com/scala/bug/issues/10289#issuecomment-310022699)
-    */
-  def findClass(className: String): Option[ClassRepresentation] = {
-    // A default implementation which should be overridden, if we can create the more efficient
-    // solution for a given type of ClassPath
-    val (pkg, simpleClassName) = PackageNameUtils.separatePkgAndClassNames(className)
-
-    val packageName = PackageName(pkg)
-    val foundClassFromClassFiles = classes(packageName).find(_.name == simpleClassName)
-    def findClassInSources = sources(packageName).find(_.name == simpleClassName)
-
-    foundClassFromClassFiles orElse findClassInSources
-  }
-
- /**
-   * Returns the classfile for an external name, e.g., "java.lang.String". This method does not
-   * return source files.
+   * Returns *only* the classfile for an external name, e.g., "java.lang.String". This method does not
+   * return source files, tasty files,.
    *
    * This method is used by the classfile parser. When parsing a Java class, its own inner classes
    * are entered with a `ClassfileLoader` that parses the classfile returned by this method.

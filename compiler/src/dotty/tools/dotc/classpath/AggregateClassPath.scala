@@ -33,25 +33,6 @@ case class AggregateClassPath(aggregates: Seq[ClassPath]) extends ClassPath {
     packageIndex.getOrElseUpdate(pkg.dottedString, aggregates.filter(_.hasPackage(pkg)))
   }
 
-  override def findClass(className: String): Option[ClassRepresentation] = {
-    val (pkg, _) = PackageNameUtils.separatePkgAndClassNames(className)
-
-    def findEntry(isSource: Boolean): Option[ClassRepresentation] =
-      aggregatesForPackage(PackageName(pkg)).iterator.map(_.findClass(className)).collectFirst {
-        case Some(s: SourceFileEntry) if isSource => s
-        case Some(s: ClassFileEntry) if !isSource => s
-      }
-
-    val classEntry = findEntry(isSource = false)
-    val sourceEntry = findEntry(isSource = true)
-
-    (classEntry, sourceEntry) match {
-      case (Some(c: ClassFileEntry), Some(s: SourceFileEntry)) => Some(ClassAndSourceFilesEntry(c.file, s.file))
-      case (c @ Some(_), _) => c
-      case (_, s) => s
-    }
-  }
-
   override def asURLs: Seq[URL] = aggregates.flatMap(_.asURLs)
 
   override def asClassPathStrings: Seq[String] = aggregates.map(_.asClassPathString).distinct

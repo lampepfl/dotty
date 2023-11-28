@@ -274,16 +274,12 @@ final class CtSymClassPath(ctSym: java.nio.file.Path, release: Int) extends Clas
 }
 
 case class DirectoryClassPath(dir: JFile) extends JFileDirectoryLookup[ClassFileEntryImpl] with NoSourcePaths {
-  override def findClass(className: String): Option[ClassRepresentation] = findClassFile(className) map ClassFileEntryImpl.apply
 
   def findClassFile(className: String): Option[AbstractFile] = {
     val relativePath = FileUtils.dirPath(className)
-    val tastyFile = new JFile(dir, relativePath + ".tasty")
-    if tastyFile.exists then Some(tastyFile.toPath.toPlainFile)
-    else
-      val classFile = new JFile(dir, relativePath + ".class")
-      if classFile.exists then  Some(classFile.toPath.toPlainFile)
-      else None
+    val classFile = new JFile(dir, relativePath + ".class")
+    if classFile.exists then Some(classFile.toPath.toPlainFile)
+    else None
   }
 
   protected def createFileEntry(file: AbstractFile): ClassFileEntryImpl = ClassFileEntryImpl(file)
@@ -298,17 +294,6 @@ case class DirectorySourcePath(dir: JFile) extends JFileDirectoryLookup[SourceFi
 
   protected def createFileEntry(file: AbstractFile): SourceFileEntryImpl = SourceFileEntryImpl(file)
   protected def isMatchingFile(f: JFile): Boolean = endsScalaOrJava(f.getName)
-
-  override def findClass(className: String): Option[ClassRepresentation] = findSourceFile(className) map SourceFileEntryImpl.apply
-
-  private def findSourceFile(className: String): Option[AbstractFile] = {
-    val relativePath = FileUtils.dirPath(className)
-    val sourceFile = LazyList("scala", "java")
-      .map(ext => new JFile(dir, relativePath + "." + ext))
-      .collectFirst { case file if file.exists() => file }
-
-    sourceFile.map(_.toPath.toPlainFile)
-  }
 
   private[dotty] def sources(inPackage: PackageName): Seq[SourceFileEntry] = files(inPackage)
 }
