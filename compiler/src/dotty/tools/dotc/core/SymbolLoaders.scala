@@ -7,7 +7,7 @@ import java.nio.channels.ClosedByInterruptException
 
 import scala.util.control.NonFatal
 
-import dotty.tools.dotc.classpath.FileUtils.isTasty
+import dotty.tools.dotc.classpath.FileUtils.hasTastyExtension
 import dotty.tools.io.{ ClassPath, ClassRepresentation, AbstractFile }
 import dotty.tools.backend.jvm.DottyBackendInterface.symExtensions
 
@@ -198,7 +198,7 @@ object SymbolLoaders {
         enterToplevelsFromSource(owner, nameOf(classRep), src)
       case (Some(bin), _) =>
         val completer =
-          if bin.isTasty then ctx.platform.newTastyLoader(bin)
+          if bin.hasTastyExtension then ctx.platform.newTastyLoader(bin)
           else ctx.platform.newClassLoader(bin)
         enterClassAndModule(owner, nameOf(classRep), completer)
     }

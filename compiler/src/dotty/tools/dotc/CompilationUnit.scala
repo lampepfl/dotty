@@ -28,13 +28,16 @@ class CompilationUnit protected (val source: SourceFile, val info: CompilationUn
   var tpdTree: tpd.Tree = tpd.EmptyTree
 
   /** Is this the compilation unit of a Java file */
-  def isJava: Boolean = source.file.name.endsWith(".java")
+  def isJava: Boolean = source.file.ext.isJava
 
   /** Is this the compilation unit of a Java file, or TASTy derived from a Java file */
-  def typedAsJava = isJava || {
-    val infoNN = info
-    infoNN != null && infoNN.tastyInfo.exists(_.attributes.isJava)
-  }
+  def typedAsJava =
+    val ext = source.file.ext
+    ext.isJavaOrTasty && (ext.isJava || tastyInfo.exists(_.attributes.isJava))
+
+  def tastyInfo: Option[TastyInfo] =
+    val local = info
+    if local == null then None else local.tastyInfo
 
 
   /** The source version for this unit, as determined by a language import */

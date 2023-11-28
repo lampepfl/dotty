@@ -16,6 +16,7 @@ import dotty.tools.tasty.TastyFormat.header
 
 import scala.compiletime.uninitialized
 import dotty.tools.tasty.TastyBuffer.Addr
+import dotty.tools.dotc.classpath.FileUtils.hasTastyExtension
 
 object TastyPrinter:
 
@@ -51,7 +52,7 @@ object TastyPrinter:
       else if arg.endsWith(".jar") then
         val jar = JarArchive.open(Path(arg), create = false)
         try
-          for file <- jar.iterator() if file.name.endsWith(".tasty") do
+          for file <- jar.iterator() if file.hasTastyExtension do
             printTasty(s"$arg ${file.path}", file.toByteArray)
         finally jar.close()
       else

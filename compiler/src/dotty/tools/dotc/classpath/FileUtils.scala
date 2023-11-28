@@ -17,21 +17,20 @@ object FileUtils {
   extension (file: AbstractFile) {
     def isPackage: Boolean = file.isDirectory && mayBeValidPackage(file.name)
 
-    def isClass: Boolean = !file.isDirectory && hasClassExtension && !file.name.endsWith("$class.class")
-      // FIXME: drop last condition when we stop being compatible with Scala 2.11
+    def isClass: Boolean = !file.isDirectory && hasClassExtension
 
-    def hasClassExtension: Boolean = file.hasExtension("class")
+    def hasClassExtension: Boolean = file.ext.isClass
 
-    def hasTastyExtension: Boolean = file.hasExtension("tasty")
+    def hasTastyExtension: Boolean = file.ext.isTasty
 
     def isTasty: Boolean = !file.isDirectory && hasTastyExtension
 
     def isScalaBinary: Boolean = file.isClass || file.isTasty
 
-    def isScalaOrJavaSource: Boolean = !file.isDirectory && (file.hasExtension("scala") || file.hasExtension("java"))
+    def isScalaOrJavaSource: Boolean = !file.isDirectory && file.ext.isScalaOrJava
 
     // TODO do we need to check also other files using ZipMagicNumber like in scala.tools.nsc.io.Jar.isJarOrZip?
-    def isJarOrZip: Boolean = file.hasExtension("jar") || file.hasExtension("zip")
+    def isJarOrZip: Boolean = file.ext.isJarOrZip
 
     /**
      * Safe method returning a sequence containing one URL representing this file, when underlying file exists,
@@ -39,27 +38,31 @@ object FileUtils {
      */
     def toURLs(default: => Seq[URL] = Seq.empty): Seq[URL] = if (file.file == null) default else Seq(file.toURL)
 
-    /** Returns the tasty file associated with this class file */
-    def classToTasty: Option[AbstractFile] =
-      assert(file.isClass, s"non-class: $file")
-      val tastyName = classNameToTasty(file.name)
-      Option(file.resolveSibling(tastyName))
+    /**
+     * Returns if there is an existing sibling `.tasty` file.
+     */
+    def hasSiblingTasty: Boolean =
+      assert(file.hasClassExtension, s"non-class: $file")
+      file.resolveSibling(classNameToTasty(file.name)) != null
   }
 
   extension (file: JFile) {
     def isPackage: Boolean = file.isDirectory && mayBeValidPackage(file.getName)
 
-    def isClass: Boolean = file.isFile && file.getName.endsWith(SUFFIX_CLASS) && !file.getName.endsWith("$class.class")
-    // FIXME: drop last condition when we stop being compatible with Scala 2.11
+    def isClass: Boolean = file.isFile && hasClassExtension
+
+    def hasClassExtension: Boolean = file.getName.endsWith(SUFFIX_CLASS)
 
     def isTasty: Boolean = file.isFile && file.getName.endsWith(SUFFIX_TASTY)
 
-    /** Returns the tasty file associated with this class file */
-    def classToTasty: Option[JFile] =
-      assert(file.isClass, s"non-class: $file")
-      val tastyName = classNameToTasty(file.getName.stripSuffix(".class"))
-      val tastyPath = file.toPath.resolveSibling(tastyName)
-      if java.nio.file.Files.exists(tastyPath) then Some(tastyPath.toFile) else None
+    /**
+     * Returns if there is an existing sibling `.tasty` file.
+     */
+    def hasSiblingTasty: Boolean =
+      assert(file.hasClassExtension, s"non-class: $file")
+      val path = file.toPath
+      val tastyPath = path.resolveSibling(classNameToTasty(file.getName))
+      java.nio.file.Files.exists(tastyPath)
 
   }
 

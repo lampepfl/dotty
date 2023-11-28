@@ -40,7 +40,7 @@ object Debug {
 
     val tastyFiles =
       Directory(fromSourcesOut).walk
-        .filter(x => x.isFile && "tasty".equalsIgnoreCase(x.extension))
+        .filter(x => x.isFile && x.ext.isTasty)
         .map(_.toString)
         .toList
 

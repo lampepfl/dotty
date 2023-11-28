@@ -120,7 +120,7 @@ class Completions(
         val allAdvanced = advanced ++ keywords
         path match
           // should not show completions for toplevel
-          case Nil | (_: PackageDef) :: _ if pos.source.file.extension != "sc" =>
+          case Nil | (_: PackageDef) :: _ if !pos.source.file.ext.isScalaScript =>
             (allAdvanced, SymbolSearch.Result.COMPLETE)
           case Select(qual, _) :: _ if qual.tpe.isErroneous =>
             (allAdvanced, SymbolSearch.Result.COMPLETE)

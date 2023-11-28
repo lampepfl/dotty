@@ -165,7 +165,7 @@ object Jar {
 
   def isJarOrZip(f: Path): Boolean = isJarOrZip(f, true)
   def isJarOrZip(f: Path, examineFile: Boolean): Boolean =
-    f.hasExtension("zip", "jar") || (examineFile && magicNumberIsZip(f))
+    f.ext.isJarOrZip || (examineFile && magicNumberIsZip(f))
 
   def create(file: File, sourceDir: Directory, mainClass: String): Unit =  {
     val writer = new Jar(file).jarWriter(Name.MAIN_CLASS -> mainClass)
