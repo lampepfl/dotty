@@ -27,10 +27,13 @@ import dotty.tools.dotc.core.Symbols
 
 object Driver {
   @sharable lazy val executor =
-    // fixed pool of 8 threads, because we have 8 cores
-    val pool = java.util.concurrent.Executors.newFixedThreadPool(8).nn
+    // TODO: systemParallelism may change over time - is it possible to update the pool size?
+    val pool = java.util.concurrent.Executors.newFixedThreadPool(systemParallelism()).nn
     sys.addShutdownHook(pool.shutdown())
     ExecutionContext.fromExecutor(pool)
+
+  /** 1 less than the system's own processor count (minimum 1) */
+  def systemParallelism() = math.max(1, Runtime.getRuntime().nn.availableProcessors() - 1)
 }
 
 /** Run the Dotty compiler.
@@ -59,12 +62,13 @@ class Driver {
       val absParallelism = math.abs(maxParallelism)
       val isParallel = maxParallelism >= 0
       val parallelism =
-        val ceiling = math.max(1, Runtime.getRuntime().nn.availableProcessors() - 1)
+        val ceiling = Driver.systemParallelism()
         if absParallelism > 0 then math.min(absParallelism, ceiling)
         else ceiling
 
       // NOTE: sbt will delete this potentially as soon as you call `apiPhaseCompleted`
       val pickleWriteOutput = ictx.settings.YearlyTastyOutput.valueIn(ictx.settingsState)
+      val profileDestination = ictx.settings.YprofileDestination.valueIn(ictx.settingsState)
 
       val pickleWriteSource =
         pickleWriteOutput.underlyingSource match
@@ -96,7 +100,14 @@ class Driver {
       inContext(firstPassCtx):
         doCompile(newCompiler, files)
 
-      def secondPassCtx(group: List[AbstractFile], promise: scala.concurrent.Promise[Unit]): Context =
+      def secondPassCtx(id: Int, group: List[AbstractFile], promise: scala.concurrent.Promise[Unit]): Context =
+        val profileDestination0 =
+          if profileDestination.nonEmpty then
+            val ext = dotty.tools.io.Path.fileExtension(profileDestination)
+            val filename = dotty.tools.io.Path.fileName(profileDestination)
+            s"$filename-worker-$id${if ext.isEmpty then "" else s".$ext"}"
+          else profileDestination
+
         val baseCtx = initCtx.fresh
           .setSettings(ictx.settingsState) // copy over the classpath arguments also
           .setSetting(ictx.settings.YsecondPass, true)
@@ -104,6 +115,9 @@ class Driver {
           .setCallbacks(ictx.store)
           .setDepsFinishPromise(promise)
           .setReporter(if isParallel then new StoreReporter(ictx.reporter) else ictx.reporter)
+
+        if profileDestination0.nonEmpty then
+          baseCtx.setSetting(ictx.settings.YprofileDestination, profileDestination0)
 
         // if ictx.settings.YoutlineClasspath.valueIn(ictx.settingsState).isEmpty then
         //   baseCtx.setSetting(baseCtx.settings.YoutlineClasspath, pickleWriteAsClasspath)
@@ -160,12 +174,13 @@ class Driver {
         report.echo(s"Compiling $compilers groups of files ${if isParallel then "in parallel" else "sequentially"}")(using firstPassCtx)
 
         def compileEager(
+            id: Int,
             promise: Promise[Unit],
             fileGroup: List[AbstractFile]
         ): Reporter = {
           if ctx.settings.verbose.value then
             report.echo("#Compiling: " + fileGroup.take(3).mkString("", ", ", "..."))
-          val secondCtx = secondPassCtx(fileGroup, promise)
+          val secondCtx = secondPassCtx(id, fileGroup, promise)
           val reporter = inContext(secondCtx):
             doCompile(newCompiler, fileGroup) // second pass
           if !secondCtx.reporter.hasErrors then
@@ -176,22 +191,26 @@ class Driver {
         }
 
         def compileFuture(
+            id: Int,
             promise: Promise[Unit],
             fileGroup: List[AbstractFile]
         )(using ExecutionContext): Future[Reporter] =
           Future {
             // println("#Compiling: " + fileGroup.mkString(" "))
-            val secondCtx = secondPassCtx(fileGroup, promise)
+            val secondCtx = secondPassCtx(id, fileGroup, promise)
             val reporter = inContext(secondCtx):
               doCompile(newCompiler, fileGroup) // second pass
             // println("#Done: " + fileGroup.mkString(" "))
             reporter
           }
 
+        def fileGroupIds = LazyList.iterate(0)(_ + 1).take(compilers)
+        def taggedGroups = fileGroupIds.lazyZip(promises).lazyZip(fileGroups)
+
         if isParallel then
           // val executor = java.util.concurrent.Executors.newFixedThreadPool(compilers).nn
           given ec: ExecutionContext = Driver.executor // ExecutionContext.fromExecutor(executor)
-          val futureReporters = Future.sequence(promises.lazyZip(fileGroups).map(compileFuture)).andThen {
+          val futureReporters = Future.sequence(taggedGroups.map(compileFuture)).andThen {
             case Success(reporters) =>
               reporters.foreach(_.flush()(using firstPassCtx))
             case Failure(ex) =>
@@ -201,7 +220,7 @@ class Driver {
           Await.ready(futureReporters, Duration.Inf)
           // executor.shutdown()
         else
-          promises.lazyZip(fileGroups).map(compileEager)
+          taggedGroups.map(compileEager)
         firstPassCtx.reporter
       else
         ictx.withIncCallback(_.dependencyPhaseCompleted()) // may be just java files compiled
