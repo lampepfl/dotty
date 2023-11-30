@@ -404,8 +404,8 @@ object Build {
     (Compile / unmanagedSourceDirectories) += baseDirectory.value / "src-bootstrapped",
 
     scalacOptions += "-Yexperimental-outline",
-    scalacOptions ++= Seq("-Ymax-parallelism", "7"),
-    scalacOptions ++= Seq("-Yprofile-enabled", "-Yprofile-destination", s"out/compile-${name.value}-profile.csv"),
+    scalacOptions ++= Seq("-Ymax-parallelism", "3"),
+    //scalacOptions ++= Seq("-Yprofile-enabled", "-Yprofile-destination", s"out/compile-${name.value}-profile.csv"),
     // scalacOptions += "-Ylog-classpath",
 
     version := dottyVersion,
