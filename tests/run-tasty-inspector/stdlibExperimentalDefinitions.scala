@@ -91,6 +91,10 @@ val experimentalDefinitionInLibrary = Set(
   "scala.quoted.Quotes.reflectModule.MethodTypeMethods.hasErasedParams",
   "scala.quoted.Quotes.reflectModule.TermParamClauseMethods.erasedArgs",
   "scala.quoted.Quotes.reflectModule.TermParamClauseMethods.hasErasedArgs",
+
+  // New feature: named tuples
+  "scala.NamedTuple",
+  "scala.NamedTuple$",
 )
 
 
