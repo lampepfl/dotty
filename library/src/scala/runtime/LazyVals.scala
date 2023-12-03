@@ -9,7 +9,7 @@ import scala.annotation.*
  */
 object LazyVals {
   @nowarn
-  private[this] val unsafe: sun.misc.Unsafe = {
+  private val unsafe: sun.misc.Unsafe = {
     def throwInitializationException() =
       throw new ExceptionInInitializerError(
         new IllegalStateException("Can't find instance of sun.misc.Unsafe")

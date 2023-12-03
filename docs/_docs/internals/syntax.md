@@ -198,7 +198,7 @@ SimpleType        ::=  SimpleLiteral                                            
 SimpleType1       ::=  id                                                       Ident(name)
                     |  Singleton ‘.’ id                                         Select(t, name)
                     |  Singleton ‘.’ ‘type’                                     SingletonTypeTree(p)
-                    |  ‘(’ Types ‘)’                                            Tuple(ts)
+                    |  ‘(’ [Types | NamesAndTypes] ‘)’                          Tuple(ts)
                     |  Refinement                                               RefinedTypeTree(EmptyTree, refinement)
                     |  TypeSplice                                               -- deprecated syntax
                     |  SimpleType1 TypeArgs                                     AppliedTypeTree(t, args)
@@ -216,6 +216,8 @@ Refinement        ::=  :<<< [RefineDcl] {semi [RefineDcl]} >>>                  
 TypeBounds        ::=  [‘>:’ Type] [‘<:’ Type]                                  TypeBoundsTree(lo, hi)
 TypeParamBounds   ::=  TypeBounds {‘:’ Type}                                    ContextBounds(typeBounds, tps)
 Types             ::=  Type {‘,’ Type}
+NamesAndTypes     ::=  NameAndType {‘,’ NameAndType}
+NameAndType       ::=  id ':' Type
 ```
 
 ### Expressions
@@ -284,8 +286,10 @@ TypeSplice        ::= spliceId                                                  
                     |  ‘$’ ‘{’ Block ‘}’                                        -- unless inside quoted type pattern -- deprecated syntax
                     |  ‘$’ ‘{’ Pattern ‘}’                                      -- when inside quoted type pattern -- deprecated syntax
 ExprsInParens     ::=  ExprInParens {‘,’ ExprInParens}
+                    |  NamedExprInParens {‘,’ NamedExprInParens}
 ExprInParens      ::=  PostfixExpr ‘:’ Type                                     -- normal Expr allows only RefinedType here
                     |  Expr
+NamedExprInParens ::=  id '=' ExprInParens
 ParArgumentExprs  ::=  ‘(’ [ExprsInParens] ‘)’                          exprs
                     |  ‘(’ ‘using’ ExprsInParens ‘)’
                     |  ‘(’ [ExprsInParens ‘,’] PostfixExpr ‘*’ ‘)’              exprs :+ Typed(expr, Ident(wildcardStar))
@@ -337,6 +341,9 @@ SimplePattern1    ::=  SimpleRef
 PatVar            ::=  varid
                     |  ‘_’
 Patterns          ::=  Pattern {‘,’ Pattern}
+                    |  NamedPattern {‘,’ NamedPattern}
+NamedPattern      ::=  id '=' Pattern
+
 ArgumentPatterns  ::=  ‘(’ [Patterns] ‘)’                                       Apply(fn, pats)
                     |  ‘(’ [Patterns ‘,’] PatVar ‘*’ ‘)’
 ```

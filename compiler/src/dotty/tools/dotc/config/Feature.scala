@@ -32,6 +32,7 @@ object Feature:
   val pureFunctions = experimental("pureFunctions")
   val captureChecking = experimental("captureChecking")
   val into = experimental("into")
+  val namedTuples = experimental("namedTuples")
 
   val globalOnlyImports: Set[TermName] = Set(pureFunctions, captureChecking)
 

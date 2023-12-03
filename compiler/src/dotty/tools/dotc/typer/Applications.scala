@@ -1282,9 +1282,10 @@ trait Applications extends Compatibility {
           case _ => false
       case _ => false
 
-  def typedUnApply(tree: untpd.Apply, selType: Type)(using Context): Tree = {
+  def typedUnApply(tree: untpd.Apply, selType0: Type)(using Context): Tree = {
     record("typedUnApply")
-    val Apply(qual, args) = tree
+    val Apply(qual, unadaptedArgs) = tree
+    val selType = selType0.stripNamedTuple
 
     def notAnExtractor(tree: Tree): Tree =
       // prefer inner errors
@@ -1500,7 +1501,10 @@ trait Applications extends Compatibility {
         for (argType <- argTypes) assert(!isBounds(argType), unapplyApp.tpe.show)
         val bunchedArgs = argTypes match {
           case argType :: Nil =>
-            if (args.lengthCompare(1) > 0 && Feature.autoTuplingEnabled && defn.isTupleNType(argType)) untpd.Tuple(args) :: Nil
+            if args.lengthCompare(1) > 0
+              && Feature.autoTuplingEnabled
+              && defn.isTupleNType(argType)
+            then untpd.Tuple(args) :: Nil
             else args
           case _ => args
         }
@@ -1516,7 +1520,7 @@ trait Applications extends Compatibility {
         else tryWithTypeTest(Typed(result, TypeTree(ownType)), selType)
       case tp =>
         val unapplyErr = if (tp.isError) unapplyFn else notAnExtractor(unapplyFn)
-        val typedArgsErr = args mapconserve (typed(_, defn.AnyType))
+        val typedArgsErr = unadaptedArgs.mapconserve(typed(_, defn.AnyType))
         cpy.UnApply(tree)(unapplyErr, Nil, typedArgsErr) withType unapplyErr.tpe
     }
   }

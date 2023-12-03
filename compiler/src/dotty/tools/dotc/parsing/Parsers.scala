@@ -643,6 +643,14 @@ object Parsers {
         ts.toList
       else leading :: Nil
 
+    def maybeNamed(op: () => Tree): () => Tree = () =>
+      if isIdent && in.lookahead.token == EQUALS && in.featureEnabled(Feature.namedTuples) then
+        atSpan(in.offset):
+          val name = ident()
+          in.nextToken()
+          NamedArg(name, op())
+      else op()
+
     def inSepRegion[T](f: Region => Region)(op: => T): T =
       val cur = in.currentRegion
       in.currentRegion = f(cur)
@@ -1605,6 +1613,14 @@ object Parsers {
             syntaxError(ErasedTypesCanOnlyBeFunctionTypes(), implicitKwPos(start))
           t
 
+      def convertToElem(t: Tree): Tree = t match
+        case ByNameTypeTree(t1) =>
+          syntaxError(ByNameParameterNotSupported(t), t.span)
+          t1
+        case ValDef(name, tpt, _) =>
+          NamedArg(name, convertToElem(tpt)).withSpan(t.span)
+        case _ => t
+
       var isValParamList = false
       if in.token == LPAREN then
         in.nextToken()
@@ -1638,14 +1654,8 @@ object Parsers {
           if isValParamList || in.isArrow || isPureArrow then
             functionRest(args)
           else
-            val args1 = args.mapConserve: t =>
-              if isByNameType(t) then
-                syntaxError(ByNameParameterNotSupported(t), t.span)
-                stripByNameType(t)
-              else
-                t
             val tuple = atSpan(start):
-              makeTupleOrParens(args1)
+              makeTupleOrParens(args.mapConserve(convertToElem))
             typeRest:
               infixTypeRest:
                 refinedTypeRest:
@@ -1919,6 +1929,7 @@ object Parsers {
      *                     |  Singleton `.' id
      *                     |  Singleton `.' type
      *                     |  ‘(’ ArgTypes ‘)’
+     *                     |  ‘(’ NamesAndTypes ‘)’
      *                     |  Refinement
      *                     |  TypeSplice                -- deprecated syntax (since 3.0.0)
      *                     |  SimpleType1 TypeArgs
@@ -1927,7 +1938,7 @@ object Parsers {
     def simpleType1() = simpleTypeRest {
       if in.token == LPAREN then
         atSpan(in.offset) {
-          makeTupleOrParens(inParensWithCommas(argTypes(namedOK = false, wildOK = true)))
+          makeTupleOrParens(inParensWithCommas(argTypes(namedOK = false, wildOK = true, tupleOK = true)))
         }
       else if in.token == LBRACE then
         atSpan(in.offset) { RefinedTypeTree(EmptyTree, refinement(indentOK = false)) }
@@ -2010,32 +2021,33 @@ object Parsers {
     /**   ArgTypes          ::=  Type {`,' Type}
      *                        |  NamedTypeArg {`,' NamedTypeArg}
      *    NamedTypeArg      ::=  id `=' Type
+     *    NamesAndTypes     ::=  NameAndType {‘,’ NameAndType}
+     *    NameAndType       ::=  id ':' Type
      */
-    def argTypes(namedOK: Boolean, wildOK: Boolean): List[Tree] = {
-
-      def argType() = {
+    def argTypes(namedOK: Boolean, wildOK: Boolean, tupleOK: Boolean): List[Tree] =
+      def argType() =
         val t = typ()
-        if (wildOK) t else rejectWildcardType(t)
-      }
+        if wildOK then t else rejectWildcardType(t)
 
-      def namedTypeArg() = {
-        val name = ident()
-        accept(EQUALS)
-        NamedArg(name.toTypeName, argType())
-      }
+      def namedArgType() =
+        atSpan(in.offset):
+          val name = ident()
+          accept(EQUALS)
+          NamedArg(name.toTypeName, argType())
 
-      if (namedOK && in.token == IDENTIFIER)
-        in.currentRegion.withCommasExpected {
-          argType() match {
-            case Ident(name) if in.token == EQUALS =>
-              in.nextToken()
-              commaSeparatedRest(NamedArg(name, argType()), () => namedTypeArg())
-            case firstArg =>
-              commaSeparatedRest(firstArg, () => argType())
-          }
-        }
-      else commaSeparated(() => argType())
-    }
+      def namedElem() =
+        atSpan(in.offset):
+          val name = ident()
+          acceptColon()
+          NamedArg(name, argType())
+
+      if namedOK && isIdent && in.lookahead.token == EQUALS then
+        commaSeparated(() => namedArgType())
+      else if tupleOK && isIdent && in.lookahead.isColon && in.featureEnabled(Feature.namedTuples) then
+        commaSeparated(() => namedElem())
+      else
+        commaSeparated(() => argType())
+    end argTypes
 
     def paramTypeOf(core: () => Tree): Tree =
       if in.token == ARROW || isPureArrow(nme.PUREARROW) then
@@ -2081,7 +2093,7 @@ object Parsers {
      *  NamedTypeArgs ::= `[' NamedTypeArg {`,' NamedTypeArg} `]'
      */
     def typeArgs(namedOK: Boolean, wildOK: Boolean): List[Tree] =
-      inBracketsWithCommas(argTypes(namedOK, wildOK))
+      inBracketsWithCommas(argTypes(namedOK, wildOK, tupleOK = false))
 
     /** Refinement ::= `{' RefineStatSeq `}'
      */
@@ -2657,7 +2669,9 @@ object Parsers {
       }
 
     /**   ExprsInParens     ::=  ExprInParens {`,' ExprInParens}
+     *                       |   NamedExprInParens {‘,’ NamedExprInParens}
      *    Bindings          ::=  Binding {`,' Binding}
+     *    NamedExprInParens ::=  id '=' ExprInParens
      */
     def exprsInParensOrBindings(): List[Tree] =
       if in.token == RPAREN then Nil
@@ -2667,7 +2681,7 @@ object Parsers {
           if isErasedKw then isFormalParams = true
           if isFormalParams then binding(Modifiers())
           else
-            val t = exprInParens()
+            val t = maybeNamed(exprInParens)()
             if t.isInstanceOf[ValDef] then isFormalParams = true
             t
         commaSeparatedRest(exprOrBinding(), exprOrBinding)
@@ -3021,7 +3035,7 @@ object Parsers {
      *                    |  Literal
      *                    |  Quoted
      *                    |  XmlPattern
-     *                    |  `(' [Patterns] `)'
+     *                    |  `(' [Patterns | NamedPatterns] `)'
      *                    |  SimplePattern1 [TypeArgs] [ArgumentPatterns]
      *                    |  ‘given’ RefinedType
      *  SimplePattern1   ::= SimpleRef
@@ -3072,9 +3086,12 @@ object Parsers {
         p
 
     /** Patterns          ::=  Pattern [`,' Pattern]
+     *                      |  NamedPattern {‘,’ NamedPattern}
+     *  NamedPattern      ::=  id '=' Pattern
      */
     def patterns(location: Location = Location.InPattern): List[Tree] =
-      commaSeparated(() => pattern(location))
+      commaSeparated(maybeNamed(() => pattern(location)))
+        // check that patterns are all named or all unnamed is done at desugaring
 
     def patternsOpt(location: Location = Location.InPattern): List[Tree] =
       if (in.token == RPAREN) Nil else patterns(location)

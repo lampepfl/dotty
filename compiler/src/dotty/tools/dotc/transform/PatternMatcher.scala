@@ -112,8 +112,13 @@ object PatternMatcher {
         sanitize(tpe), coord = rhs.span)
         // TODO: Drop Case once we use everywhere else `isPatmatGenerated`.
 
+    private def dropNamedTuple(tree: Tree): Tree =
+      val tpe = tree.tpe.widen
+      if tpe.isNamedTupleType then tree.cast(tpe.stripNamedTuple) else tree
+
     /** The plan `let x = rhs in body(x)` where `x` is a fresh variable */
-    private def letAbstract(rhs: Tree, tpe: Type = NoType)(body: Symbol => Plan): Plan = {
+    private def letAbstract(rhs0: Tree, tpe: Type = NoType)(body: Symbol => Plan): Plan = {
+      val rhs = dropNamedTuple(rhs0)
       val declTpe = if tpe.exists then tpe else rhs.tpe
       val vble = newVar(rhs, EmptyFlags, declTpe)
       initializer(vble) = rhs
@@ -334,6 +339,7 @@ object PatternMatcher {
       def unapplyPlan(unapp: Tree, args: List[Tree]): Plan = {
         def caseClass = unapp.symbol.owner.linkedClass
         lazy val caseAccessors = caseClass.caseAccessors
+        val unappType = unapp.tpe.widen.stripNamedTuple
 
         def isSyntheticScala2Unapply(sym: Symbol) =
           sym.is(Synthetic) && sym.owner.is(Scala2x)
@@ -349,28 +355,26 @@ object PatternMatcher {
             !defn.isTupleNType(tree.tpe match { case tp: OrType => tp.join case tp => tp }) // widen even hard unions, to see if it's a union of tuples
           val components = if isGenericTuple then caseAccessors.indices.toList.map(tupleApp(_, ref(scrutinee))) else caseAccessors.map(tupleSel)
           matchArgsPlan(components, args, onSuccess)
-        else if (unapp.tpe <:< (defn.BooleanType))
+        else if unappType.isRef(defn.BooleanClass) then
           TestPlan(GuardTest, unapp, unapp.span, onSuccess)
         else
           letAbstract(unapp) { unappResult =>
             val isUnapplySeq = unapp.symbol.name == nme.unapplySeq
-            if (isProductMatch(unapp.tpe.widen, args.length) && !isUnapplySeq) {
-              val selectors = productSelectors(unapp.tpe).take(args.length)
+            if isProductMatch(unappType, args.length) && !isUnapplySeq then
+              val selectors = productSelectors(unappType).take(args.length)
                 .map(ref(unappResult).select(_))
               matchArgsPlan(selectors, args, onSuccess)
             }
-            else if (isUnapplySeq && unapplySeqTypeElemTp(unapp.tpe.widen.finalResultType).exists) {
+            else if isUnapplySeq && unapplySeqTypeElemTp(unappType.finalResultType).exists then
               unapplySeqPlan(unappResult, args)
-            }
-            else if (isUnapplySeq && isProductSeqMatch(unapp.tpe.widen, args.length, unapp.srcPos)) {
-              val arity = productArity(unapp.tpe.widen, unapp.srcPos)
+            else if isUnapplySeq && isProductSeqMatch(unappType, args.length, unapp.srcPos) then
+              val arity = productArity(unappType, unapp.srcPos)
               unapplyProductSeqPlan(unappResult, args, arity)
-            }
             else if unappResult.info <:< defn.NonEmptyTupleTypeRef then
               val components = (0 until foldApplyTupleType(unappResult.denot.info).length).toList.map(tupleApp(_, ref(unappResult)))
               matchArgsPlan(components, args, onSuccess)
             else {
-              assert(isGetMatch(unapp.tpe))
+              assert(isGetMatch(unappType))
               val argsPlan = {
                 val get = ref(unappResult).select(nme.get, _.info.isParameterless)
                 val arity = productArity(get.tpe, unapp.srcPos)

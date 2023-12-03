@@ -63,6 +63,8 @@ i17149.scala
 tuple-fold.scala
 mt-redux-norm.perspective.scala
 i18211.scala
+named-tuples1.scala
+named-tuples-strawman-2.scala
 
 # Opaque type
 i5720.scala

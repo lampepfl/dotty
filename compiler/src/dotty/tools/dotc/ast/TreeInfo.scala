@@ -244,6 +244,10 @@ trait TreeInfo[T <: Untyped] { self: Trees.Instance[T] =>
   def hasNamedArg(args: List[Any]): Boolean = args exists isNamedArg
   val isNamedArg: Any => Boolean = (arg: Any) => arg.isInstanceOf[Trees.NamedArg[?]]
 
+  def dropNamedArg(arg: Tree) = arg match
+    case NamedArg(_, arg1) => arg1
+    case arg => arg
+
   /** Is this pattern node a catch-all (wildcard or variable) pattern? */
   def isDefaultCase(cdef: CaseDef): Boolean = cdef match {
     case CaseDef(pat, EmptyTree, _) => isWildcardArg(pat)

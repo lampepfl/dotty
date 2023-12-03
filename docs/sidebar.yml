@@ -154,6 +154,7 @@ subsection:
           - page: reference/experimental/cc.md
           - page: reference/experimental/purefuns.md
           - page: reference/experimental/tupled-function.md
+          - page: reference/experimental/named-tuples.md
       - page: reference/syntax.md
       - title: Language Versions
         index: reference/language-versions/language-versions.md

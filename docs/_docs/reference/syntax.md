@@ -198,7 +198,7 @@ SimpleType        ::=  SimpleLiteral
                     |  id
                     |  Singleton ‘.’ id
                     |  Singleton ‘.’ ‘type’
-                    |  ‘(’ Types ‘)’
+                    |  ‘(’ [Types] ‘)’
                     |  Refinement
                     |  SimpleType1 TypeArgs
                     |  SimpleType1 ‘#’ id
@@ -263,7 +263,7 @@ SimpleExpr        ::=  SimpleRef
                     |  quoteId                                                  -- only inside splices
                     |  ‘new’ ConstrApp {‘with’ ConstrApp} [TemplateBody]
                     |  ‘new’ TemplateBody
-                    |  ‘(’ ExprsInParens ‘)’
+                    |  ‘(’ [ExprsInParens] ‘)’
                     |  SimpleExpr ‘.’ id
                     |  SimpleExpr ‘.’ MatchClause
                     |  SimpleExpr TypeArgs
@@ -279,8 +279,7 @@ ExprSplice        ::= spliceId                                                  
                     |  ‘$’ ‘{’ Block ‘}’                                        -- unless inside quoted pattern
                     |  ‘$’ ‘{’ Pattern ‘}’                                      -- when inside quoted pattern
 ExprsInParens     ::=  ExprInParens {‘,’ ExprInParens}
-ExprInParens      ::=  PostfixExpr ‘:’ Type
-                    |  Expr
+ExprInParens      ::=  PostfixExpr ‘:’ Type |  Expr
 ParArgumentExprs  ::=  ‘(’ [ExprsInParens] ‘)’
                     |  ‘(’ ‘using’ ExprsInParens ‘)’
                     |  ‘(’ [ExprsInParens ‘,’] PostfixExpr ‘*’ ‘)’
@@ -331,6 +330,7 @@ SimplePattern1    ::=  SimpleRef
 PatVar            ::=  varid
                     |  ‘_’
 Patterns          ::=  Pattern {‘,’ Pattern}
+
 ArgumentPatterns  ::=  ‘(’ [Patterns] ‘)’
                     |  ‘(’ [Patterns ‘,’] PatVar ‘*’ ‘)’
 ```

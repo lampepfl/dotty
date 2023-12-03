@@ -4,7 +4,8 @@ package core
 
 import TypeErasure.ErasedValueType
 import Types.*, Contexts.*, Symbols.*, Flags.*, Decorators.*
-import Names.Name
+import Names.{Name, TermName}
+import Constants.Constant
 
 class TypeUtils {
   /** A decorator that provides methods on types
@@ -65,8 +66,12 @@ class TypeUtils {
           case tp: AppliedType if defn.isTupleNType(tp) && normalize =>
             Some(tp.args)  // if normalize is set, use the dealiased tuple
                            // otherwise rely on the default case below to print unaliased tuples.
+          case tp: SkolemType =>
+            recur(tp.underlying, bound)
           case tp: SingletonType =>
-            if tp.termSymbol == defn.EmptyTupleModule then Some(Nil) else None
+            if tp.termSymbol == defn.EmptyTupleModule then Some(Nil)
+            else if normalize then recur(tp.widen, bound)
+            else None
           case _ =>
             if defn.isTupleClass(tp.typeSymbol) && !normalize then Some(tp.dealias.argInfos)
             else None
@@ -113,6 +118,33 @@ class TypeUtils {
       tupleElementTypes match
         case Some(types) => TypeOps.nestedPairs(types)
         case None => throw new AssertionError("not a tuple")
+
+    def namedTupleElementTypesUpTo(bound: Int, normalize: Boolean = true)(using Context): List[(TermName, Type)] =
+      (if normalize then self.normalized else self).dealias match
+        case defn.NamedTuple(nmes, vals) =>
+          val names = nmes.tupleElementTypesUpTo(bound, normalize).getOrElse(Nil).map:
+            case ConstantType(Constant(str: String)) => str.toTermName
+          val values = vals.tupleElementTypesUpTo(bound, normalize).getOrElse(Nil)
+          names.zip(values)
+        case t =>
+          Nil
+
+    def namedTupleElementTypes(using Context): List[(TermName, Type)] =
+      namedTupleElementTypesUpTo(Int.MaxValue)
+
+    def isNamedTupleType(using Context): Boolean = self match
+      case defn.NamedTuple(_, _) => true
+      case _ => false
+
+    /** Drop all named elements in tuple type */
+    def stripNamedTuple(using Context): Type = self.normalized.dealias match
+      case defn.NamedTuple(_, vals) =>
+        vals
+      case self @ AnnotatedType(tp, annot) =>
+        val tp1 = tp.stripNamedTuple
+        if tp1 ne tp then AnnotatedType(tp1, annot) else self
+      case _ =>
+        self
 
     def refinedWith(name: Name, info: Type)(using Context) = RefinedType(self, name, info)
 

@@ -9,10 +9,10 @@ import Decorators.*
 import Annotations.Annotation
 import NameKinds.{UniqueName, ContextBoundParamName, ContextFunctionParamName, DefaultGetterName, WildcardParamName}
 import typer.{Namer, Checking}
-import util.{Property, SourceFile, SourcePosition, Chars}
+import util.{Property, SourceFile, SourcePosition, SrcPos, Chars}
 import config.Feature.{sourceVersion, migrateTo3, enabled}
 import config.SourceVersion.*
-import collection.mutable.ListBuffer
+import collection.mutable
 import reporting.*
 import annotation.constructorOnly
 import printing.Formatting.hl
@@ -248,7 +248,7 @@ object desugar {
 
   private def elimContextBounds(meth: DefDef, isPrimaryConstructor: Boolean)(using Context): DefDef =
     val DefDef(_, paramss, tpt, rhs) = meth
-    val evidenceParamBuf = ListBuffer[ValDef]()
+    val evidenceParamBuf = mutable.ListBuffer[ValDef]()
 
     var seenContextBounds: Int = 0
     def desugarContextBounds(rhs: Tree): Tree = rhs match
@@ -1455,22 +1455,101 @@ object desugar {
       AppliedTypeTree(
         TypeTree(defn.throwsAlias.typeRef).withSpan(op.span), tpt :: excepts :: Nil)
 
+  private def checkWellFormedTupleElems(elems: List[Tree])(using Context): List[Tree] =
+    val seen = mutable.Set[Name]()
+    for case arg @ NamedArg(name, _) <- elems do
+      if seen.contains(name) then
+        report.error(em"Duplicate tuple element name", arg.srcPos)
+      seen += name
+      if name.startsWith("_") && name.toString.tail.toIntOption.isDefined then
+        report.error(
+            em"$name cannot be used as the name of a tuple element because it is a regular tuple selector",
+            arg.srcPos)
+
+    elems match
+    case elem :: elems1 =>
+      val mismatchOpt =
+        if elem.isInstanceOf[NamedArg]
+        then elems1.find(!_.isInstanceOf[NamedArg])
+        else elems1.find(_.isInstanceOf[NamedArg])
+      mismatchOpt match
+        case Some(misMatch) =>
+          report.error(em"Illegal combination of named and unnamed tuple elements", misMatch.srcPos)
+          elems.mapConserve(dropNamedArg)
+        case None => elems
+    case _ => elems
+  end checkWellFormedTupleElems
+
   /** Translate tuple expressions of arity <= 22
    *
    *     ()             ==>   ()
    *     (t)            ==>   t
    *     (t1, ..., tN)  ==>   TupleN(t1, ..., tN)
    */
-  def smallTuple(tree: Tuple)(using Context): Tree = {
-    val ts = tree.trees
-    val arity = ts.length
-    assert(arity <= Definitions.MaxTupleArity)
-    def tupleTypeRef = defn.TupleType(arity).nn
-    if (arity == 0)
-      if (ctx.mode is Mode.Type) TypeTree(defn.UnitType) else unitLiteral
-    else if (ctx.mode is Mode.Type) AppliedTypeTree(ref(tupleTypeRef), ts)
-    else Apply(ref(tupleTypeRef.classSymbol.companionModule.termRef), ts)
-  }
+  def tuple(tree: Tuple, pt: Type)(using Context): Tree =
+    var elems = checkWellFormedTupleElems(tree.trees)
+    if ctx.mode.is(Mode.Pattern) then elems = adaptPatternArgs(elems, pt)
+    val elemValues = elems.mapConserve(dropNamedArg)
+    val tup =
+      val arity = elems.length
+      if arity <= Definitions.MaxTupleArity then
+        def tupleTypeRef = defn.TupleType(arity).nn
+        val tree1 =
+          if arity == 0 then
+            if ctx.mode is Mode.Type then TypeTree(defn.UnitType) else unitLiteral
+          else if ctx.mode is Mode.Type then AppliedTypeTree(ref(tupleTypeRef), elemValues)
+          else Apply(ref(tupleTypeRef.classSymbol.companionModule.termRef), elemValues)
+        tree1.withSpan(tree.span)
+      else
+        cpy.Tuple(tree)(elemValues)
+    val names = elems.collect:
+      case NamedArg(name, arg) => name
+    if names.isEmpty || ctx.mode.is(Mode.Pattern) then
+      tup
+    else
+      def namesTuple = inMode(ctx.mode &~ Mode.Pattern | Mode.Type):
+        tuple(Tuple(
+          names.map: name =>
+            SingletonTypeTree(Literal(Constant(name.toString))).withSpan(tree.span)),
+          WildcardType)
+      if ctx.mode.is(Mode.Type) then
+        AppliedTypeTree(ref(defn.NamedTupleTypeRef), namesTuple :: tup :: Nil)
+      else
+        TypeApply(
+          Apply(Select(ref(defn.NamedTupleModule), nme.withNames), tup),
+          namesTuple :: Nil)
+
+  /** When desugaring a list pattern arguments `elems` adapt them and the
+   *  expected type `pt` to each other. This means:
+   *   - If `elems` are named pattern elements, rearrange them to match `pt`.
+   *     This requires all names in `elems` to be also present in `pt`.
+   *   - If `elems` are unnamed elements, and `pt` is a named tuple, drop all
+   *     tuple element names from `pt`.
+   */
+  def adaptPatternArgs(elems: List[Tree], pt: Type)(using Context): List[Tree] =
+
+    def reorderedNamedArgs(wildcardSpan: Span): List[untpd.Tree] =
+      var selNames = pt.namedTupleElementTypes.map(_(0))
+      if selNames.isEmpty && pt.classSymbol.is(CaseClass) then
+        selNames = pt.classSymbol.caseAccessors.map(_.name.asTermName)
+      val nameToIdx = selNames.zipWithIndex.toMap
+      val reordered = Array.fill[untpd.Tree](selNames.length):
+        untpd.Ident(nme.WILDCARD).withSpan(wildcardSpan)
+      for case arg @ NamedArg(name: TermName, _) <- elems do
+        nameToIdx.get(name) match
+          case Some(idx) =>
+            if reordered(idx).isInstanceOf[Ident] then
+              reordered(idx) = arg
+            else
+              report.error(em"Duplicate named pattern", arg.srcPos)
+          case _ =>
+            report.error(em"No element named `$name` is defined in selector type $pt", arg.srcPos)
+      reordered.toList
+
+    elems match
+      case (first @ NamedArg(_, _)) :: _ => reorderedNamedArgs(first.span.startPos)
+      case _ => elems
+  end adaptPatternArgs
 
   private def isTopLevelDef(stat: Tree)(using Context): Boolean = stat match
     case _: ValDef | _: PatDef | _: DefDef | _: Export | _: ExtMethods => true
@@ -1989,7 +2068,7 @@ object desugar {
    *  without duplicates
    */
   private def getVariables(tree: Tree, shouldAddGiven: Context ?=> Bind => Boolean)(using Context): List[VarInfo] = {
-    val buf = ListBuffer[VarInfo]()
+    val buf = mutable.ListBuffer[VarInfo]()
     def seenName(name: Name) = buf exists (_._1.name == name)
     def add(named: NameTree, t: Tree): Unit =
       if (!seenName(named.name) && named.name.isTermName) buf += ((named, t))
