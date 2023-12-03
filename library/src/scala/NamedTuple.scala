@@ -6,7 +6,7 @@ import compiletime.ops.boolean.*
 object NamedTuple:
 
   opaque type AnyNamedTuple = Any
-  opaque type NamedTuple[N <: Tuple, V <: Tuple] >: V <: AnyNamedTuple = V
+  opaque type NamedTuple[N <: Tuple, +V <: Tuple] >: V <: AnyNamedTuple = V
 
   def apply[N <: Tuple, V <: Tuple](x: V) = x
 

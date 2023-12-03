@@ -90,9 +90,7 @@
 47 |  val p5 = person.zip(first = 11, age = 33) // error
    |                      ^^^^^^^^^^^^^^^^^^^^
    |                      Found:    (first : Int, age : Int)
-   |                      Required: NamedTuple.NamedTuple[(("name" : String), ("age" : String)), V2]
-   |
-   |                      where:    V2 is a type variable with constraint <: Tuple
+   |                      Required: NamedTuple.NamedTuple[(("name" : String), ("age" : String)), Tuple]
    |
    | longer explanation available when compiling with `-explain`
 -- Warning: tests/neg/named-tuples.scala:24:29 -------------------------------------------------------------------------
