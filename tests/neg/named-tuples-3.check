@@ -1,0 +1,4 @@
+-- Error: tests/neg/named-tuples-3.scala:7:16 --------------------------------------------------------------------------
+7 |val p: Person = f  // error
+  |                ^
+  |                Malformed NamedTuple: names must be string types, but Int was found.
