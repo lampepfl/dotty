@@ -354,7 +354,6 @@ object Tuple:
     /** A boolean indicating whether there is an element in the type `X` of `x`
      *  that matches type `Y`.
      */
-
     inline def containsType[Y] = constValue[Contains[X, Y]]
 
     /* Note: It would be nice to add the following two extension methods:

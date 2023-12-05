@@ -8,7 +8,7 @@ object NamedTuple:
   opaque type AnyNamedTuple = Any
   opaque type NamedTuple[N <: Tuple, +V <: Tuple] >: V <: AnyNamedTuple = V
 
-  def apply[N <: Tuple, V <: Tuple](x: V) = x
+  def apply[N <: Tuple, V <: Tuple](x: V): NamedTuple[N, V] = x
 
   def unapply[N <: Tuple, V <: Tuple](x: NamedTuple[N, V]): Some[V] = Some(x)
 

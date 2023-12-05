@@ -1,5 +1,5 @@
 import language.experimental.namedTuples
-import NamedTuple.toTuple
+import NamedTuple.*
 
 type Person = (name: String, age: Int)
 val bob = (name = "Bob", age = 33): (name: String, age: Int)
@@ -9,8 +9,8 @@ type Uni = (uni: Double)
 val uni = (uni = 1.0)
 val _: Uni = uni
 
-type AddressInfo = (city: String, zip: Int)
-val addr = (city = "Lausanne", zip = 1003)
+type AddressInfo = (city: String, zipCode: Int)
+val addr = (city = "Lausanne", zipCode = 1003)
 val _: AddressInfo = addr
 
 type CombinedInfo = NamedTuple.Concat[Person, AddressInfo]
@@ -94,6 +94,14 @@ val _: CombinedInfo = bob ++ addr
     case bob1 @ (age = 33, name = "Bob") =>
       val x: Person = bob1 // bob1 still has type Person with the unswapped elements
     case _ => assert(false)
+
+  val addr2 = (city = "Pully", zipCode = 1009)
+  val addr3 = addr.zip(addr2)
+  val addr4 = addr3.zip("Preverenges", 1028)
+  println(addr4)
+
+
+
 
 
 

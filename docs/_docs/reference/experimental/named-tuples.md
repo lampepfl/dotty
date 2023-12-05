@@ -38,9 +38,9 @@ This follows since a regular tuple `(T_1, ..., T_n)` is treated as a subtype of 
 ```scala
 val x: (String, Int) = Bob           // error: type mismatch
 ```
-One can convert a named tuple to an unnamed tuple with the `dropNames` method, so the following works:
+One can convert a named tuple to an unnamed tuple with the `toTuple` method, so the following works:
 ```scala
-val x: (String, Int) = Bob.dropNames // ok
+val x: (String, Int) = Bob.toTuple // ok
 ```
 Note that conformance rules for named tuples are analogous to the rules for named parameters. One can assign parameters by position to a named parameter list.
 ```scala

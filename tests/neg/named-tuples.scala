@@ -16,6 +16,7 @@ import language.experimental.namedTuples
   val nameOnly = (name = "Louis")
 
   val y: (String, Int) = person // error
+  val _: (String, Int) = (name = "", age = 0) // error
   val _: NameOnly = person // error
   val _: Person = nameOnly // error
 
