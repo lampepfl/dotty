@@ -124,6 +124,7 @@ class TypeUtils {
         case defn.NamedTuple(nmes, vals) =>
           val names = nmes.tupleElementTypesUpTo(bound, normalize).getOrElse(Nil).map:
             case ConstantType(Constant(str: String)) => str.toTermName
+            case t => throw TypeError(em"Malformed NamedTuple: names must be string types, but $t was found.")
           val values = vals.tupleElementTypesUpTo(bound, normalize).getOrElse(Nil)
           names.zip(values)
         case t =>
