@@ -112,6 +112,31 @@ object Typer {
   def rememberSearchFailure(tree: tpd.Tree, fail: SearchFailure) =
     tree.putAttachment(HiddenSearchFailure,
       fail :: tree.attachmentOrElse(HiddenSearchFailure, Nil))
+
+  def tryEither[T](op: Context ?=> T)(fallBack: (T, TyperState) => T)(using Context): T = {
+    val nestedCtx = ctx.fresh.setNewTyperState()
+    val result = op(using nestedCtx)
+    if (nestedCtx.reporter.hasErrors && !nestedCtx.reporter.hasStickyErrors) {
+      record("tryEither.fallBack")
+      fallBack(result, nestedCtx.typerState)
+    }
+    else {
+      record("tryEither.commit")
+      nestedCtx.typerState.commit()
+      result
+    }
+  }
+
+  /** Try `op1`, if there are errors, try `op2`, if `op2` also causes errors, fall back
+   *  to errors and result of `op1`.
+   */
+  def tryAlternatively[T](op1: Context ?=> T)(op2: Context ?=> T)(using Context): T =
+    tryEither(op1) { (failedVal, failedState) =>
+      tryEither(op2) { (_, _) =>
+        failedState.commit()
+        failedVal
+      }
+    }
 }
 /** Typecheck trees, the main entry point is `typed`.
  *
@@ -3412,31 +3437,6 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
 
   def typedPattern(tree: untpd.Tree, selType: Type = WildcardType)(using Context): Tree =
     withMode(Mode.Pattern)(typed(tree, selType))
-
-  def tryEither[T](op: Context ?=> T)(fallBack: (T, TyperState) => T)(using Context): T = {
-    val nestedCtx = ctx.fresh.setNewTyperState()
-    val result = op(using nestedCtx)
-    if (nestedCtx.reporter.hasErrors && !nestedCtx.reporter.hasStickyErrors) {
-      record("tryEither.fallBack")
-      fallBack(result, nestedCtx.typerState)
-    }
-    else {
-      record("tryEither.commit")
-      nestedCtx.typerState.commit()
-      result
-    }
-  }
-
-  /** Try `op1`, if there are errors, try `op2`, if `op2` also causes errors, fall back
-   *  to errors and result of `op1`.
-   */
-  def tryAlternatively[T](op1: Context ?=> T)(op2: Context ?=> T)(using Context): T =
-    tryEither(op1) { (failedVal, failedState) =>
-      tryEither(op2) { (_, _) =>
-        failedState.commit()
-        failedVal
-      }
-    }
 
   /** Is `pt` a prototype of an `apply` selection, or a parameterless function yielding one? */
   def isApplyProto(pt: Type)(using Context): Boolean = pt.revealIgnored match {

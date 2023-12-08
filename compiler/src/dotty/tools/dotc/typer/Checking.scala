@@ -29,7 +29,7 @@ import config.Printers.{typr, patmatch}
 import NameKinds.DefaultGetterName
 import NameOps.*
 import SymDenotations.{NoCompleter, NoDenotation}
-import Applications.unapplyArgs
+import Applications.UnapplyArgs
 import Inferencing.isFullyDefined
 import transform.patmat.SpaceEngine.{isIrrefutable, isIrrefutableQuotePattern}
 import transform.ValueClasses.underlyingOfValueClass
@@ -979,7 +979,7 @@ trait Checking {
           case UnApply(fn, implicits, pats) =>
             check(pat, pt) &&
             (isIrrefutable(fn, pats.length) || fail(pat, pt, Reason.RefutableExtractor)) && {
-              val argPts = unapplyArgs(fn.tpe.widen.finalResultType, fn, pats, pat.srcPos)
+              val argPts = UnapplyArgs(fn.tpe.widen.finalResultType, fn, pats, pat.srcPos).argTypes
               pats.corresponds(argPts)(recur)
             }
           case Alternative(pats) =>

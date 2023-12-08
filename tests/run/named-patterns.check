@@ -3,6 +3,11 @@ name Bob
 age 22
 age 22, name Bob
 Bob, 22
+name Bob, age 22
+name (Bob,22)
+age (Bob,22)
+age 22, name Bob
+Bob, 22
 1003 Lausanne, Rue de la Gare 44
 1003 Lausanne
 Rue de la Gare in Lausanne
