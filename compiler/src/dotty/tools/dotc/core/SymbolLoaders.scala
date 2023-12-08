@@ -7,13 +7,14 @@ import java.nio.channels.ClosedByInterruptException
 
 import scala.util.control.NonFatal
 
+import dotty.tools.dotc.classpath.FileUtils.isTasty
 import dotty.tools.io.{ ClassPath, ClassRepresentation, AbstractFile }
 import dotty.tools.backend.jvm.DottyBackendInterface.symExtensions
 
 import Contexts._, Symbols._, Flags._, SymDenotations._, Types._, Scopes._, Names._
 import NameOps._
 import StdNames._
-import classfile.ClassfileParser
+import classfile.{ClassfileParser, ClassfileTastyUUIDParser}
 import Decorators._
 
 import util.Stats
@@ -23,6 +24,7 @@ import ast.desugar
 
 import parsing.JavaParsers.OutlineJavaParser
 import parsing.Parsers.OutlineParser
+import dotty.tools.tasty.TastyHeaderUnpickler
 
 
 object SymbolLoaders {
@@ -192,10 +194,13 @@ object SymbolLoaders {
         if (ctx.settings.verbose.value) report.inform("[symloader] picked up newer source file for " + src.path)
         enterToplevelsFromSource(owner, nameOf(classRep), src)
       case (None, Some(src)) =>
-        if (ctx.settings.verbose.value) report.inform("[symloader] no class, picked up source file for " + src.path)
+        if (ctx.settings.verbose.value) report.inform("[symloader] no class or tasty, picked up source file for " + src.path)
         enterToplevelsFromSource(owner, nameOf(classRep), src)
       case (Some(bin), _) =>
-        enterClassAndModule(owner, nameOf(classRep), ctx.platform.newClassLoader(bin))
+        val completer =
+          if bin.isTasty then ctx.platform.newTastyLoader(bin)
+          else ctx.platform.newClassLoader(bin)
+        enterClassAndModule(owner, nameOf(classRep), completer)
     }
 
   def needCompile(bin: AbstractFile, src: AbstractFile): Boolean =
@@ -404,20 +409,38 @@ class ClassfileLoader(val classfile: AbstractFile) extends SymbolLoader {
   def description(using Context): String = "class file " + classfile.toString
 
   override def doComplete(root: SymDenotation)(using Context): Unit =
-    load(root)
-
-  def load(root: SymDenotation)(using Context): Unit = {
     val (classRoot, moduleRoot) = rootDenots(root.asClass)
     val classfileParser = new ClassfileParser(classfile, classRoot, moduleRoot)(ctx)
-    val result = classfileParser.run()
-    if (mayLoadTreesFromTasty)
-      result match {
-        case Some(unpickler: tasty.DottyUnpickler) =>
-          classRoot.classSymbol.rootTreeOrProvider = unpickler
-          moduleRoot.classSymbol.rootTreeOrProvider = unpickler
-        case _ =>
-      }
-  }
+    classfileParser.run()
+}
+
+class TastyLoader(val tastyFile: AbstractFile) extends SymbolLoader {
+
+  override def sourceFileOrNull: AbstractFile | Null = tastyFile
+
+  def description(using Context): String = "TASTy file " + tastyFile.toString
+
+  override def doComplete(root: SymDenotation)(using Context): Unit =
+    val (classRoot, moduleRoot) = rootDenots(root.asClass)
+    val tastyBytes = tastyFile.toByteArray
+    val unpickler = new tasty.DottyUnpickler(tastyBytes)
+    unpickler.enter(roots = Set(classRoot, moduleRoot, moduleRoot.sourceModule))(using ctx.withSource(util.NoSource))
+    if mayLoadTreesFromTasty then
+      classRoot.classSymbol.rootTreeOrProvider = unpickler
+      moduleRoot.classSymbol.rootTreeOrProvider = unpickler
+    checkTastyUUID(tastyFile, tastyBytes)
+
+
+  private def checkTastyUUID(tastyFile: AbstractFile, tastyBytes: Array[Byte])(using Context): Unit =
+    var classfile = tastyFile.resolveSibling(tastyFile.name.stripSuffix(".tasty") + ".class")
+    if classfile == null then
+      classfile = tastyFile.resolveSibling(tastyFile.name.stripSuffix(".tasty") + "$.class")
+    if classfile != null then
+      val tastyUUID = new TastyHeaderUnpickler(tastyBytes).readHeader()
+      new ClassfileTastyUUIDParser(classfile)(ctx).checkTastyUUID(tastyUUID)
+    else
+      // This will be the case in any of our tests that compile with `-Youtput-only-tasty`
+      report.inform(s"No classfiles found for $tastyFile when checking TASTy UUID")
 
   private def mayLoadTreesFromTasty(using Context): Boolean =
     ctx.settings.YretainTrees.value || ctx.settings.fromTasty.value

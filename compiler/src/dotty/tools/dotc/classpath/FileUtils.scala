@@ -20,6 +20,10 @@ object FileUtils {
     def isClass: Boolean = !file.isDirectory && file.hasExtension("class") && !file.name.endsWith("$class.class")
       // FIXME: drop last condition when we stop being compatible with Scala 2.11
 
+    def isTasty: Boolean = !file.isDirectory && file.hasExtension("tasty")
+
+    def isScalaBinary: Boolean = file.isClass || file.isTasty
+
     def isScalaOrJavaSource: Boolean = !file.isDirectory && (file.hasExtension("scala") || file.hasExtension("java"))
 
     // TODO do we need to check also other files using ZipMagicNumber like in scala.tools.nsc.io.Jar.isJarOrZip?
@@ -30,17 +34,34 @@ object FileUtils {
      * and returning given default value in other case
      */
     def toURLs(default: => Seq[URL] = Seq.empty): Seq[URL] = if (file.file == null) default else Seq(file.toURL)
+
+    /** Returns the tasty file associated with this class file */
+    def classToTasty: Option[AbstractFile] =
+      assert(file.isClass, s"non-class: $file")
+      val tastyName = classNameToTasty(file.name)
+      Option(file.resolveSibling(tastyName))
   }
 
   extension (file: JFile) {
     def isPackage: Boolean = file.isDirectory && mayBeValidPackage(file.getName)
 
-    def isClass: Boolean = file.isFile && file.getName.endsWith(".class") && !file.getName.endsWith("$class.class")
-      // FIXME: drop last condition when we stop being compatible with Scala 2.11
+    def isClass: Boolean = file.isFile && file.getName.endsWith(SUFFIX_CLASS) && !file.getName.endsWith("$class.class")
+    // FIXME: drop last condition when we stop being compatible with Scala 2.11
+
+    def isTasty: Boolean = file.isFile && file.getName.endsWith(SUFFIX_TASTY)
+
+    /** Returns the tasty file associated with this class file */
+    def classToTasty: Option[JFile] =
+      assert(file.isClass, s"non-class: $file")
+      val tastyName = classNameToTasty(file.getName.stripSuffix(".class"))
+      val tastyPath = file.toPath.resolveSibling(tastyName)
+      if java.nio.file.Files.exists(tastyPath) then Some(tastyPath.toFile) else None
+
   }
 
   private val SUFFIX_CLASS = ".class"
   private val SUFFIX_SCALA = ".scala"
+  private val SUFFIX_TASTY = ".tasty"
   private val SUFFIX_JAVA = ".java"
   private val SUFFIX_SIG = ".sig"
 
@@ -81,4 +102,15 @@ object FileUtils {
   def mkFileFilter(f: JFile => Boolean): FileFilter = new FileFilter {
     def accept(pathname: JFile): Boolean = f(pathname)
   }
+
+  /** Transforms a .class file name to a .tasty file name */
+  private def classNameToTasty(fileName: String): String =
+    val classOrModuleName = fileName.stripSuffix(".class")
+    val className =
+      if classOrModuleName.endsWith("$")
+        && classOrModuleName != "Null$" // scala.runtime.Null$
+        && classOrModuleName != "Nothing$" // scala.runtime.Nothing$
+      then classOrModuleName.stripSuffix("$")
+      else classOrModuleName
+    className + SUFFIX_TASTY
 }

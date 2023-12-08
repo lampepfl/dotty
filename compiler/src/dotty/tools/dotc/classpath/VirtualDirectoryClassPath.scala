@@ -41,12 +41,17 @@ case class VirtualDirectoryClassPath(dir: VirtualDirectory) extends ClassPath wi
   override def findClass(className: String): Option[ClassRepresentation] = findClassFile(className) map ClassFileEntryImpl.apply
 
   def findClassFile(className: String): Option[AbstractFile] = {
-    val relativePath = FileUtils.dirPath(className) + ".class"
-    Option(lookupPath(dir)(relativePath.split(java.io.File.separator).toIndexedSeq, directory = false))
+    val pathSeq = FileUtils.dirPath(className).split(java.io.File.separator)
+    val parentDir = lookupPath(dir)(pathSeq.init.toSeq, directory = true)
+    if parentDir == null then return None
+    else
+      Option(lookupPath(parentDir)(pathSeq.last + ".tasty" :: Nil, directory = false))
+        .orElse(Option(lookupPath(parentDir)(pathSeq.last + ".class" :: Nil, directory = false)))
   }
 
   private[dotty] def classes(inPackage: PackageName): Seq[ClassFileEntry] = files(inPackage)
 
   protected def createFileEntry(file: AbstractFile): ClassFileEntryImpl = ClassFileEntryImpl(file)
-  protected def isMatchingFile(f: AbstractFile): Boolean = f.isClass
+  protected def isMatchingFile(f: AbstractFile): Boolean =
+    f.isTasty || (f.isClass && f.classToTasty.isEmpty)
 }

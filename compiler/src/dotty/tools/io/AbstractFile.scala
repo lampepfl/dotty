@@ -250,6 +250,12 @@ abstract class AbstractFile extends Iterable[AbstractFile] {
     file
   }
 
+  /** Returns the sibling abstract file in the parent of this abstract file or directory.
+   *  If there is no such file, returns `null`.
+   */
+  def resolveSibling(name: String): AbstractFile | Null =
+    container.lookupName(name, directory = false)
+
   private def fileOrSubdirectoryNamed(name: String, isDir: Boolean): AbstractFile =
     lookupName(name, isDir) match {
       case null =>

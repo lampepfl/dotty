@@ -1,0 +1,6 @@
+# compile library A
+> a/compile
+# compile library B
+> b/compile
+# compile library C, from source, against TASTy of A and B (where B loaded from jar)
+> c/compile

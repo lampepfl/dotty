@@ -31,6 +31,7 @@ import io.AbstractFile
 import util.{SourceFile, NoSource, Property, SourcePosition, SrcPos, EqHashMap}
 import scala.annotation.internal.sharable
 import config.Printers.typr
+import dotty.tools.dotc.classpath.FileUtils.isScalaBinary
 
 object Symbols {
 
@@ -150,7 +151,7 @@ object Symbols {
       * symbols defined by the user in a prior run of the REPL, that are still valid.
       */
     final def isDefinedInSource(using Context): Boolean =
-      span.exists && isValidInCurrentRun && associatedFileMatches(_.extension != "class")
+      span.exists && isValidInCurrentRun && associatedFileMatches(!_.isScalaBinary)
 
     /** Is symbol valid in current run? */
     final def isValidInCurrentRun(using Context): Boolean =
@@ -271,7 +272,7 @@ object Symbols {
     /** The class file from which this class was generated, null if not applicable. */
     final def binaryFile(using Context): AbstractFile | Null = {
       val file = associatedFile
-      if (file != null && file.extension == "class") file else null
+      if file != null && file.isScalaBinary then file else null
     }
 
     /** A trap to avoid calling x.symbol on something that is already a symbol.
@@ -284,7 +285,7 @@ object Symbols {
 
     final def source(using Context): SourceFile = {
       def valid(src: SourceFile): SourceFile =
-        if (src.exists && src.file.extension != "class") src
+        if (src.exists && !src.file.isScalaBinary) src
         else NoSource
 
       if (!denot.exists) NoSource
@@ -462,7 +463,7 @@ object Symbols {
       if !mySource.exists && !denot.is(Package) then
         // this allows sources to be added in annotations after `sourceOfClass` is first called
         val file = associatedFile
-        if file != null && file.extension != "class" then
+        if file != null && !file.isScalaBinary then
           mySource = ctx.getSource(file)
         else
           mySource = defn.patchSource(this)

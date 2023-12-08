@@ -23,6 +23,12 @@ class PostProcessor(val frontendAccess: PostProcessorFrontendAccess, val bTypes:
 
   def postProcessAndSendToDisk(generatedDefs: GeneratedDefs): Unit = {
     val GeneratedDefs(classes, tasty) = generatedDefs
+    if !ctx.settings.YoutputOnlyTasty.value then
+      postProcessClassesAndSendToDisk(classes)
+    postProcessTastyAndSendToDisk(tasty)
+  }
+
+  private def postProcessClassesAndSendToDisk(classes: List[GeneratedClass]): Unit = {
     for (GeneratedClass(classNode, sourceFile, isArtifact, onFileCreated) <- classes) {
       val bytes =
         try
@@ -46,8 +52,10 @@ class PostProcessor(val frontendAccess: PostProcessorFrontendAccess, val bTypes:
         if clsFile != null then onFileCreated(clsFile)
       }
     }
+  }
 
-    for (GeneratedTasty(classNode, binaryGen) <- tasty){
+  private def postProcessTastyAndSendToDisk(tasty: List[GeneratedTasty]): Unit = {
+    for (GeneratedTasty(classNode, binaryGen) <- tasty) {
       classfileWriter.writeTasty(classNode.name.nn, binaryGen())
     }
   }

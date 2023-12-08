@@ -72,6 +72,8 @@ abstract class ZipArchive(override val jpath: JPath, release: Option[String]) ex
     // have to keep this name for compat with sbt's compiler-interface
     def getArchive: ZipFile = null
     override def underlyingSource: Option[ZipArchive] = Some(self)
+    override def resolveSibling(name: String): AbstractFile =
+      parent.lookupName(name, directory = false)
     override def toString: String = self.path + "(" + path + ")"
   }
 

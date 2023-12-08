@@ -36,6 +36,9 @@ abstract class Platform {
   /** Create a new class loader to load class file `bin` */
   def newClassLoader(bin: AbstractFile)(using Context): SymbolLoader
 
+  /** Create a new TASTy loader to load class file `bin` */
+  def newTastyLoader(bin: AbstractFile)(using Context): SymbolLoader
+
   /** The given symbol is a method with the right name and signature to be a runnable program. */
   def isMainMethod(sym: Symbol)(using Context): Boolean
 

@@ -66,4 +66,7 @@ class JavaPlatform extends Platform {
 
   def newClassLoader(bin: AbstractFile)(using Context): SymbolLoader =
     new ClassfileLoader(bin)
+
+  def newTastyLoader(bin: AbstractFile)(using Context): SymbolLoader =
+    new TastyLoader(bin)
 }
