@@ -371,7 +371,9 @@ object PatternMatcher {
               val arity = productArity(unappType, unapp.srcPos)
               unapplyProductSeqPlan(unappResult, args, arity)
             else if unappResult.info <:< defn.NonEmptyTupleTypeRef then
-              val components = (0 until foldApplyTupleType(unappResult.denot.info).length).toList.map(tupleApp(_, ref(unappResult)))
+              val components =
+                (0 until unappResult.denot.info.tupleElementTypes.getOrElse(Nil).length)
+                  .toList.map(tupleApp(_, ref(unappResult)))
               matchArgsPlan(components, args, onSuccess)
             else {
               assert(isGetMatch(unappType))

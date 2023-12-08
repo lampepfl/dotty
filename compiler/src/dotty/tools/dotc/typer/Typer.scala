@@ -2432,6 +2432,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
             || body1.isInstanceOf[Literal]
           val symTp =
             if isStableIdentifierOrLiteral || pt.isNamedTupleType then pt
+              // need to combine tuple element types with expected named type
             else if isWildcardStarArg(body1)
                     || pt == defn.ImplicitScrutineeTypeRef
                     || body1.tpe <:< pt  // There is some strange interaction with gadt matching.

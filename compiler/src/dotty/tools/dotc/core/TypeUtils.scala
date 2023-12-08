@@ -8,6 +8,7 @@ import Names.{Name, TermName}
 import Constants.Constant
 
 class TypeUtils {
+
   /** A decorator that provides methods on types
    *  that are needed in the transformer pipeline.
    */

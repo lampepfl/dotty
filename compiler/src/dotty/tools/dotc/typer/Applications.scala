@@ -150,7 +150,7 @@ object Applications {
     (0 until argsNum).map(i => if (i < arity - 1) selTps(i) else elemTp).toList
   }
 
-  def unapplyArgs(unapplyResult: Type, unapplyFn: Tree, args: List[untpd.Tree], pos: SrcPos)(using Context): List[Type] = {
+  def unapplyArgs(unapplyResult: Type, unapplyFn: Tree, args: List[untpd.Tree], pos: SrcPos)(using Context): List[Type] =
     def getName(fn: Tree): Name =
       fn match
         case TypeApply(fn, _) => getName(fn)
@@ -165,46 +165,36 @@ object Applications {
       Nil
     }
 
-    def unapplySeq(tp: Type)(fallback: => List[Type]): List[Type] = {
+    def unapplySeq(tp: Type)(fallback: => List[Type]): List[Type] =
       val elemTp = unapplySeqTypeElemTp(tp)
-      if (elemTp.exists) args.map(Function.const(elemTp))
-      else if (isProductSeqMatch(tp, args.length, pos)) productSeqSelectors(tp, args.length, pos)
-      else if tp.derivesFrom(defn.NonEmptyTupleClass) then foldApplyTupleType(tp)
+      if elemTp.exists then
+        args.map(Function.const(elemTp))
+      else if isProductSeqMatch(tp, args.length, pos) then
+        productSeqSelectors(tp, args.length, pos)
+      else if tp.derivesFrom(defn.NonEmptyTupleClass) then
+        tp.tupleElementTypes.getOrElse(Nil)
       else fallback
-    }
 
-    if (unapplyName == nme.unapplySeq)
-      unapplySeq(unapplyResult) {
+    if unapplyName == nme.unapplySeq then
+      unapplySeq(unapplyResult):
         if (isGetMatch(unapplyResult, pos)) unapplySeq(getTp)(fail)
         else fail
-      }
-    else {
+    else
       assert(unapplyName == nme.unapply)
-      if (isProductMatch(unapplyResult, args.length, pos))
+      if isProductMatch(unapplyResult, args.length, pos) then
         productSelectorTypes(unapplyResult, pos)
-      else if (isGetMatch(unapplyResult, pos))
+      else if isGetMatch(unapplyResult, pos) then
         getUnapplySelectors(getTp, args, pos)
-      else if (unapplyResult.widenSingleton isRef defn.BooleanClass)
+      else if unapplyResult.derivesFrom(defn.BooleanClass) then
         Nil
-      else if (defn.isProductSubType(unapplyResult) && productArity(unapplyResult, pos) != 0)
+      else if defn.isProductSubType(unapplyResult) && productArity(unapplyResult, pos) != 0 then
         productSelectorTypes(unapplyResult, pos)
           // this will cause a "wrong number of arguments in pattern" error later on,
           // which is better than the message in `fail`.
       else if unapplyResult.derivesFrom(defn.NonEmptyTupleClass) then
-        foldApplyTupleType(unapplyResult)
+        unapplyResult.tupleElementTypes.getOrElse(Nil)
       else fail
-    }
-  }
-
-  def foldApplyTupleType(tp: Type)(using Context): List[Type] =
-    object tupleFold extends TypeAccumulator[List[Type]]:
-      override def apply(accum: List[Type], t: Type): List[Type] =
-        t match
-          case AppliedType(tycon, x :: x2 :: Nil) if tycon.typeSymbol == defn.PairClass =>
-            apply(x :: accum, x2)
-          case x => foldOver(accum, x)
-    end tupleFold
-    tupleFold(Nil, tp).reverse
+  end unapplyArgs
 
   def wrapDefs(defs: mutable.ListBuffer[Tree] | Null, tree: Tree)(using Context): Tree =
     if (defs != null && defs.nonEmpty) tpd.Block(defs.toList, tree) else tree
