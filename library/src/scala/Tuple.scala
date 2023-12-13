@@ -166,6 +166,17 @@ object Tuple:
     case EmptyTuple => Y
     case x1 *: xs1 => x1 *: Concat[xs1, Y]
 
+  /** An infix shorthand for `Concat[X, Y]` */
+  infix type ++[X <: Tuple, +Y <: Tuple] = Concat[X, Y]
+
+  /** The index of `Y` in tuple `X` as a literal constant Int,
+   *  or `Size[X]` if `Y` does not occur in `X`
+   */
+  type IndexOf[X <: Tuple, Y] <: Int = X match
+    case Y *: _ => 0
+    case x *: xs => S[IndexOf[xs, Y]]
+    case EmptyTuple => 0
+
   /** Fold a tuple `(T1, ..., Tn)` into `F[T1, F[... F[Tn, Z]...]]]` */
   type Fold[Tup <: Tuple, Z, F[_, _]] = Tup match
     case EmptyTuple => Z
@@ -258,6 +269,42 @@ object Tuple:
    */
   type Union[T <: Tuple] = Fold[T, Nothing, [x, y] =>> x | y]
 
+  /** A type level Boolean indicating whether the tuple `X` conforms
+   *  to the tuple `Y`. This means:
+   *   - the two tuples have the same number of elements
+   *   - for corresponding elements `x` in `X` and `y` in `Y`, `x` matches `y`.
+   *  @pre  The elements of `X` are assumed to be singleton types
+   */
+  type Conforms[X <: Tuple, Y <: Tuple] <: Boolean = Y match
+    case EmptyTuple =>
+      X match
+        case EmptyTuple => true
+        case _ => false
+    case y *: ys =>
+      X match
+        case `y` *: xs => Conforms[xs, ys]
+        case _ => false
+
+  /** A type level Boolean indicating whether the tuple `X` has an element
+   *  that matches `Y`.
+   *  @pre  The elements of `X` are assumed to be singleton types
+   */
+  type Contains[X <: Tuple, Y] <: Boolean = X match
+    case Y *: _ => true
+    case x *: xs => Contains[xs, Y]
+    case EmptyTuple => false
+
+  /** A type level Boolean indicating whether the type `Y` contains
+   *  none of the elements of `X`.
+   *  @pre  The elements of `X` and `Y` are assumed to be singleton types
+   */
+  type Disjoint[X <: Tuple, Y <: Tuple] <: Boolean = X match
+    case x *: xs =>
+      Contains[Y, x] match
+        case true => false
+        case false => Disjoint[xs, Y]
+    case EmptyTuple => true
+
   /** Empty tuple */
   def apply(): EmptyTuple = EmptyTuple
 
@@ -296,6 +343,31 @@ object Tuple:
   /** Convert a Product into a tuple of unknown arity and types */
   def fromProduct(product: Product): Tuple =
     runtime.Tuples.fromProduct(product)
+
+  extension [X <: Tuple](inline x: X)
+
+    /** The index (starting at 0) of the first element in the type `X` of `x`
+     *  that matches type `Y`.
+     */
+    inline def indexOfType[Y] = constValue[IndexOf[X, Y]]
+
+    /** A boolean indicating whether there is an element in the type `X` of `x`
+     *  that matches type `Y`.
+     */
+
+    inline def containsType[Y] = constValue[Contains[X, Y]]
+
+    /* Note: It would be nice to add the following two extension methods:
+
+      inline def indexOf[Y: Precise](y: Y) = constValue[IndexOf[X, Y]]
+      inline def containsType[Y: Precise](y: Y) = constValue[Contains[X, Y]]
+
+    because we could then move indexOf/contains completely to the value level.
+    But this requires `Y` to be inferred precisely, and therefore a mechanism
+    like the `Precise` context bound used above, which does not yet exist.
+    */
+
+  end extension
 
   def fromProductTyped[P <: Product](p: P)(using m: scala.deriving.Mirror.ProductOf[P]): m.MirroredElemTypes =
     runtime.Tuples.fromProduct(p).asInstanceOf[m.MirroredElemTypes]
