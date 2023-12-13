@@ -505,7 +505,6 @@ object Tuples {
     }
   }
 
-  @experimental
   def reverse(self: Tuple): Tuple = (self: Any) match {
     case xxl: TupleXXL => xxlReverse(xxl)
     case _ => specialCaseReverse(self)
