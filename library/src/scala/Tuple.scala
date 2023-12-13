@@ -101,75 +101,95 @@ sealed trait Tuple extends Product:
 
 object Tuple:
 
+  /** The size of a tuple, represented as a literal constant subtype of Int */
+  type Size[X <: Tuple] <: Int = X match
+    case EmptyTuple => 0
+    case x *: xs => S[Size[xs]]
+
+  /** The type of the element at position N in the tuple X */
+  type Elem[X <: Tuple, N <: Int] = X match
+    case x *: xs =>
+      N match
+        case 0 => x
+        case S[n1] => Elem[xs, n1]
+
+  /** The type of the first element of a tuple */
+  type Head[X <: Tuple] = X match
+    case x *: _ => x
+
+  /** The type of the last element of a tuple */
+  type Last[X <: Tuple] = X match
+    case x *: EmptyTuple => x
+    case _ *: xs => Last[xs]
+
+  /** The type of a tuple consisting of all elements of tuple X except the first one */
+  type Tail[X <: Tuple] <: Tuple = X match
+    case _ *: xs => xs
+
+  /** The type of the initial part of a tuple without its last element */
+  type Init[X <: Tuple] <: Tuple = X match
+    case _ *: EmptyTuple => EmptyTuple
+    case x *: xs =>
+      x *: Init[xs]
+
+  /** The type of the tuple consisting of the first `N` elements of `X`,
+   *  or all elements if `N` exceeds `Size[X]`.
+   */
+  type Take[X <: Tuple, N <: Int] <: Tuple = N match
+    case 0 => EmptyTuple
+    case S[n1] => X match
+      case EmptyTuple => EmptyTuple
+      case x *: xs => x *: Take[xs, n1]
+
+  /** The type of the tuple consisting of all elements of `X` except the first `N` ones,
+   *  or no elements if `N` exceeds `Size[X]`.
+   */
+  type Drop[X <: Tuple, N <: Int] <: Tuple = N match {
+    case 0 => X
+    case S[n1] => X match {
+      case EmptyTuple => EmptyTuple
+      case x *: xs => Drop[xs, n1]
+    }
+  }
+
+  /** The pair type `(Take(X, N), Drop[X, N]). */
+  type Split[X <: Tuple, N <: Int] = (Take[X, N], Drop[X, N])
+
   /** Type of a tuple with an element appended */
   type Append[X <: Tuple, Y] <: NonEmptyTuple = X match {
     case EmptyTuple => Y *: EmptyTuple
     case x *: xs => x *: Append[xs, Y]
   }
 
-  /** Type of the head of a tuple */
-  type Head[X <: Tuple] = X match {
-    case x *: _ => x
-  }
-
-  /** Type of the initial part of the tuple without its last element */
-  type Init[X <: Tuple] <: Tuple = X match {
-    case _ *: EmptyTuple => EmptyTuple
-    case x *: xs =>
-      x *: Init[xs]
-  }
-
-  /** Type of the tail of a tuple */
-  type Tail[X <: Tuple] <: Tuple = X match {
-    case _ *: xs => xs
-  }
-
-  /** Type of the last element of a tuple */
-  type Last[X <: Tuple] = X match {
-    case x *: EmptyTuple => x
-    case _ *: xs => Last[xs]
-  }
-
-  /** Type of the concatenation of two tuples */
-  type Concat[X <: Tuple, +Y <: Tuple] <: Tuple = X match {
+  /** Type of the concatenation of two tuples `X` and `Y` */
+  type Concat[X <: Tuple, +Y <: Tuple] <: Tuple = X match
     case EmptyTuple => Y
     case x1 *: xs1 => x1 *: Concat[xs1, Y]
-  }
-
-  /** Type of the element at position N in the tuple X */
-  type Elem[X <: Tuple, N <: Int] = X match {
-    case x *: xs =>
-      N match {
-        case 0 => x
-        case S[n1] => Elem[xs, n1]
-      }
-  }
-
-  /** Literal constant Int size of a tuple */
-  type Size[X <: Tuple] <: Int = X match {
-    case EmptyTuple => 0
-    case x *: xs => S[Size[xs]]
-  }
 
   /** Fold a tuple `(T1, ..., Tn)` into `F[T1, F[... F[Tn, Z]...]]]` */
   type Fold[Tup <: Tuple, Z, F[_, _]] = Tup match
     case EmptyTuple => Z
     case h *: t => F[h, Fold[t, Z, F]]
 
-  /** Converts a tuple `(T1, ..., Tn)` to `(F[T1], ..., F[Tn])` */
-  type Map[Tup <: Tuple, F[_ <: Union[Tup]]] <: Tuple = Tup match {
+  /** The type of tuple `X` mapped with the type-level function `F`.
+   *  If `X = (T1, ..., Ti)` then `Map[X, F] = `(F[T1], ..., F[Ti])`.
+   */
+  type Map[Tup <: Tuple, F[_ <: Union[Tup]]] <: Tuple = Tup match
     case EmptyTuple => EmptyTuple
     case h *: t => F[h] *: Map[t, F]
-  }
 
-  /** Converts a tuple `(T1, ..., Tn)` to a flattened `(..F[T1], ..., ..F[Tn])` */
-  type FlatMap[Tup <: Tuple, F[_ <: Union[Tup]] <: Tuple] <: Tuple = Tup match {
+  /** The type of tuple `X` flat-mapped with the type-level function `F`.
+   *  If `X = (T1, ..., Ti)` then `FlatMap[X, F] = `F[T1] ++ ... ++ F[Ti]`
+   */
+  type FlatMap[Tup <: Tuple, F[_ <: Union[Tup]] <: Tuple] <: Tuple = Tup match
     case EmptyTuple => EmptyTuple
     case h *: t => Concat[F[h], FlatMap[t, F]]
-  }
+    // TODO: implement term level analogue
 
-  /** Filters out those members of the tuple for which the predicate `P` returns `false`.
-   *  A predicate `P[X]` is a type that can be either `true` or `false`. For example:
+  /** The type of the tuple consisting of all elements of tuple `X` that have types
+   *  for which the given type level predicate `P` reduces to the literal
+   *  constant `true`. A predicate `P[X]` is a type that can be either `true`
+   *  or `false`. For example:
    *  ```scala
    *  type IsString[x] <: Boolean = x match {
    *    case String => true
@@ -232,29 +252,6 @@ object Tuple:
   type ReverseOnto[X <: Tuple, Acc <: Tuple] <: Tuple = X match
     case x *: xs => ReverseOnto[xs, x *: Acc]
     case EmptyTuple => Acc
-
-  /** Transforms a tuple `(T1, ..., Tn)` into `(T1, ..., Ti)`. */
-  type Take[T <: Tuple, N <: Int] <: Tuple = N match {
-    case 0 => EmptyTuple
-    case S[n1] => T match {
-      case EmptyTuple => EmptyTuple
-      case x *: xs => x *: Take[xs, n1]
-    }
-  }
-
-  /** Transforms a tuple `(T1, ..., Tn)` into `(Ti+1, ..., Tn)`. */
-  type Drop[T <: Tuple, N <: Int] <: Tuple = N match {
-    case 0 => T
-    case S[n1] => T match {
-      case EmptyTuple => EmptyTuple
-      case x *: xs => Drop[xs, n1]
-    }
-  }
-
-  /** Splits a tuple (T1, ..., Tn) into a pair of two tuples `(T1, ..., Ti)` and
-   * `(Ti+1, ..., Tn)`.
-   */
-  type Split[T <: Tuple, N <: Int] = (Take[T, N], Drop[T, N])
 
   /** Given a tuple `(T1, ..., Tn)`, returns a union of its
    *  member types: `T1 | ... | Tn`. Returns `Nothing` if the tuple is empty.
