@@ -5,7 +5,7 @@ import compiletime.*
 import compiletime.ops.int.*
 
 /** Tuple of arbitrary arity */
-sealed trait Tuple extends Product {
+sealed trait Tuple extends Product:
   import Tuple.*
 
   /** Create a copy of this tuple as an Array */
@@ -83,9 +83,23 @@ sealed trait Tuple extends Product {
    */
   inline def reverse[This >: this.type <: Tuple]: Reverse[This] =
     runtime.Tuples.reverse(this).asInstanceOf[Reverse[This]]
-}
 
-object Tuple {
+  /** A tuple with the elements of this tuple in reversed order added in front of `acc` */
+  inline def reverseOnto[This >: this.type <: Tuple, Acc <: Tuple](acc: Acc): ReverseOnto[This, Acc] =
+    (this.reverse ++ acc).asInstanceOf[ReverseOnto[This, Acc]]
+
+  /** A tuple consisting of all elements of this tuple that have types
+   *  for which the given type level predicate `P` reduces to the literal
+   *  constant `true`.
+   */
+  inline def filter[This >: this.type <: Tuple, P[_] <: Boolean]: Filter[This, P] =
+    val toInclude = constValueTuple[IndicesWhere[This, P]].toArray
+    val arr = new Array[Object](toInclude.length)
+    for i <- 0 until toInclude.length do
+      arr(i) = this.productElement(toInclude(i).asInstanceOf[Int]).asInstanceOf[Object]
+    Tuple.fromArray(arr).asInstanceOf[Filter[This, P]]
+
+object Tuple:
 
   /** Type of a tuple with an element appended */
   type Append[X <: Tuple, Y] <: NonEmptyTuple = X match {
@@ -165,25 +179,38 @@ object Tuple {
    *  ```
    *  @syntax markdown
    */
-  type Filter[Tup <: Tuple, P[_] <: Boolean] <: Tuple = Tup match {
+  type Filter[X <: Tuple, P[_] <: Boolean] <: Tuple = X match
     case EmptyTuple => EmptyTuple
-    case h *: t => P[h] match {
+    case h *: t => P[h] match
       case true => h *: Filter[t, P]
       case false => Filter[t, P]
-    }
-  }
 
-  /** Given two tuples, `A1 *: ... *: An * At` and `B1 *: ... *: Bn *: Bt`
-   *  where at least one of `At` or `Bt` is `EmptyTuple` or `Tuple`,
-   *  returns the tuple type `(A1, B1) *: ... *: (An, Bn) *: Ct`
-   *  where `Ct` is `EmptyTuple` if `At` or `Bt` is `EmptyTuple`, otherwise `Ct` is `Tuple`.
+  /** A tuple consisting of those indices `N` of tuple `X` where the predicate `P`
+   *  is true for `Elem[X, N]`. Indices are type level values <: Int.
    */
-  type Zip[T1 <: Tuple, T2 <: Tuple] <: Tuple = (T1, T2) match {
+  type IndicesWhere[X <: Tuple, P[_] <: Boolean] =
+    helpers.IndicesWhereHelper[X, P, 0]
+
+  /** The type of the tuple consisting of all element values of
+   *  tuple `X` zipped with corresponding elements of tuple `Y`.
+   *  If the two tuples have different sizes,
+   *  the extra elements of the larger tuple will be disregarded.
+   *  For example, if
+   *  ```
+   *     X = (S1, ..., Si)
+   *     Y = (T1, ..., Tj)  where j >= i
+   *  ```
+   *  then
+   *  ```
+   *     Zip[X, Y] = ((S1, T1), ..., (Si, Ti))
+   *  ```
+   *  @syntax markdown
+   */
+  type Zip[T1 <: Tuple, T2 <: Tuple] <: Tuple = (T1, T2) match
     case (h1 *: t1, h2 *: t2) => (h1, h2) *: Zip[t1, t2]
     case (EmptyTuple, _) => EmptyTuple
     case (_, EmptyTuple) => EmptyTuple
     case _ => Tuple
-  }
 
   /** Converts a tuple `(F[T1], ..., F[Tn])` to `(T1,  ... Tn)` */
   type InverseMap[X <: Tuple, F[_]] <: Tuple = X match {
@@ -198,15 +225,13 @@ object Tuple {
    */
   type IsMappedBy[F[_]] = [X <: Tuple] =>> X =:= Map[InverseMap[X, F], F]
 
-  /** Type of the reversed tuple */
-  type Reverse[X <: Tuple] = Helpers.ReverseImpl[EmptyTuple, X]
+  /** A tuple with the elements of tuple `X` in reversed order */
+  type Reverse[X <: Tuple] = ReverseOnto[X, EmptyTuple]
 
-  object Helpers:
-
-    /** Type of the reversed tuple */
-    type ReverseImpl[Acc <: Tuple, X <: Tuple] <: Tuple = X match
-      case x *: xs => ReverseImpl[x *: Acc, xs]
-      case EmptyTuple => Acc
+  /** A tuple with the elements of tuple `X` in reversed order added in front of `Acc` */
+  type ReverseOnto[X <: Tuple, Acc <: Tuple] <: Tuple = X match
+    case x *: xs => ReverseOnto[xs, x *: Acc]
+    case EmptyTuple => Acc
 
   /** Transforms a tuple `(T1, ..., Tn)` into `(T1, ..., Ti)`. */
   type Take[T <: Tuple, N <: Int] <: Tuple = N match {
@@ -275,7 +300,18 @@ object Tuple {
   given canEqualTuple[H1, T1 <: Tuple, H2, T2 <: Tuple](
     using eqHead: CanEqual[H1, H2], eqTail: CanEqual[T1, T2]
   ): CanEqual[H1 *: T1, H2 *: T2] = CanEqual.derived
-}
+
+  object helpers:
+
+    /** Used to implement IndicesWhere */
+    type IndicesWhereHelper[X <: Tuple, P[_] <: Boolean, N <: Int] <: Tuple = X match
+      case EmptyTuple => EmptyTuple
+      case h *: t => P[h] match
+        case true => N *: IndicesWhereHelper[t, P, S[N]]
+        case false => IndicesWhereHelper[t, P, S[N]]
+
+  end helpers
+end Tuple
 
 /** A tuple of 0 elements */
 type EmptyTuple = EmptyTuple.type
