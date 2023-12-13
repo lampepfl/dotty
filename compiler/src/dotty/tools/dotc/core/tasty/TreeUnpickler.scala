@@ -1063,7 +1063,7 @@ class TreeUnpickler(reader: TastyReader,
       }
       val parentReader = fork
       val parents = readParents(withArgs = false)(using parentCtx)
-      val parentTypes = parents.map(_.tpe.dealias)
+      val parentTypes = parents.map(_.tpe.dealiasKeepAnnots.separateRefinements(cls, null))
       if cls.is(JavaDefined) && parentTypes.exists(_.derivesFrom(defn.JavaAnnotationClass)) then
         cls.setFlag(JavaAnnotation)
       val self =
