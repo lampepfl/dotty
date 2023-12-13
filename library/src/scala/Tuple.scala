@@ -271,22 +271,29 @@ object Tuple:
   def unapply(x: EmptyTuple): true = true
 
   /** Convert an array into a tuple of unknown arity and types */
-  def fromArray[T](xs: Array[T]): Tuple = {
+  def fromArray[T](xs: Array[T]): Tuple =
+    fromArray(xs, xs.length)
+
+  /** Convert the first `n` elements of an array into a tuple of unknown arity and types */
+  def fromArray[T](xs: Array[T], n: Int): Tuple = {
     val xs2 = xs match {
       case xs: Array[Object] => xs
       case xs => xs.map(_.asInstanceOf[Object])
     }
-    runtime.Tuples.fromArray(xs2)
+    runtime.Tuples.fromArray(xs2, n)
   }
 
   /** Convert an immutable array into a tuple of unknown arity and types */
-  def fromIArray[T](xs: IArray[T]): Tuple = {
+  def fromIArray[T](xs: IArray[T]): Tuple = fromIArray(xs, xs.length)
+
+  /** Convert the first `n` elements of an immutable array into a tuple of unknown arity and types */
+  def fromIArray[T](xs: IArray[T], n: Int): Tuple = {
     val xs2: IArray[Object] = xs match {
       case xs: IArray[Object] @unchecked => xs
       case _ =>
         xs.map(_.asInstanceOf[Object])
     }
-    runtime.Tuples.fromIArray(xs2)
+    runtime.Tuples.fromIArray(xs2, n)
   }
 
   /** Convert a Product into a tuple of unknown arity and types */

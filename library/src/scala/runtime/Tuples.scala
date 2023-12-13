@@ -28,7 +28,7 @@ object Tuples {
     arr
   }
 
-  def fromArray(xs: Array[Object]): Tuple = xs.length match {
+  def fromArray(xs: Array[Object], n: Int): Tuple = n match {
     case 0  => EmptyTuple
     case 1  => Tuple1(xs(0))
     case 2  => Tuple2(xs(0), xs(1))
@@ -55,9 +55,14 @@ object Tuples {
     case _ => TupleXXL.fromIArray(xs.clone().asInstanceOf[IArray[Object]]).asInstanceOf[Tuple]
   }
 
-  def fromIArray(xs: IArray[Object]): Tuple =
-    if (xs.length <= 22) fromArray(xs.asInstanceOf[Array[Object]])
+  def fromArray(xs: Array[Object]): Tuple = fromArray(xs, xs.length)
+
+  def fromIArray(xs: IArray[Object], n: Int): Tuple =
+    if n <= 22 || n != xs.length
+    then fromArray(xs.asInstanceOf[Array[Object]], n)
     else TupleXXL.fromIArray(xs).asInstanceOf[Tuple]
+
+  def fromIArray(xs: IArray[Object]): Tuple = fromIArray(xs, xs.length)
 
   def fromProduct(xs: Product): Tuple = (xs.productArity match {
     case 0  => EmptyTuple
