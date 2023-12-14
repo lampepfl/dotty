@@ -53,3 +53,22 @@ object Test1:
     addr match
       case Address(c, z, s, number) =>
         println(s"$z $c, $s $number")
+
+    type Person3 = (p: Person2, addr: Address)
+
+    val p3 = (p = bob2, addr = addr)
+    p3 match
+      case (addr = Address(city = c, zip = z, street = s, number = n), p = Person2(name = nn, age = a)) =>
+        println(s"$nn, aged $a, in $z $c, $s $n")
+    p3 match
+      case (p = Person2(name = nn), addr = Address(zip = z, city = c)) =>
+        println(s"$nn in $z $c")
+    p3 match
+      case (p = Person2(age = a), addr = Address(city = c, street = s)) =>
+        println(s"aged $a in $s in $c")
+    p3 match
+      case  (Person2(age = a, name = nn), Address(number = n, street = s, zip = z, city = c)) =>
+        println(s"$nn, aged $a in $z $c, $s $n")
+    p3 match
+      case (Person2(nn, a), Address(c, z, s, number)) =>
+        println(s"$nn, aged $a in $z $c, $s $number")

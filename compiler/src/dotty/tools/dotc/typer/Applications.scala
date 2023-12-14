@@ -182,7 +182,12 @@ object Applications {
         ((_, _) => None)
 
     private def getUnapplySelectors(tp: Type)(using Context): List[Type] =
-      if args.length > 1 && !(tp.derivesFrom(defn.SeqClass)) then
+      // We treat patterns as product elements if
+      // they are named, or there is more than one pattern
+      val isProduct = args match
+        case x :: xs => x.isInstanceOf[untpd.NamedArg] || xs.nonEmpty
+        case _ => false
+      if isProduct && !tp.derivesFrom(defn.SeqClass) then
         productUnapplySelectors(tp).getOrElse:
           // There are unapplys with return types which have `get` and `_1, ..., _n`
           // as members, but which are not subtypes of Product. So `productUnapplySelectors`
