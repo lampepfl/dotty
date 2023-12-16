@@ -1,5 +1,8 @@
 // Test what can be compared for equality against null.
-class Foo {
+
+case class VC(x: Int) extends AnyVal
+
+def test =
   // Null itself
   val x0: Null = null
   x0 != x0
@@ -9,21 +12,21 @@ class Foo {
   null == null
   null != null
 
-  // Non-nullable types: error
+  // Non-nullable types: OK.
   val x1: String = "hello"
-  x1 != null  // error
-  x1 == null  // error
-  null == x1  // error
-  null != x1  // error
-  x1 == x0    // error
-  x0 != x1    // error
-  x1.asInstanceOf[String|Null] == null
-  x1.asInstanceOf[String|Null] == x0
+  x1 != null
+  x1 == null
+  null == x1
+  null != x1
+  x1 == x0
+  x0 != x1
+  x1.asInstanceOf[String | Null] == null
+  x1.asInstanceOf[String | Null] == x0
   x1.asInstanceOf[Any] == null
   x1.asInstanceOf[Any] == x0
 
   // Nullable types: OK
-  val x2: String|Null = null
+  val x2: String | Null = null
   x2 == null
   null == x2
   x2 == x0
@@ -41,4 +44,10 @@ class Foo {
   null == false // error
   'a' == null   // error
   null == 'b'   // error
-}
+
+  // Nullable value types: OK.
+  val x3: Int | Null = null
+  x3 == null
+  null == x3
+  x3 == x0
+  x3 != x0

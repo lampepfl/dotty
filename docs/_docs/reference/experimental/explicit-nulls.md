@@ -90,26 +90,10 @@ More details can be found in [safe initialization](../other-new-features/safe-in
 
 ## Equality
 
-We don't allow the double-equal (`==` and `!=`) and reference (`eq` and `ne`) comparison between
-`AnyRef` and `Null` anymore, since a variable with a non-nullable type cannot have `null` as value.
-`null` can only be compared with `Null`, nullable union (`T | Null`), or `Any` type.
-
-For some reason, if we really want to compare `null` with non-null values, we have to provide a type hint (e.g. `: Any`).
-
-```scala
-val x: String = ???
-val y: String | Null = ???
-
-x == null       // error: Values of types String and Null cannot be compared with == or !=
-x eq null       // error
-"hello" == null // error
-
-y == null       // ok
-y == x          // ok
-
-(x: String | Null) == null  // ok
-(x: Any) == null            // ok
-```
+We still allow the double-equal (`==` and `!=`), reference (`eq` and `ne`) comparison,
+and pattern matching between `Null` and reference types.
+Even if a type is non-nullable, we still need to consider the possibility of `null` value
+caused by the Java methods or uninitialized values.
 
 ## Java Interoperability
 

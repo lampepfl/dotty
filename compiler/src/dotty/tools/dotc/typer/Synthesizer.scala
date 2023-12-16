@@ -175,18 +175,6 @@ class Synthesizer(typer: Typer)(using @constructorOnly c: Context):
           cmpWithBoxed(cls1, cls2)
       else if cls2.isPrimitiveValueClass then
         cmpWithBoxed(cls2, cls1)
-      else if ctx.mode.is(Mode.SafeNulls) then
-        // If explicit nulls is enabled, and unsafeNulls is not enabled,
-        // we want to disallow comparison between Object and Null.
-        // If we have to check whether a variable with a non-nullable type has null value
-        // (for example, a NotNull java method returns null for some reasons),
-        // we can still cast it to a nullable type then compare its value.
-        //
-        // Example:
-        // val x: String = null.asInstanceOf[String]
-        // if (x == null) {} // error: x is non-nullable
-        // if (x.asInstanceOf[String|Null] == null) {} // ok
-        cls1 == defn.NullClass && cls1 == cls2
       else if cls1 == defn.NullClass then
         cls1 == cls2 || cls2.derivesFrom(defn.ObjectClass)
       else if cls2 == defn.NullClass then

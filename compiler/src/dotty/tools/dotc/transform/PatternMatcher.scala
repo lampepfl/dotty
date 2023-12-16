@@ -56,7 +56,12 @@ class PatternMatcher extends MiniPhase {
       if !inInlinedCode then
         // check exhaustivity and unreachability
         SpaceEngine.checkExhaustivity(tree)
-        SpaceEngine.checkRedundancy(tree)
+        // With explcit nulls, even if the selector type is non-nullable,
+        // we still need to consider the possibility of null value,
+        // so we use the after-erasure nullability for space operations
+        // to achieve consistent runtime behavior.
+        // For example, `val x: String = ???; x match { case null => }` should not be unreachable.
+        withoutMode(Mode.SafeNulls)(SpaceEngine.checkRedundancy(tree))
 
       translated.ensureConforms(matchType)
     }

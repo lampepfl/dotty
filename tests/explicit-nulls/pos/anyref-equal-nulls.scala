@@ -11,10 +11,10 @@ class S {
     null == s1
     null != s1
 
-    s2 == null // error
-    s2 != null // error
-    null == s2 // error
-    null != s2 // error
+    s2 == null
+    s2 != null
+    null == s2
+    null != s2
 
     s1 == s2
     s1 != s2
@@ -27,21 +27,21 @@ class S {
     null != n
 
     s1 == n
-    s2 == n // error
+    s2 == n
     n != s1
-    n != s2 // error
+    n != s2
   }
 
   locally {
-    ss1 == null // error
-    ss1 != null // error
-    null == ss1 // error
-    null != ss1 // error
+    ss1 == null
+    ss1 != null
+    null == ss1
+    null != ss1
 
-    ss1 == n // error
-    ss1 != n // error
-    n == ss1 // error
-    n != ss1 // error
+    ss1 == n
+    ss1 != n
+    n == ss1
+    n != ss1
 
     ss1 == ss2
     ss2 != ss1
