@@ -20,7 +20,7 @@ object Test extends App {
   val x2: T = t
   val x3: D[Int] = d
 
-  assert(summon[T].isInstanceOf[B])
+  assert(summon[T].isInstanceOf[T])
   assert(summon[D[Int]].isInstanceOf[D[_]])
 }
 

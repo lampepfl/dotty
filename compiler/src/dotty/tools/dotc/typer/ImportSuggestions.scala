@@ -296,7 +296,7 @@ trait ImportSuggestions:
       var i = 0
       var diff = 0
       while i < filled && diff == 0 do
-        diff = compare(ref, top(i))(using noImplicitsCtx)
+        diff = compare(ref, top(i), preferGeneral = true)(using noImplicitsCtx)
         if diff > 0 then
           rest += top(i)
           top(i) = ref

@@ -22,7 +22,7 @@ import ProtoTypes.*
 import Inferencing.*
 import reporting.*
 import Nullables.*, NullOpsDecorator.*
-import config.Feature
+import config.{Feature, SourceVersion}
 
 import collection.mutable
 import config.Printers.{overload, typr, unapp}
@@ -1657,6 +1657,12 @@ trait Applications extends Compatibility {
   /** Compare two alternatives of an overloaded call or an implicit search.
    *
    *  @param  alt1, alt2      Non-overloaded references indicating the two choices
+   *  @param  preferGeneral   When comparing two value types, prefer the more general one
+   *                          over the more specific one iff `preferGeneral` is true.
+   *                          `preferGeneral` is set to `true` when we compare two given values, since
+   *                          then we want the most general evidence that matches the target
+   *                          type. It is set to `false` for overloading resolution, when we want the
+   *                          most specific type instead.
    *  @return  1   if 1st alternative is preferred over 2nd
    *          -1   if 2nd alternative is preferred over 1st
    *           0   if neither alternative is preferred over the other
@@ -1672,27 +1678,28 @@ trait Applications extends Compatibility {
    *  an alternative that takes more implicit parameters wins over one
    *  that takes fewer.
    */
-  def compare(alt1: TermRef, alt2: TermRef)(using Context): Int = trace(i"compare($alt1, $alt2)", overload) {
+  def compare(alt1: TermRef, alt2: TermRef, preferGeneral: Boolean = false)(using Context): Int = trace(i"compare($alt1, $alt2)", overload) {
     record("resolveOverloaded.compare")
 
-    /** Is alternative `alt1` with type `tp1` as specific as alternative
+    val compareGivens = alt1.symbol.is(Given) || alt2.symbol.is(Given)
+
+    /** Is alternative `alt1` with type `tp1` as good as alternative
      *  `alt2` with type `tp2` ?
      *
-     *    1. A method `alt1` of type `(p1: T1, ..., pn: Tn)U` is as specific as `alt2`
+     *    1. A method `alt1` of type `(p1: T1, ..., pn: Tn)U` is as good as `alt2`
      *       if `alt1` is nullary or `alt2` is applicable to arguments (p1, ..., pn) of
      *       types T1,...,Tn. If the last parameter `pn` has a vararg type T*, then
      *       `alt1` must be applicable to arbitrary numbers of `T` parameters (which
      *       implies that it must be a varargs method as well).
      *    2. A polymorphic member of type [a1 >: L1 <: U1, ..., an >: Ln <: Un]T is as
-     *       specific as `alt2` of type `tp2` if T is as specific as `tp2` under the
+     *       good as `alt2` of type `tp2` if T is as good as `tp2` under the
      *       assumption that for i = 1,...,n each ai is an abstract type name bounded
      *       from below by Li and from above by Ui.
      *    3. A member of any other type `tp1` is:
-     *       a. always as specific as a method or a polymorphic method.
-     *       b. as specific as a member of any other type `tp2` if `tp1` is compatible
-     *          with `tp2`.
+     *       a. always as good as a method or a polymorphic method.
+     *       b. as good as a member of any other type `tp2` is `asGoodValueType(tp1, tp2) = true`
      */
-    def isAsSpecific(alt1: TermRef, tp1: Type, alt2: TermRef, tp2: Type): Boolean = trace(i"isAsSpecific $tp1 $tp2", overload) {
+    def isAsGood(alt1: TermRef, tp1: Type, alt2: TermRef, tp2: Type): Boolean = trace(i"isAsSpecific $tp1 $tp2", overload) {
       tp1 match
         case tp1: MethodType => // (1)
           tp1.paramInfos.isEmpty && tp2.isInstanceOf[LambdaType]
@@ -1714,69 +1721,89 @@ trait Applications extends Compatibility {
             fullyDefinedType(tp1Params, "type parameters of alternative", alt1.symbol.srcPos)
 
             val tparams = newTypeParams(alt1.symbol, tp1.paramNames, EmptyFlags, tp1.instantiateParamInfos(_))
-            isAsSpecific(alt1, tp1.instantiate(tparams.map(_.typeRef)), alt2, tp2)
+            isAsGood(alt1, tp1.instantiate(tparams.map(_.typeRef)), alt2, tp2)
           }
         case _ => // (3)
           tp2 match
             case tp2: MethodType => true // (3a)
             case tp2: PolyType if tp2.resultType.isInstanceOf[MethodType] => true // (3a)
             case tp2: PolyType => // (3b)
-              explore(isAsSpecificValueType(tp1, instantiateWithTypeVars(tp2)))
+              explore(isAsGoodValueType(tp1, instantiateWithTypeVars(tp2)))
             case _ => // 3b)
-              isAsSpecificValueType(tp1, tp2)
+              isAsGoodValueType(tp1, tp2)
     }
 
-    /** Test whether value type `tp1` is as specific as value type `tp2`.
-     *  Let's abbreviate this to `tp1 <:s tp2`.
-     *  Previously, `<:s` was the same as `<:`. This behavior is still
-     *  available under mode `Mode.OldOverloadingResolution`. The new behavior
-     *  is different, however. Here, `T <:s U` iff
+    /** Test whether value type `tp1` is as good as value type `tp2`.
+     *  Let's abbreviate this to `tp1 <:p tp2`. The behavior depends on the Scala version
+     *  and mode.
      *
-     *    flip(T) <: flip(U)
+     *   - In Scala 2, `<:p` was the same as `<:`. This behavior is still
+     *     available in 3.0-migration if mode `Mode.OldImplicitResolution` is turned on as well.
+     *     It is used to highlight differences between Scala 2 and 3 behavior.
      *
-     *  where `flip` changes covariant occurrences of contravariant type parameters to
-     *  covariant ones. Intuitively `<:s` means subtyping `<:`, except that all arguments
-     *  to contravariant parameters are compared as if they were covariant. E.g. given class
+     *   - In Scala 3.0-3.4, the behavior is as follows: `T <:p U` iff there is an impliit conversion
+     *     from `T` to `U`, or
      *
-     *     class Cmp[-X]
+     *        flip(T) <: flip(U)
      *
-     *  `Cmp[T] <:s Cmp[U]` if `T <: U`. On the other hand, non-variant occurrences
-     *  of parameters are not affected. So `T <: U` would imply `Set[Cmp[U]] <:s Set[Cmp[T]]`,
-     *  as usual, because `Set` is non-variant.
+     *     where `flip` changes covariant occurrences of contravariant type parameters to
+     *     covariant ones. Intuitively `<:p` means subtyping `<:`, except that all arguments
+     *     to contravariant parameters are compared as if they were covariant. E.g. given class
      *
-     *  This relation might seem strange, but it models closely what happens for methods.
-     *  Indeed, if we integrate the existing rules for methods into `<:s` we have now that
+     *         class Cmp[-X]
      *
-     *     (T)R  <:s  (U)R
+     *     `Cmp[T] <:p Cmp[U]` if `T <: U`. On the other hand, non-variant occurrences
+     *     of parameters are not affected. So `T <: U` would imply `Set[Cmp[U]] <:p Set[Cmp[T]]`,
+     *     as usual, because `Set` is non-variant.
      *
-     *  iff
+     *   - From Scala 3.5, `T <:p U` means `T <: U` or `T` convertible to `U`
+     *     for overloading resolution (when `preferGeneral is false), and the opposite relation
+     *     `U <: T` or `U convertible to `T` for implicit disambiguation between givens
+     *     (when `preferGeneral` is true). For old-style implicit values, the 3.4 behavior is kept.
      *
-     *     T => R  <:s  U => R
+     *   - In Scala 3.5-migration, use the 3.5 scheme normally, and the 3.4 scheme if
+     *     `Mode.OldImplicitResolution` is on. This is used to highlight differences in the
+     *     two resolution schemes.
      *
-     *  Also: If a compared type refers to a given or its module class, use
+     *  Also and only for given resolution: If a compared type refers to a given or its module class, use
      *  the intersection of its parent classes instead.
      */
-    def isAsSpecificValueType(tp1: Type, tp2: Type)(using Context) =
-      if (ctx.mode.is(Mode.OldOverloadingResolution))
+    def isAsGoodValueType(tp1: Type, tp2: Type)(using Context) =
+      val oldResolution = ctx.mode.is(Mode.OldImplicitResolution)
+      if !preferGeneral || Feature.migrateTo3 && oldResolution then
+        // Normal specificity test for overloading resolution (where `preferGeneral` is false)
+        // and in mode Scala3-migration when we compare with the old Scala 2 rules.
         isCompatible(tp1, tp2)
-      else {
-        val flip = new TypeMap {
-          def apply(t: Type) = t match {
-            case t @ AppliedType(tycon, args) =>
-              def mapArg(arg: Type, tparam: TypeParamInfo) =
-                if (variance > 0 && tparam.paramVarianceSign < 0) defn.FunctionNOf(arg :: Nil, defn.UnitType)
-                else arg
-              mapOver(t.derivedAppliedType(tycon, args.zipWithConserve(tycon.typeParams)(mapArg)))
-            case _ => mapOver(t)
-          }
-        }
-        def prepare(tp: Type) = tp.stripTypeVar match {
+      else
+        def prepare(tp: Type) = tp.stripTypeVar match
           case tp: NamedType if tp.symbol.is(Module) && tp.symbol.sourceModule.is(Given) =>
-            flip(tp.widen.widenToParents)
-          case _ => flip(tp)
-        }
-        (prepare(tp1) relaxed_<:< prepare(tp2)) || viewExists(tp1, tp2)
-      }
+            tp.widen.widenToParents
+          case _ =>
+            tp
+
+        val tp1p = prepare(tp1)
+        val tp2p = prepare(tp2)
+
+        if Feature.sourceVersion.isAtMost(SourceVersion.`3.4`)
+            || oldResolution
+            || !compareGivens
+        then
+          // Intermediate rules: better means specialize, but map all type arguments downwards
+          // These are enabled for 3.0-3.4, and for all comparisons between old-style implicits,
+          // and in 3.5-migration when we compare with previous rules.
+          val flip = new TypeMap:
+            def apply(t: Type) = t match
+              case t @ AppliedType(tycon, args) =>
+                def mapArg(arg: Type, tparam: TypeParamInfo) =
+                  if (variance > 0 && tparam.paramVarianceSign < 0) defn.FunctionNOf(arg :: Nil, defn.UnitType)
+                  else arg
+                mapOver(t.derivedAppliedType(tycon, args.zipWithConserve(tycon.typeParams)(mapArg)))
+              case _ => mapOver(t)
+          (flip(tp1p) relaxed_<:< flip(tp2p)) || viewExists(tp1, tp2)
+        else
+          // New rules: better means generalize
+          (tp2p relaxed_<:< tp1p) || viewExists(tp2, tp1)
+    end isAsGoodValueType
 
     /** Widen the result type of synthetic given methods from the implementation class to the
      *  type that's implemented. Example
@@ -1809,8 +1836,8 @@ trait Applications extends Compatibility {
 
     def compareWithTypes(tp1: Type, tp2: Type) = {
       val ownerScore = compareOwner(alt1.symbol.maybeOwner, alt2.symbol.maybeOwner)
-      def winsType1 = isAsSpecific(alt1, tp1, alt2, tp2)
-      def winsType2 = isAsSpecific(alt2, tp2, alt1, tp1)
+      val winsType1 = isAsGood(alt1, tp1, alt2, tp2)
+      def winsType2 = isAsGood(alt2, tp2, alt1, tp1)
 
       overload.println(i"compare($alt1, $alt2)? $tp1 $tp2 $ownerScore $winsType1 $winsType2")
       if winsType1 && winsType2
