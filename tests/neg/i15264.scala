@@ -1,3 +1,4 @@
+import language.`3.5`
 object priority:
     // lower number = higher priority
     class Prio0 extends Prio1
@@ -30,7 +31,6 @@ object repro:
     // if you import these don't import from 'context' above
     object qcontext:
         // base defs, like what you would get from cats
-        given ga: A[Int] = new B[Int] // added so that we don't get an ambiguity in test2
         given gb: B[Int] = new B[Int]
         given gc: C[Int] = new C[Int]
 
@@ -46,9 +46,14 @@ object test1:
     // these will work
     val a = summon[A[Int]]
 
-
 object test2:
     import repro.*
     import repro.qcontext.given
 
-    val a = summon[A[Q[Int]]]
+    // This one will fail as ambiguous - prios aren't having an effect.
+    // Priorities indeed don't have an effect if the result is already decided
+    // without using clauses, they onyl act as a tie breaker.
+    // With the new resolution rules, it's ambiguous since we pick `gaq` for
+    // summon, and that needs an A[Int], but there are only the two competing choices
+    // qb and qc.
+    val a = summon[A[Q[Int]]] // error: ambiguous between qb and qc for A[Int]

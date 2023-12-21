@@ -1,5 +1,6 @@
 /* These tests show various mechanisms available for implicit prioritization.
  */
+import language.`3.5`
 
 class E[T](val str: String)  // The type for which we infer terms below
 
@@ -72,16 +73,16 @@ def test2a = {
 }
 
 /* If that solution is not applicable, we can define an override by refining the
- * result type of the given instance, e.g. like this:
+ * result type of all lower-priority instances, e.g. like this:
  */
 object Impl3 {
-  given t1[T]: E[T]("low")
+  trait LowPriority // A marker trait to indicate a lower priority
+  given t1[T]: E[T]("low") with LowPriority
 }
 
 object Override {
-  trait HighestPriority  // A marker trait to indicate a higher priority
 
-  given over[T]: E[T]("hi") with HighestPriority()
+  given over[T]: E[T]("hi") with {}
 }
 
 def test3 = {
@@ -90,7 +91,7 @@ def test3 = {
 
   { import Override.given
     import Impl3.given
-    assert(summon[E[String]].str == "hi") // `over` takes priority since its result type is a subtype of t1's.
+    assert(summon[E[String]].str == "hi", summon[E[String]].str) // `Impl3` takes priority since its result type is a subtype of t1's.
   }
 }
 
