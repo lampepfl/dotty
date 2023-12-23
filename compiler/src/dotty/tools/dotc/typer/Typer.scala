@@ -157,6 +157,9 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
   // Overridden in derived typers
   def newLikeThis(nestingLevel: Int): Typer = new Typer(nestingLevel)
 
+  // Overridden to do nothing in derived typers
+  protected def migrate[T](migration: => T, disabled: => T = ()): T = migration
+
   /** Find the type of an identifier with given `name` in given context `ctx`.
    *   @param name       the name of the identifier
    *   @param pt         the expected type
