@@ -308,7 +308,6 @@ object Symbols extends SymUtils {
      *  With the given setup, all such calls will give implicit-not found errors
      */
     final def symbol(implicit ev: DontUseSymbolOnSymbol): Nothing = unsupported("symbol")
-    type DontUseSymbolOnSymbol
 
     final def source(using Context): SourceFile = {
       def valid(src: SourceFile): SourceFile =
@@ -931,6 +930,8 @@ object Symbols extends SymUtils {
     def unapply(xs: List[Symbol])(using Context): Option[List[TypeSymbol]] = xs match
       case (x: Symbol) :: _ if x.isType => Some(xs.asInstanceOf[List[TypeSymbol]])
       case _ => None
+
+  type DontUseSymbolOnSymbol
 
 // ----- Locating predefined symbols ----------------------------------------
 

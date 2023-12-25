@@ -7,7 +7,7 @@ import ast.*
 import Trees.*, StdNames.*, Scopes.*, Denotations.*, NamerOps.*, ContextOps.*
 import Contexts.*, Symbols.*, Types.*, SymDenotations.*, Names.*, NameOps.*, Flags.*
 import Decorators.*, Comments.{_, given}
-import NameKinds.DefaultGetterName
+import NameKinds.{DefaultGetterName, ContextBoundParamName}
 import ast.desugar, ast.desugar.*
 import ProtoTypes.*
 import util.Spans.*
@@ -1813,7 +1813,7 @@ class Namer { typer: Typer =>
   }
 
   /** The type signature of a DefDef with given symbol */
-  def defDefSig(ddef: DefDef, sym: Symbol, completer: Namer#Completer)(using Context): Type = {
+  def defDefSig(ddef: DefDef, sym: Symbol, completer: Namer#Completer)(using Context): Type =
     // Beware: ddef.name need not match sym.name if sym was freshened!
     val isConstructor = sym.name == nme.CONSTRUCTOR
 
@@ -1849,16 +1849,37 @@ class Namer { typer: Typer =>
     ddef.trailingParamss.foreach(completeParams)
     val paramSymss = normalizeIfConstructor(ddef.paramss.nestedMap(symbolOfTree), isConstructor)
     sym.setParamss(paramSymss)
+
+    /** Set all class parameters with types that have an abstract type member
+     *  to be tracked, provided they are `val` parameters, or context bound
+     *  evidence parameters. In the second case, reset any private and local
+     *  flags for context bound evidence parameter so that it becomes a `val`.
+     */
+    def setTracked(sym: Symbol): Unit = sym.maybeOwner.maybeOwner.infoOrCompleter match
+      case info: TempClassInfo
+      if !sym.is(Tracked)
+          && sym.name.is(ContextBoundParamName)
+          && sym.info.memberNames(abstractTypeNameFilter).nonEmpty =>
+        typr.println(i"set tracked $sym: ${sym.info} containing ${sym.info.memberNames(abstractTypeNameFilter).toList}")
+        for acc <- info.decls.lookupAll(sym.name) if acc.is(ParamAccessor) do
+          acc.resetFlag(PrivateLocal)
+          acc.setFlag(Tracked)
+          sym.setFlag(Tracked)
+      case _ =>
+
     def wrapMethType(restpe: Type): Type =
       instantiateDependent(restpe, paramSymss)
       methodType(paramSymss, restpe, ddef.mods.is(JavaDefined))
+
     if isConstructor then
+      if sym.isPrimaryConstructor && Feature.enabled(modularity) then
+        paramSymss.foreach(_.foreach(setTracked))
       // set result type tree to unit, but take the current class as result type of the symbol
       typedAheadType(ddef.tpt, defn.UnitType)
       wrapMethType(effectiveResultType(sym, paramSymss))
     else
       valOrDefDefSig(ddef, sym, paramSymss, wrapMethType)
-  }
+  end defDefSig
 
   def inferredResultType(
       mdef: ValOrDefDef,
