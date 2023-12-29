@@ -1,0 +1,32 @@
+-- [E172] Type Error: tests/neg/i7092.scala:24:19 ----------------------------------------------------------------------
+24 |  summon[F[String]] // error
+   |                   ^
+   |                   Not found for String
+-- [E172] Type Error: tests/neg/i7092.scala:25:19 ----------------------------------------------------------------------
+25 |  summon[G[String]] // error
+   |                   ^
+   |                   Not found for String
+-- [E172] Type Error: tests/neg/i7092.scala:26:16 ----------------------------------------------------------------------
+26 |  summon[H[Int]] // error
+   |                ^
+   |                Not found for Int, ?B
+-- [E172] Type Error: tests/neg/i7092.scala:27:23 ----------------------------------------------------------------------
+27 |  summon[H[Int][Float]] // error
+   |                       ^
+   |                       Not found for Int, Float
+-- [E172] Type Error: tests/neg/i7092.scala:28:18 ----------------------------------------------------------------------
+28 |  summon[AAA[Int]] // error
+   |                  ^
+   |                  Not found for Int
+-- [E172] Type Error: tests/neg/i7092.scala:29:25 ----------------------------------------------------------------------
+29 |  summon[AAA[Int][Float]] // error
+   |                         ^
+   |                         Not found for Int
+-- [E172] Type Error: tests/neg/i7092.scala:30:19 ----------------------------------------------------------------------
+30 |  summon[op.F[Int]] // error
+   |                   ^
+   |                   Could not find Int
+-- [E172] Type Error: tests/neg/i7092.scala:31:28 ----------------------------------------------------------------------
+31 |  summon[String =!:= String] // error
+   |                            ^
+   |                            Cannot proof type inequality because types are equal: String =:= String

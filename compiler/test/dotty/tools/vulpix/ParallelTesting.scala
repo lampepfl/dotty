@@ -266,12 +266,11 @@ trait ParallelTesting extends RunnerOrchestration { self =>
      */
     final def diffTest(testSource: TestSource, checkFile: JFile, actual: List[String], reporters: Seq[TestReporter], logger: LoggedRunnable) = {
       for (msg <- FileDiff.check(testSource.title, actual, checkFile.getPath)) {
-        onFailure(testSource, reporters, logger, Some(msg))
-
         if (updateCheckFiles) {
           FileDiff.dump(checkFile.toPath.toString, actual)
           echo("Updated checkfile: " + checkFile.getPath)
         } else {
+          onFailure(testSource, reporters, logger, Some(msg))
           val outFile = checkFile.toPath.resolveSibling(s"${checkFile.toPath.getFileName}.out").toString
           FileDiff.dump(outFile, actual)
           echo(FileDiff.diffMessage(checkFile.getPath, outFile))
