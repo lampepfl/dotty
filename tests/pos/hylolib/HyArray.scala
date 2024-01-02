@@ -161,7 +161,7 @@ object HyArray {
 
 }
 
-given [T: Value] => Value[HyArray[T]] with {
+given [T: Value] => HyArray[T] is Value with {
 
   extension (self: HyArray[T]) {
 
@@ -178,7 +178,7 @@ given [T: Value] => Value[HyArray[T]] with {
 
 }
 
-given [T: Value] => Collection[HyArray[T]] with {
+given [T: Value] => HyArray[T] is Collection with {
 
   type Element = T
   type Position = Int

@@ -19,7 +19,7 @@ object AnyCollection {
     // and `anyValueIsValue` when the method is called on a collection of `Int`s. None of these
     // choices is even correct! Note also that the ambiguity is suppressed if the constructor of
     // `AnyValue` is declared with a context bound rather than an implicit parameter.
-    given Value[b.Position] = b.positionIsValue
+    given b.Position is Value = b.positionIsValue
 
     def start(): AnyValue =
       AnyValue(base.startPosition)
@@ -42,7 +42,7 @@ object AnyCollection {
 
 }
 
-given anyCollectionIsCollection[T: Value]: Collection[AnyCollection[T]] with {
+given [T: Value] => AnyCollection[T] is Collection with {
 
   type Element = T
   type Position = AnyValue

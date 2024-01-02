@@ -5,7 +5,8 @@ package hylo
   * The data structure of and algorithms of Hylo's standard library operate "notional values" rather
   * than arbitrary references. This trait defines the basis operations of all values.
   */
-trait Value[Self] {
+trait Value:
+  type Self
 
   extension (self: Self) {
 
@@ -15,20 +16,18 @@ trait Value[Self] {
     /** Returns `true` iff `self` and `other` have an equivalent value. */
     def eq(other: Self): Boolean
 
+    def neq(other: Self): Boolean = !self.eq(other)
+
     /** Hashes the salient parts of `self` into `hasher`. */
     def hashInto(hasher: Hasher): Hasher
 
   }
 
-}
-
-extension [Self: Value](self: Self) def neq(other: Self): Boolean = !self.eq(other)
-
 // ----------------------------------------------------------------------------
 // Comparable
 // ----------------------------------------------------------------------------
 
-trait Comparable[Self] extends Value[Self] {
+trait Comparable extends Value {
 
   extension (self: Self) {
 

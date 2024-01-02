@@ -2,7 +2,8 @@
 package hylo
 
 /** A collection of elements accessible by their position. */
-trait Collection[Self] {
+trait Collection {
+  type Self
 
   /** The type of the elements in the collection. */
   type Element: Value
@@ -213,7 +214,7 @@ extension [Self: Collection as s](self: Self) {
     * @complexity
     *   O(n) where n is the number of elements in `self`.
     */
-  def minElement()(using Comparable[s.Element]): Option[s.Element] =
+  def minElement()(using s.Element is Comparable): Option[s.Element] =
     self.minElement(isLessThan = _ `lt` _)
 
   /** Returns the maximum element in `self`, using `isGreaterThan` to compare elements.
@@ -229,7 +230,7 @@ extension [Self: Collection as s](self: Self) {
     * @complexity
     *   O(n) where n is the number of elements in `self`.
     */
-  def maxElement()(using Comparable[s.Element]): Option[s.Element] =
+  def maxElement()(using s.Element is Comparable): Option[s.Element] =
     self.maxElement(isGreaterThan = _ `gt` _)
 
   /** Returns the maximum element in `self`, using `isOrderedBefore` to compare elements.
@@ -257,12 +258,12 @@ extension [Self: Collection as s](self: Self) {
 
 }
 
-extension [Self: Collection as s](self: Self)(using
-    Value[s.Element]
+extension [Self: Collection as s](self: Self)(
+    using s.Element is Value
 ) {
 
   /** Returns `true` if `self` contains the same elements as `other`, in the same order. */
-  def elementsEqual[T](using o: Collection[T] { type Element = s.Element })(other: T): Boolean =
+  def elementsEqual[T](using o: T is Collection { type Element = s.Element })(other: T): Boolean =
     def loop(i: s.Position, j: o.Position): Boolean =
       if (i `eq` self.endPosition) {
         j `eq` other.endPosition

@@ -318,7 +318,7 @@ object BitArray {
 
 }
 
-given bitArrayPositionIsValue: Value[BitArray.Position] with {
+given BitArray.Position is Value with {
 
   extension (self: BitArray.Position) {
 
@@ -335,7 +335,7 @@ given bitArrayPositionIsValue: Value[BitArray.Position] with {
 
 }
 
-given bitArrayIsCollection: Collection[BitArray] with {
+given BitArray is Collection with {
 
   type Element = Boolean
   type Position = BitArray.Position

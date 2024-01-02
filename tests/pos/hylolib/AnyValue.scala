@@ -58,9 +58,9 @@ object AnyValue {
 
 }
 
-given anyValueIsValue: Value[AnyValue] with {
+given AnyValue is Value:
 
-  extension (self: AnyValue) {
+  extension (self: AnyValue)
 
     def copy(): AnyValue =
       self.copy()
@@ -71,6 +71,3 @@ given anyValueIsValue: Value[AnyValue] with {
     def hashInto(hasher: Hasher): Hasher =
       self.hashInto(hasher)
 
-  }
-
-}
