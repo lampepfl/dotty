@@ -1,14 +1,9 @@
 package hylo
 
 /** A type whose instances can be described by a character string. */
-trait StringConvertible[Self] {
+trait StringConvertible:
+  type Self
 
-  extension (self: Self) {
-
-    /** Returns a textual description of `self`. */
-    def description: String =
-      self.toString
-
-  }
-
-}
+  /** Returns a textual description of `self`. */
+  extension (self: Self)
+    def description: String = self.toString

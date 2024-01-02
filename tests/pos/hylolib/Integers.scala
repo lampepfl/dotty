@@ -1,8 +1,8 @@
 package hylo
 
-given Boolean is Value with {
+given Boolean is Value:
 
-  extension (self: Boolean) {
+  extension (self: Boolean)
 
     def copy(): Boolean =
       // Note: Scala's `Boolean` has value semantics already.
@@ -14,13 +14,9 @@ given Boolean is Value with {
     def hashInto(hasher: Hasher): Hasher =
       hasher.combine(if self then 1 else 0)
 
-  }
+given Int is Value:
 
-}
-
-given Int is Value with {
-
-  extension (self: Int) {
+  extension (self: Int)
 
     def copy(): Int =
       // Note: Scala's `Int` has value semantics already.
@@ -32,13 +28,9 @@ given Int is Value with {
     def hashInto(hasher: Hasher): Hasher =
       hasher.combine(self)
 
-  }
+given Int is Comparable:
 
-}
-
-given Int is Comparable with {
-
-  extension (self: Int) {
+  extension (self: Int)
 
     def copy(): Int =
       self
@@ -51,8 +43,4 @@ given Int is Comparable with {
 
     def lt(other: Int): Boolean = self < other
 
-  }
-
-}
-
-given intIsStringConvertible: StringConvertible[Int] with {}
+given Int is StringConvertible {}

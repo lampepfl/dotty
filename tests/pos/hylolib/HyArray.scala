@@ -57,15 +57,13 @@ final class HyArray[Element: Value as elementIsCValue](
     result
 
   // NOTE: Can't refine `C.Element` without renaming the generic parameter of `HyArray`.
-  // /** Adds the contents of `source` at the end of the array. */
-  // def appendContents[C](using
-  //     s: Collection[C]
-  // )(
-  //     source: C { type Element = Element },
-  //     assumeUniqueness: Boolean = false
-  // ): HyArray[Element] =
-  //   val result = if (assumeUniqueness) { this } else { copy(count + source.count) }
-  //   source.reduce(result, (r, e) => r.append(e, assumeUniqueness = true))
+  /** Adds the contents of `source` at the end of the array. */
+  def appendContents[C: Collection { type Element = HyArray.this.Element }](
+      source: C, assumeUniqueness: Boolean = false
+  ): HyArray[Element] =
+    val result = if (assumeUniqueness) { this } else { copy(count + source.count) }
+    source.reduce(result): (r, e) =>
+      r.append(e, assumeUniqueness = true)
 
   /** Removes and returns the last element, or returns `None` if the array is empty. */
   def popLast(assumeUniqueness: Boolean = false): (HyArray[Element], Option[Element]) =
@@ -161,9 +159,9 @@ object HyArray {
 
 }
 
-given [T: Value] => HyArray[T] is Value with {
+given [T: Value] => HyArray[T] is Value:
 
-  extension (self: HyArray[T]) {
+  extension (self: HyArray[T])
 
     def copy(): HyArray[T] =
       self.copy()
@@ -174,16 +172,12 @@ given [T: Value] => HyArray[T] is Value with {
     def hashInto(hasher: Hasher): Hasher =
       self.reduce(hasher)((h, e) => e.hashInto(h))
 
-  }
-
-}
-
-given [T: Value] => HyArray[T] is Collection with {
+given [T: Value] => HyArray[T] is Collection:
 
   type Element = T
   type Position = Int
 
-  extension (self: HyArray[T]) {
+  extension (self: HyArray[T])
 
     // NOTE: Having to explicitly override means that primary declaration can't automatically
     // specialize trait requirements.
@@ -199,22 +193,11 @@ given [T: Value] => HyArray[T] is Collection with {
 
     def at(p: Int) = self.at(p)
 
-  }
-
-}
-
-// NOTE: This should work.
-// given hyArrayIsStringConvertible[T](using
-//     tIsValue: Value[T],
-//     tIsStringConvertible: StringConvertible[T]
-// ): StringConvertible[HyArray[T]] with {
-//
-//   given Collection[HyArray[T]] = hyArrayIsCollection[T]
-//
-//   extension (self: HyArray[T])
-//     override def description: String =
-//       var contents = mutable.StringBuilder()
-//       self.forEach((e) => { contents ++= e.description; true })
-//       s"[${contents.mkString(", ")}]"
-//
-// }
+given [T: {Value, StringConvertible}] => HyArray[T] is StringConvertible:
+  extension (self: HyArray[T])
+    override def description: String =
+      val contents = mutable.StringBuilder()
+      self.forEach: e =>
+        contents ++= e.description
+        true
+      s"[${contents.mkString(", ")}]"

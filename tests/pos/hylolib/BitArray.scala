@@ -318,9 +318,9 @@ object BitArray {
 
 }
 
-given BitArray.Position is Value with {
+given BitArray.Position is Value:
 
-  extension (self: BitArray.Position) {
+  extension (self: BitArray.Position)
 
     def copy(): BitArray.Position =
       self.copy()
@@ -331,16 +331,12 @@ given BitArray.Position is Value with {
     def hashInto(hasher: Hasher): Hasher =
       self.hashInto(hasher)
 
-  }
-
-}
-
-given BitArray is Collection with {
+given BitArray is Collection:
 
   type Element = Boolean
   type Position = BitArray.Position
 
-  extension (self: BitArray) {
+  extension (self: BitArray)
 
     override def count: Int =
       self.count
@@ -357,16 +353,10 @@ given BitArray is Collection with {
     def at(p: BitArray.Position): Boolean =
       self.at(p)
 
-  }
-
-}
-
-given bitArrayIsStringConvertible: StringConvertible[BitArray] with {
-
+given BitArray is StringConvertible:
   extension (self: BitArray)
     override def description: String =
       var contents = mutable.StringBuilder()
       self.forEach((e) => { contents += (if e then '1' else '0'); true })
       contents.mkString
 
-}

@@ -42,12 +42,12 @@ object AnyCollection {
 
 }
 
-given [T: Value] => AnyCollection[T] is Collection with {
+given [T: Value] => AnyCollection[T] is Collection:
 
   type Element = T
   type Position = AnyValue
 
-  extension (self: AnyCollection[T]) {
+  extension (self: AnyCollection[T])
 
     def startPosition =
       self._start()
@@ -61,6 +61,3 @@ given [T: Value] => AnyCollection[T] is Collection with {
     def at(p: Position) =
       self._at(p)
 
-  }
-
-}
