@@ -24,9 +24,9 @@ trait Collection:
       */
     def count: Int =
       val e = endPosition
-      def _count(p: Position, n: Int): Int =
-        if p `eq` e then n else _count(self.positionAfter(p), n + 1)
-      _count(startPosition, 0)
+      def loop(p: Position, n: Int): Int =
+        if p `eq` e then n else loop(self.positionAfter(p), n + 1)
+      loop(startPosition, 0)
 
     /** Returns the position of `self`'s first element', or `endPosition` if `self` is empty.
       *
@@ -80,7 +80,7 @@ trait Collection:
         recur(self.positionAfter(i))
 end Collection
 
-extension [Self: Collection](self: Self) {
+extension [Self: Collection](self: Self)
 
   /** Returns the first element of `self` along with a slice containing the suffix after this
     * element, or `None` if `self` is empty.
@@ -89,28 +89,24 @@ extension [Self: Collection](self: Self) {
     *   O(1)
     */
   def headAndTail: Option[(Self.Element, Slice[Self])] =
-    if (self.isEmpty) {
+    if self.isEmpty then
       None
-    } else {
+    else
       val p = self.startPosition
       val q = self.positionAfter(p)
       val t = Slice(self, Range(q, self.endPosition, (a, b) => (a `eq` b) || self.isBefore(a, b)))
       Some((self.at(p), t))
-    }
 
   /** Applies `combine` on `partialResult` and each element of `self`, in order.
     *
     * @complexity
     *   O(n) where n is the number of elements in `self`.
     */
-  def reduce[T](partialResult: T, combine: (T, Self.Element) => T): T =
+  def reduce[T](partialResult: T)(combine: (T, Self.Element) => T): T =
     val e = self.endPosition
     def loop(p: Self.Position, r: T): T =
-      if (p.eq(e)) {
-        r
-      } else {
-        loop(self.positionAfter(p), combine(r, self.at(p)))
-      }
+      if p `eq` e then r
+      else loop(self.positionAfter(p), combine(r, self.at(p)))
     loop(self.startPosition, partialResult)
 
   /** Applies `action` on each element of `self`, in order, until `action` returns `false`, and
@@ -122,16 +118,12 @@ extension [Self: Collection](self: Self) {
     * @complexity
     *   O(n) where n is the number of elements in `self`.
     */
-  def forEach(action: (Self.Element) => Boolean): Boolean =
+  def forEach(action: Self.Element => Boolean): Boolean =
     val e = self.endPosition
     def loop(p: Self.Position): Boolean =
-      if (p.eq(e)) {
-        true
-      } else if (!action(self.at(p))) {
-        false
-      } else {
-        loop(self.positionAfter(p))
-      }
+      if p `eq` e then true
+      else if !action(self.at(p)) then false
+      else loop(self.positionAfter(p))
     loop(self.startPosition)
 
   /** Returns a collection with the elements of `self` transformed by `transform`, in order.
@@ -139,29 +131,25 @@ extension [Self: Collection](self: Self) {
     * @complexity
     *   O(n) where n is the number of elements in `self`.
     */
-  def map[T: Value](transform: (Self.Element) => T): HyArray[T] =
-    self.reduce(
-      HyArray[T](),
-      (r, e) => r.append(transform(e), assumeUniqueness = true)
-    )
+  def map[T: Value](transform: Self.Element => T): HyArray[T] =
+    self.reduce(HyArray[T]()): (r, e) =>
+      r.append(transform(e), assumeUniqueness = true)
 
   /** Returns a collection with the elements of `self` satisfying `isInclude`, in order.
     *
     * @complexity
     *   O(n) where n is the number of elements in `self`.
     */
-  def filter(isIncluded: (Self.Element) => Boolean): HyArray[Self.Element] =
-    self.reduce(
-      HyArray[Self.Element](),
-      (r, e) => if (isIncluded(e)) then r.append(e, assumeUniqueness = true) else r
-    )
+  def filter(isIncluded: Self.Element => Boolean): HyArray[Self.Element] =
+    self.reduce(HyArray[Self.Element]()): (r, e) =>
+      if isIncluded(e) then r.append(e, assumeUniqueness = true) else r
 
   /** Returns `true` if `self` contains an element satisfying `predicate`.
     *
     * @complexity
     *   O(n) where n is the number of elements in `self`.
     */
-  def containsWhere(predicate: (Self.Element) => Boolean): Boolean =
+  def containsWhere(predicate: Self.Element => Boolean): Boolean =
     self.firstPositionWhere(predicate) != None
 
   /** Returns `true` if all elements in `self` satisfy `predicate`.
@@ -169,7 +157,7 @@ extension [Self: Collection](self: Self) {
     * @complexity
     *   O(n) where n is the number of elements in `self`.
     */
-  def allSatisfy(predicate: (Self.Element) => Boolean): Boolean =
+  def allSatisfy(predicate: Self.Element => Boolean): Boolean =
     self.firstPositionWhere(predicate) == None
 
   /** Returns the position of the first element of `self` satisfying `predicate`, or `None` if no
@@ -178,16 +166,12 @@ extension [Self: Collection](self: Self) {
     * @complexity
     *   O(n) where n is the number of elements in `self`.
     */
-  def firstPositionWhere(predicate: (Self.Element) => Boolean): Option[Self.Position] =
+  def firstPositionWhere(predicate: Self.Element => Boolean): Option[Self.Position] =
     val e = self.endPosition
     def loop(p: Self.Position): Option[Self.Position] =
-      if (p.eq(e)) {
-        None
-      } else if (predicate(self.at(p))) {
-        Some(p)
-      } else {
-        loop(self.positionAfter(p))
-      }
+      if p `eq` e then None
+      else if predicate(self.at(p)) then Some(p)
+      else loop(self.positionAfter(p))
     loop(self.startPosition)
 
   /** Returns the minimum element in `self`, using `isLessThan` to compare elements.
@@ -229,26 +213,19 @@ extension [Self: Collection](self: Self) {
     *   O(n) where n is the number of elements in `self`.
     */
   def leastElement(isOrderedBefore: (Self.Element, Self.Element) => Boolean): Option[Self.Element] =
-    if (self.isEmpty) {
+    if self.isEmpty then
       None
-    } else {
+    else
       val e = self.endPosition
-      def _least(p: Self.Position, least: Self.Element): Self.Element =
-        if (p.eq(e)) {
+      def loop(p: Self.Position, least: Self.Element): Self.Element =
+        if p `eq` e then
           least
-        } else {
+        else
           val x = self.at(p)
           val y = if isOrderedBefore(x, least) then x else least
-          _least(self.positionAfter(p), y)
-        }
-
+          loop(self.positionAfter(p), y)
       val b = self.startPosition
-      Some(_least(self.positionAfter(b), self.at(b)))
-    }
-
-}
-
-extension [Self: Collection](self: Self)
+      Some(loop(self.positionAfter(b), self.at(b)))
 
   /** Returns `true` if `self` contains the same elements as `other`, in the same order. */
   def elementsEqual[T: Collection { type Element = Self.Element } ](other: T): Boolean =
@@ -262,4 +239,4 @@ extension [Self: Collection](self: Self)
       else
         loop(self.positionAfter(i), other.positionAfter(j))
     loop(self.startPosition, other.startPosition)
-
+end extension

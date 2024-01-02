@@ -172,7 +172,7 @@ given [T: Value] => HyArray[T] is Value with {
       self.elementsEqual(other)
 
     def hashInto(hasher: Hasher): Hasher =
-      self.reduce(hasher, (h, e) => e.hashInto(h))
+      self.reduce(hasher)((h, e) => e.hashInto(h))
 
   }
 
