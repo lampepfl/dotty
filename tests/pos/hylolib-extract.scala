@@ -23,3 +23,7 @@ given BitArray is Collection:
 
 extension [Self: Value](self: Self)
   def neq(other: Self): Boolean = !self.eq(other)
+
+extension [Self: Collection](self: Self)
+  def elementsEqual[T: Collection { type Element = Self.Element } ](other: T): Boolean =
+    ???
