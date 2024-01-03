@@ -48,16 +48,8 @@ given [T: Value] => AnyCollection[T] is Collection:
   type Position = AnyValue
 
   extension (self: AnyCollection[T])
-
-    def startPosition =
-      self._start()
-
-    def endPosition =
-      self._end()
-
-    def positionAfter(p: Position) =
-      self._after(p)
-
-    def at(p: Position) =
-      self._at(p)
+    def startPosition = self._start()
+    def endPosition = self._end()
+    def positionAfter(p: Position) = self._after(p)
+    def at(p: Position) = self._at(p)
 

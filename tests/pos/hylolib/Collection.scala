@@ -78,6 +78,22 @@ trait Collection:
           else if n `eq` e then false
           else recur(self.positionAfter(n))
         recur(self.positionAfter(i))
+
+  class Slice2(val base: Self, val bounds: Range[Position]):
+
+    def isEmpty: Boolean =
+      bounds.lowerBound.eq(bounds.upperBound)
+
+    def startPosition: Position =
+      bounds.lowerBound
+
+    def endPosition: Position =
+      bounds.upperBound
+
+    def at(p: Position): Element =
+      base.at(p)
+  end Slice2
+
 end Collection
 
 extension [Self: Collection](self: Self)
@@ -95,6 +111,15 @@ extension [Self: Collection](self: Self)
       val p = self.startPosition
       val q = self.positionAfter(p)
       val t = Slice(self, Range(q, self.endPosition, (a, b) => (a `eq` b) || self.isBefore(a, b)))
+      Some((self.at(p), t))
+
+  def headAndTail2: Option[(Self.Element, Self.Slice2)] =
+    if self.isEmpty then
+      None
+    else
+      val p = self.startPosition
+      val q = self.positionAfter(p)
+      val t = Self.Slice2(self, Range(q, self.endPosition, (a, b) => (a `eq` b) || self.isBefore(a, b)))
       Some((self.at(p), t))
 
   /** Applies `combine` on `partialResult` and each element of `self`, in order.

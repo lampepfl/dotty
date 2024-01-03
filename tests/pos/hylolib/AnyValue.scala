@@ -61,13 +61,7 @@ object AnyValue {
 given AnyValue is Value:
 
   extension (self: AnyValue)
-
-    def copy(): AnyValue =
-      self.copy()
-
-    def eq(other: AnyValue): Boolean =
-      self `eq` other
-
-    def hashInto(hasher: Hasher): Hasher =
-      self.hashInto(hasher)
+    def copy(): AnyValue = self.copy()
+    def eq(other: AnyValue): Boolean = self `eq` other
+    def hashInto(hasher: Hasher): Hasher = self.hashInto(hasher)
 
