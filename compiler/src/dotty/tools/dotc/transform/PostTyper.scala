@@ -424,7 +424,7 @@ class PostTyper extends MacroTransform with InfoTransformer { thisPhase =>
                   // these refinements are split off from the parent type constructor
                   // application `parent` in Namer and don't show up as parent types
                   // of the class.
-                  val illegalRefs = parent.tpe.stripRefinement.namedPartsWith:
+                  val illegalRefs = parent.tpe.dealias.stripRefinement.namedPartsWith:
                       p => p.symbol.is(ParamAccessor) && (p.symbol.owner eq sym)
                   if illegalRefs.nonEmpty then
                     report.error(
