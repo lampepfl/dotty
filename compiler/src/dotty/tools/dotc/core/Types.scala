@@ -1631,17 +1631,19 @@ object Types extends TypeUtils {
      *
      *    P { ... type T = / += / -= U ... } # T
      *
-     *  to just U. Does not perform the reduction if the resulting type would contain
-     *  a reference to the "this" of the current refined type, except in the following situation
+     *  to just U. Analogously, `P { val x: S} # x` is reduced tp `S` is `S`
+     *  is a singleton type.
      *
-     *  (1) The "this" reference can be avoided by following an alias. Example:
+     *  Does not perform the reduction if the resulting type would contain
+     *  a reference to the "this" of the current refined type, except if the "this"
+     *  reference can be avoided by following an alias. Example:
      *
      *      P { type T = String, type R = P{...}.T } # R  -->  String
      *
      *  (*) normalizes means: follow instantiated typevars and aliases.
      */
-    def lookupRefined(name: Name)(using Context): Type = {
-      @tailrec def loop(pre: Type): Type = pre.stripTypeVar match {
+    def lookupRefined(name: Name)(using Context): Type =
+      @tailrec def loop(pre: Type): Type = pre match
         case pre: RefinedType =>
           pre.refinedInfo match {
             case tp: AliasingBounds =>
@@ -1664,12 +1666,13 @@ object Types extends TypeUtils {
             case TypeAlias(alias) => loop(alias)
             case _ => NoType
           }
+        case pre: (TypeVar | AnnotatedType) =>
+          loop(pre.underlying)
         case _ =>
           NoType
-      }
 
       loop(this)
-    }
+    end lookupRefined
 
     /** The type <this . name> , reduced if possible */
     def select(name: Name)(using Context): Type =
@@ -2708,13 +2711,11 @@ object Types extends TypeUtils {
       case _ => true
     }
 
-    /** Reduce a type-ref `T { X = U; ... } # X`  to   `U`
-     *  provided `U` does not refer with a RecThis to the
-     *  refinement type `T { X = U; ... }`
+    /** Try to reduce this type using lookupRefined, or return the type itself
+     *  if that fails.
      */
     def reduceProjection(using Context): Type =
-      val reduced = prefix.lookupRefined(name)
-      if reduced.exists then reduced else this
+      prefix.lookupRefined(name).orElse(this)
 
     /** Guard against cycles that can arise if given `op`
      *  follows info. The problematic cases are a type alias to itself or
@@ -2801,35 +2802,30 @@ object Types extends TypeUtils {
     def derivedSelect(prefix: Type)(using Context): Type =
       if prefix eq this.prefix then this
       else if prefix.isExactlyNothing then prefix
-      else {
-        val res =
-          if (isType && currentValidSymbol.isAllOf(ClassTypeParam)) argForParam(prefix)
+      else
+        val reduced =
+          if isType && currentValidSymbol.isAllOf(ClassTypeParam) then argForParam(prefix)
           else prefix.lookupRefined(name)
-        if (res.exists) return res
-        if (isType) {
-          if (Config.splitProjections)
-            prefix match {
-              case prefix: AndType =>
-                def isMissing(tp: Type) = tp match {
-                  case tp: TypeRef => !tp.info.exists
-                  case _ => false
-                }
-                val derived1 = derivedSelect(prefix.tp1)
-                val derived2 = derivedSelect(prefix.tp2)
-                return (
-                  if (isMissing(derived1)) derived2
-                  else if (isMissing(derived2)) derived1
-                  else prefix.derivedAndType(derived1, derived2))
-              case prefix: OrType =>
-                val derived1 = derivedSelect(prefix.tp1)
-                val derived2 = derivedSelect(prefix.tp2)
-                return prefix.derivedOrType(derived1, derived2)
-              case _ =>
-            }
-        }
-        if (prefix.isInstanceOf[WildcardType]) WildcardType.sameKindAs(this)
+        if reduced.exists then return reduced
+        if Config.splitProjections && isType then
+          prefix match
+            case prefix: AndType =>
+              def isMissing(tp: Type) = tp match
+                case tp: TypeRef => !tp.info.exists
+                case _ => false
+              val derived1 = derivedSelect(prefix.tp1)
+              val derived2 = derivedSelect(prefix.tp2)
+              return
+                if isMissing(derived1) then derived2
+                else if isMissing(derived2) then derived1
+                else prefix.derivedAndType(derived1, derived2)
+            case prefix: OrType =>
+              val derived1 = derivedSelect(prefix.tp1)
+              val derived2 = derivedSelect(prefix.tp2)
+              return prefix.derivedOrType(derived1, derived2)
+            case _ =>
+        if prefix.isInstanceOf[WildcardType] then WildcardType.sameKindAs(this)
         else withPrefix(prefix)
-      }
 
     /** A reference like this one, but with the given symbol, if it exists */
     private def withSym(sym: Symbol)(using Context): ThisType =
