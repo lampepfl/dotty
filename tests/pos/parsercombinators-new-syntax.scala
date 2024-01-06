@@ -3,7 +3,6 @@ import collection.mutable
 
 /// A parser combinator.
 trait Combinator:
-
   type Self
   type Input
   type Result
@@ -13,21 +12,22 @@ trait Combinator:
     def parse(in: Input): Option[Result]
 end Combinator
 
-case class Apply[C, E](action: C => Option[E])
+case class Apply[I, R](action: I => Option[R])
 case class Combine[A, B](first: A, second: B)
 
 given [I, R] => Apply[I, R] is Combinator:
   type Input = I
   type Result = R
-  extension (self: Self)
+  extension (self: Apply[I, R])
     def parse(in: I): Option[R] = self.action(in)
 
 given [A: Combinator, B: Combinator { type Input = A.Input }]
     => Combine[A, B] is Combinator:
   type Input = A.Input
   type Result = (A.Result, B.Result)
-  extension (self: Self)
-    def parse(in: Input): Option[Result] = ???
+  extension (self: Combine[A, B])
+    def parse(in: Input): Option[Result] =
+      for x <- self.first.parse(in); y <- self.second.parse(in) yield (x, y)
 
 extension [A] (buf: mutable.ListBuffer[A]) def popFirst() =
   if buf.isEmpty then None
