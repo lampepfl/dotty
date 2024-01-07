@@ -78,11 +78,11 @@ object Instances extends Common:
   extension [T](xs: List[T])
     def second = xs.tail.head
     def third = xs.tail.tail.head
-/*
+
   extension [M[_]: Monad, A](xss: M[M[A]])
     def flatten: M[A] =
       xss.flatMap(identity)
-*/
+
   def maximum[T: Ord](xs: List[T]): T =
     xs.reduce(_ `max` _)
 

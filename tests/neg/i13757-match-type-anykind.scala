@@ -8,7 +8,7 @@ object Test:
   type AnyKindMatchType3[X <: AnyKind] = X match // error: the scrutinee of a match type cannot be higher-kinded
     case _ => Int
 
-  type AnyKindMatchType4[X <: Option] = X match // error // error: the scrutinee of a match type cannot be higher-kinded
+  type AnyKindMatchType4[X <: Option] = X match // error: the scrutinee of a match type cannot be higher-kinded
     case _ => Int
 
   type AnyKindMatchType5[X[_]] = X match // error: the scrutinee of a match type cannot be higher-kinded

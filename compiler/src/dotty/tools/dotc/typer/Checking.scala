@@ -1322,20 +1322,20 @@ trait Checking {
   }
 
   /** Check that user-defined (result) type is fully applied */
-  def checkFullyAppliedType(tree: Tree)(using Context): Unit = tree match
+  def checkFullyAppliedType(tree: Tree, prefix: String)(using Context): Unit = tree match
     case TypeBoundsTree(lo, hi, alias) =>
-      checkFullyAppliedType(lo)
-      checkFullyAppliedType(hi)
-      checkFullyAppliedType(alias)
+      checkFullyAppliedType(lo, prefix)
+      checkFullyAppliedType(hi, prefix)
+      checkFullyAppliedType(alias, prefix)
     case Annotated(arg, annot) =>
-      checkFullyAppliedType(arg)
+      checkFullyAppliedType(arg, prefix)
     case LambdaTypeTree(_, body) =>
-      checkFullyAppliedType(body)
+      checkFullyAppliedType(body, prefix)
     case _: TypeTree =>
     case _ =>
       if tree.tpe.typeParams.nonEmpty then
         val what = if tree.symbol.exists then tree.symbol.show else i"type $tree"
-        report.error(em"$what takes type parameters", tree.srcPos)
+        report.error(em"$prefix$what takes type parameters", tree.srcPos)
 
   /** Check that we are in an inline context (inside an inline method or in inline code) */
   def checkInInlineContext(what: String, pos: SrcPos)(using Context): Unit =
@@ -1600,7 +1600,7 @@ trait ReChecking extends Checking {
   override def checkEnumParent(cls: Symbol, firstParent: Symbol)(using Context): Unit = ()
   override def checkEnum(cdef: untpd.TypeDef, cls: Symbol, firstParent: Symbol)(using Context): Unit = ()
   override def checkRefsLegal(tree: tpd.Tree, badOwner: Symbol, allowed: (Name, Symbol) => Boolean, where: String)(using Context): Unit = ()
-  override def checkFullyAppliedType(tree: Tree)(using Context): Unit = ()
+  override def checkFullyAppliedType(tree: Tree, prefix: String)(using Context): Unit = ()
   override def checkEnumCaseRefsLegal(cdef: TypeDef, enumCtx: Context)(using Context): Unit = ()
   override def checkAnnotApplicable(annot: Tree, sym: Symbol)(using Context): Boolean = true
   override def checkMatchable(tp: Type, pos: SrcPos, pattern: Boolean)(using Context): Unit = ()
