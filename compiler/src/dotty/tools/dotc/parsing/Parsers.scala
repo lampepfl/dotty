@@ -2167,11 +2167,16 @@ object Parsers {
       else atSpan((t.span union cbs.head.span).start) { ContextBounds(t, cbs) }
     }
 
+    /** ContextBound      ::=  Type [`as` id] */
+    def contextBound(pname: TypeName): Tree =
+      ContextBoundTypeTree(toplevelTyp(), pname)
+
     def contextBounds(pname: TypeName): List[Tree] =
       if in.isColon then
-        atSpan(in.skipToken()) {
-          ContextBoundTypeTree(toplevelTyp(), pname)
-        } :: contextBounds(pname)
+        in.nextToken()
+        if in.token == LBRACE && in.featureEnabled(Feature.modularity)
+        then inBraces(commaSeparated(() => contextBound(pname)))
+        else contextBound(pname) :: contextBounds(pname)
       else if in.token == VIEWBOUND then
         report.errorOrMigrationWarning(
           em"view bounds `<%' are no longer supported, use a context bound `:' instead",
