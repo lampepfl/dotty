@@ -9,7 +9,7 @@ nightlyOf: https://docs.scala-lang.org/scala3/reference/experimental/modularity.
 Martin Odersky, 7.1.2024
 
 Scala is a language in the SML tradition, in the sense that it has
-abstract and alias types as members of classes. This leads to a simple dependently
+abstract and alias types as members of modules (which in Scala take the form of objects and classes). This leads to a simple dependently
 typed system, where dependencies in types are on paths instead of full terms.
 
 So far, some key ingredients were lacking which meant that module composition with functors is harder in Scala than in SML. In particular, one often needs to resort the infamous `Aux` pattern that lifts type members into type parameters so that they can be tracked across class instantiations. This makes modular, dependently typed programs
@@ -19,10 +19,10 @@ In this note I propose some small changes to Scala's dependent typing that makes
 modular programming much more straightforward.
 
 The suggested improvements have been implemented and are available
-in source version `future` if the additional experimental language import `modularity` is present. For instance, using
+in source version `future` if the additional experimental language import `modularity` is present. For instance, using the following command:
 
 ```
-  scala compile -source future -language experimental.modularity
+  scala compile -source:future -language:experimental.modularity
 ```
 
 ## Tracked Parameters
@@ -41,7 +41,7 @@ For instance, consider the following definitions:
 ```
 Then `f(y)` would have type `Int`, since the compiler will substitute the
 concrete parameter reference `y` for the formal parameter `x` in the result
-type of `f`.
+type of `f`, and `y.T = Int`
 
 However, if we use a class `F` instead of a method `f`, things go wrong.
 
@@ -66,7 +66,7 @@ Then the constructor `F` would get roughly the following type:
 ```scala
   F(x1: C): F { val x: x1.type }
 ```
-_Aside:_ More precisely, both parameter and refinement would apply to the same name `x` but the refinement still refers to the parameter. We unfortunately can't express that in source, however, so we chose the new name `x1` for the parameter.
+_Aside:_ More precisely, both parameter and refinement would apply to the same name `x` but the refinement still refers to the parameter. We unfortunately can't express that in source, however, so we chose the new name `x1` for the parameter in the explanation.
 
 With the new constructor type, the expression `F(y).result` would now have the type `Int`, as hoped for. The reasoning to get there is as follows:
 
@@ -118,23 +118,21 @@ The (soft) `tracked` modifier is only allowed for `val` parameters of classes.
 
 **Discussion**
 
-Since `tracked` is so useful, why not assume it by default? First, `tracked` makes sense only for `val` parameters. If a class parameter is not also a field declared using `val` then there's nothing to refine in the constructor.
-But making all `val` parameters tracked by default would also be a backwards
-incompatible change. For instance, the following code would break:
+Since `tracked` is so useful, why not assume it by default? First, `tracked` makes sense only for `val` parameters. If a class parameter is not also a field declared using `val` then there's nothing to refine in the constructor result type. One could think of at least making all `val` parameters tracked by default, but that would be a backwards incompatible change. For instance, the following code would break:
 
 ```scala
 case class Foo(x: Int)
 var foo = Foo(1)
 if someCondition then foo = Foo(2)
 ```
-if we assume `tracked` for parameter `x` (which is implicitly a `val`),
+If we assume `tracked` for parameter `x` (which is implicitly a `val`),
 then `foo` would get inferred type `Foo { val x: 1 }`, so it could not
-be reassigned to a value of type `Foo { val x: 2 }`.
+be reassigned to a value of type `Foo { val x: 2 }` on the next line.
 
 Another approach might be to assume `tracked` for a `val` parameter `x`
 only if the class refers to a type member of `x`. But it turns out that this
 scheme is unimplementable since it would quickly lead to cyclic references
-in recursive class graphs. So an explicit `tracked` looks like the best feasible option.
+when typechecking recursive class graphs. So an explicit `tracked` looks like the best available option.
 
 ## Allow Class Parents to be Refined Types
 
@@ -186,6 +184,6 @@ The rules for export forwarders are changed as follows.
 
 Previously, all export forwarders were declared `final`. Now, only term members are declared `final`. Type aliases are left aside.
 
-This makes it possible to export the same type member into several traits and then mix these traits in the same class. `typeclass-aggregates.scala` shows why this is essential to be able to combine multiple givens with type members.
+This makes it possible to export the same type member into several traits and then mix these traits in the same class. The test file `tests/pos/typeclass-aggregates.scala` shows why this is essential if we want to combine multiple givens with type members in a new given that aggregates all these givens in an intersection type.
 
 The change does not lose safety since different type aliases would in any case lead to uninstantiatable classes.
