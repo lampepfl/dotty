@@ -1,8 +1,5 @@
 //> using options -language:experimental.modularity -source future
 
-// this should go in Predef
-infix type is[A <: AnyKind, B <: {type Self <: AnyKind}] = B { type Self = A }
-
 class Common:
 
   trait Ord:

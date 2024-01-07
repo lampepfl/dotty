@@ -1,8 +1,6 @@
 //> using options -language:experimental.modularity -source future
 import collection.mutable
 
-infix type is[A <: AnyKind, B <: {type Self <: AnyKind}] = B { type Self = A }
-
 /// A parser combinator.
 trait Combinator:
 

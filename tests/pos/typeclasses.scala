@@ -26,8 +26,6 @@ class Common:
       def flatMap[B](f: A => Self[B]): Self[B]
       def map[B](f: A => B) = x.flatMap(f `andThen` pure)
 
-  infix type is[A <: AnyKind, B <: {type Self <: AnyKind}] = B { type Self = A }
-
 end Common
 
 
@@ -132,7 +130,6 @@ instance Sheep: Animal with
     override def talk(): Unit =
       println(s"$name pauses briefly... $noise")
 */
-import Instances.is
 
 // Implement the `Animal` trait for `Sheep`.
 given (Sheep is Animal) with
