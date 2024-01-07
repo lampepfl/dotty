@@ -119,4 +119,4 @@ i7445b.scala
 parsercombinators-givens.scala
 parsercombinators-ctx-bounds.scala
 parsercombinators-this.scala
-
+parsercombinators-arrow.scala

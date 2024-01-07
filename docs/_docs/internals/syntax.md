@@ -459,10 +459,13 @@ ClassConstr       ::=  [ClsTypeParamClause] [ConstrMods] ClsParamClauses        
 ConstrMods        ::=  {Annotation} [AccessModifier]
 ObjectDef         ::=  id [Template]                                            ModuleDef(mods, name, template)  // no constructor
 EnumDef           ::=  id ClassConstr InheritClauses EnumBody
-GivenDef          ::=  [GivenSig] (GivenType [‘=’ Expr] | StructuralInstance)
-GivenSig          ::=  [id] [DefTypeParamClause] {UsingParamClause} ‘:’         -- one of `id`, `DefTypeParamClause`, `UsingParamClause` must be present
+
+GivenDef          ::=  [GivenConditional '=>'] GivenSig
+GivenConditional  ::=  [DefTypeParamClause | UsingParamClause] {UsingParamClause}
+GivenSig          ::=  GivenType ['as' id] ([‘=’ Expr] | TemplateBody)
+                    |  ConstrApps ['as' id] TemplateBody
 GivenType         ::=  AnnotType1 {id [nl] AnnotType1}
-StructuralInstance ::=  ConstrApp {‘with’ ConstrApp} [‘with’ WithTemplateBody]
+
 Extension         ::=  ‘extension’ [DefTypeParamClause] {UsingParamClause}
                        ‘(’ DefTermParam ‘)’ {UsingParamClause} ExtMethods
 ExtMethods        ::=  ExtMethod | [nl] <<< ExtMethod {semi ExtMethod} >>>
