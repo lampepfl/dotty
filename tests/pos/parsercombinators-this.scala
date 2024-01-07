@@ -4,14 +4,14 @@ import collection.mutable
 /// A parser combinator.
 trait Combinator:
 
-  type This
+  type Self
 
   /// The context from which elements are being parsed, typically a stream of tokens.
   type Context
   /// The element being parsed.
   type Element
 
-  extension (self: This)
+  extension (self: Self)
     /// Parses and returns an element from `context`.
     def parse(context: Context): Option[Element]
 end Combinator
@@ -20,7 +20,7 @@ final case class Apply[C, E](action: C => Option[E])
 final case class Combine[A, B](first: A, second: B)
 
 given apply[C, E]: Combinator with {
-  type This = Apply[C, E]
+  type Self = Apply[C, E]
   type Context = C
   type Element = E
   extension(self: Apply[C, E]) {
@@ -30,7 +30,7 @@ given apply[C, E]: Combinator with {
 
 given combine[A: Combinator, B: Combinator { type Context = A.Context }]
     : Combinator with
-  type This = Combine[A, B]
+  type Self = Combine[A, B]
   type Context = A.Context
   type Element = (A.Element, B.Element)
   extension(self: Combine[A, B])

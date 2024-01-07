@@ -3,30 +3,30 @@
 class Common:
 
   trait Ord:
-    type This
-    extension (x: This)
-      def compareTo(y: This): Int
-      def < (y: This): Boolean = compareTo(y) < 0
-      def > (y: This): Boolean = compareTo(y) > 0
+    type Self
+    extension (x: Self)
+      def compareTo(y: Self): Int
+      def < (y: Self): Boolean = compareTo(y) < 0
+      def > (y: Self): Boolean = compareTo(y) > 0
 
   trait SemiGroup:
-    type This
-    extension (x: This) def combine(y: This): This
+    type Self
+    extension (x: Self) def combine(y: Self): Self
 
   trait Monoid extends SemiGroup:
-    def unit: This
+    def unit: Self
 
   trait Functor:
-    type This[A]
-    extension [A](x: This[A]) def map[B](f: A => B): This[B]
+    type Self[A]
+    extension [A](x: Self[A]) def map[B](f: A => B): Self[B]
 
   trait Monad extends Functor:
-    def pure[A](x: A): This[A]
-    extension [A](x: This[A])
-      def flatMap[B](f: A => This[B]): This[B]
+    def pure[A](x: A): Self[A]
+    extension [A](x: Self[A])
+      def flatMap[B](f: A => Self[B]): Self[B]
       def map[B](f: A => B) = x.flatMap(f `andThen` pure)
 
-  infix type is[A <: AnyKind, B <: {type This <: AnyKind}] = B { type This = A }
+  infix type is[A <: AnyKind, B <: {type Self <: AnyKind}] = B { type Self = A }
 
 end Common
 
@@ -34,7 +34,7 @@ end Common
 object Instances extends Common:
 
   given intOrd: (Int is Ord) with
-    type This = Int
+    type Self = Int
     extension (x: Int)
       def compareTo(y: Int) =
         if x < y then -1
@@ -77,8 +77,8 @@ object Instances extends Common:
     def second = xs.tail.head
     def third = xs.tail.tail.head
 
-  extension [M, A](using m: Monad)(xss: m.This[m.This[A]])
-    def flatten: m.This[A] =
+  extension [M, A](using m: Monad)(xss: m.Self[m.Self[A]])
+    def flatten: m.Self[A] =
       xss.flatMap(identity)
 
   def maximum[T](xs: List[T])(using T is Ord): T =
@@ -103,12 +103,12 @@ object Instances extends Common:
 // wc Scala: 30     115     853
 // wc Rust : 57     193    1466
 trait Animal:
-  type This
-  // Associated function signature; `This` refers to the implementor type.
-  def apply(name: String): This
+  type Self
+  // Associated function signature; `Self` refers to the implementor type.
+  def apply(name: String): Self
 
   // Method signatures; these will return a string.
-  extension (self: This)
+  extension (self: Self)
     def name: String
     def noise: String
     def talk(): Unit = println(s"$name, $noise")
@@ -126,7 +126,7 @@ class Sheep(val name: String):
 /*
 instance Sheep: Animal with
   def apply(name: String) = Sheep(name)
-  extension (self: This)
+  extension (self: Self)
     def name: String = self.name
     def noise: String = if self.isNaked then "baaaaah?" else "baaaaah!"
     override def talk(): Unit =
@@ -137,7 +137,7 @@ import Instances.is
 // Implement the `Animal` trait for `Sheep`.
 given (Sheep is Animal) with
   def apply(name: String) = Sheep(name)
-  extension (self: This)
+  extension (self: Self)
     def name: String = self.name
     def noise: String = if self.isNaked then "baaaaah?" else "baaaaah!"
     override def talk(): Unit =

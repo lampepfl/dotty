@@ -384,6 +384,7 @@ object StdNames {
     val RootPackage: N          = "RootPackage"
     val RootClass: N            = "RootClass"
     val Select: N               = "Select"
+    val Self: N                 = "Self"
     val Shape: N                = "Shape"
     val StringContext: N        = "StringContext"
     val This: N                 = "This"

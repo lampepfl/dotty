@@ -1,19 +1,19 @@
 //> using options -language:experimental.modularity -source future
 import collection.mutable
 
-infix type is[A <: AnyKind, B <: {type This <: AnyKind}] = B { type This = A }
+infix type is[A <: AnyKind, B <: {type Self <: AnyKind}] = B { type Self = A }
 
 /// A parser combinator.
 trait Combinator:
 
-  type This
+  type Self
 
   /// The context from which elements are being parsed, typically a stream of tokens.
   type Context
   /// The element being parsed.
   type Element
 
-  extension (self: This)
+  extension (self: Self)
     /// Parses and returns an element from `context`.
     def parse(context: Context): Option[Element]
 end Combinator

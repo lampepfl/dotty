@@ -2196,12 +2196,12 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
     val tparam = untpd.Ident(tree.paramName).withSpan(tree.span)
     if tycon.tpe.typeParams.nonEmpty then
       typed(untpd.AppliedTypeTree(tyconSplice, tparam :: Nil))
-    else if Feature.enabled(modularity) && tycon.tpe.member(tpnme.This).symbol.isAbstractType then
-      typed(untpd.RefinedTypeTree(tyconSplice, List(untpd.TypeDef(tpnme.This, tparam))))
+    else if Feature.enabled(modularity) && tycon.tpe.member(tpnme.Self).symbol.isAbstractType then
+      typed(untpd.RefinedTypeTree(tyconSplice, List(untpd.TypeDef(tpnme.Self, tparam))))
     else
       errorTree(tree,
         em"""Illegal context bound: ${tycon.tpe} does not take type parameters and
-            |does not have an abstract type member named `This` either.""")
+            |does not have an abstract type member named `Self` either.""")
 
   def typedSingletonTypeTree(tree: untpd.SingletonTypeTree)(using Context): SingletonTypeTree = {
     val ref1 = typedExpr(tree.ref, SingletonTypeProto)

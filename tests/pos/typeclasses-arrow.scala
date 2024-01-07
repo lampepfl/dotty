@@ -1,39 +1,39 @@
 //> using options -language:experimental.modularity -source future
 
 // this should go in Predef
-infix type is[A <: AnyKind, B <: {type This <: AnyKind}] = B { type This = A }
+infix type is[A <: AnyKind, B <: {type Self <: AnyKind}] = B { type Self = A }
 
 class Common:
 
   trait Ord:
-    type This
-    extension (x: This)
-      def compareTo(y: This): Int
-      def < (y: This): Boolean = compareTo(y) < 0
-      def > (y: This): Boolean = compareTo(y) > 0
-      def <= (y: This): Boolean = compareTo(y) <= 0
-      def >= (y: This): Boolean = compareTo(y) >= 0
-      def max(y: This): This = if x < y then y else x
+    type Self
+    extension (x: Self)
+      def compareTo(y: Self): Int
+      def < (y: Self): Boolean = compareTo(y) < 0
+      def > (y: Self): Boolean = compareTo(y) > 0
+      def <= (y: Self): Boolean = compareTo(y) <= 0
+      def >= (y: Self): Boolean = compareTo(y) >= 0
+      def max(y: Self): Self = if x < y then y else x
 
   trait Show:
-    type This
-    extension (x: This) def show: String
+    type Self
+    extension (x: Self) def show: String
 
   trait SemiGroup:
-    type This
-    extension (x: This) def combine(y: This): This
+    type Self
+    extension (x: Self) def combine(y: Self): Self
 
   trait Monoid extends SemiGroup:
-    def unit: This
+    def unit: Self
 
   trait Functor:
-    type This[A]
-    extension [A](x: This[A]) def map[B](f: A => B): This[B]
+    type Self[A]
+    extension [A](x: Self[A]) def map[B](f: A => B): Self[B]
 
   trait Monad extends Functor:
-    def pure[A](x: A): This[A]
-    extension [A](x: This[A])
-      def flatMap[B](f: A => This[B]): This[B]
+    def pure[A](x: A): Self[A]
+    extension [A](x: Self[A])
+      def flatMap[B](f: A => Self[B]): Self[B]
       def map[B](f: A => B) = x.flatMap(f `andThen` pure)
 end Common
 
@@ -105,12 +105,12 @@ object Instances extends Common:
 // wc Rust : 57     193    1466
 
 trait Animal:
-  type This
-  // Associated function signature; `This` refers to the implementor type.
-  def apply(name: String): This
+  type Self
+  // Associated function signature; `Self` refers to the implementor type.
+  def apply(name: String): Self
 
   // Method signatures; these will return a string.
-  extension (self: This)
+  extension (self: Self)
     def name: String
     def noise: String
     def talk(): Unit = println(s"$name, $noise")
@@ -127,7 +127,7 @@ class Sheep(val name: String):
 
 given Sheep is Animal:
   def apply(name: String) = Sheep(name)
-  extension (self: This)
+  extension (self: Self)
     def name: String = self.name
     def noise: String = if self.isNaked then "baaaaah?" else "baaaaah!"
     override def talk(): Unit =
