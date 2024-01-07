@@ -2197,7 +2197,8 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
     if tycon.tpe.typeParams.nonEmpty then
       typed(untpd.AppliedTypeTree(tyconSplice, tparam :: Nil))
     else if Feature.enabled(modularity) && tycon.tpe.member(tpnme.Self).symbol.isAbstractType then
-      typed(untpd.RefinedTypeTree(tyconSplice, List(untpd.TypeDef(tpnme.Self, tparam))))
+      val tparamSplice = untpd.TypedSplice(typedExpr(tparam))
+      typed(untpd.RefinedTypeTree(tyconSplice, List(untpd.TypeDef(tpnme.Self, tparamSplice))))
     else
       errorTree(tree,
         em"""Illegal context bound: ${tycon.tpe} does not take type parameters and
