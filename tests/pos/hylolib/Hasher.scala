@@ -1,3 +1,4 @@
+//> using options -language:experimental.modularity -source future
 package hylo
 
 import scala.util.Random

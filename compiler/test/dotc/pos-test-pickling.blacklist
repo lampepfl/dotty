@@ -120,3 +120,6 @@ parsercombinators-givens.scala
 parsercombinators-ctx-bounds.scala
 parsercombinators-this.scala
 parsercombinators-arrow.scala
+parsercombinators-new-syntax.scala
+hylolib
+

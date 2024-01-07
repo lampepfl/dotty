@@ -56,7 +56,6 @@ final class HyArray[Element: Value as elementIsCValue](
     result._count += 1
     result
 
-  // NOTE: Can't refine `C.Element` without renaming the generic parameter of `HyArray`.
   /** Adds the contents of `source` at the end of the array. */
   def appendContents[C: Collection { type Element = HyArray.this.Element }](
       source: C, assumeUniqueness: Boolean = false

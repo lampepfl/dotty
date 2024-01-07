@@ -1,3 +1,4 @@
+//> using options -language:experimental.modularity -source future
 package hylo
 
 /** A type-erased collection.
@@ -14,12 +15,7 @@ final class AnyCollection[Element] private (
 object AnyCollection {
 
   /** Creates an instance forwarding its operations to `base`. */
-  def apply[Base: Collection as b](base: Base): AnyCollection[b.Element] =
-    // NOTE: This evidence is redefined so the compiler won't report ambiguity between `intIsValue`
-    // and `anyValueIsValue` when the method is called on a collection of `Int`s. None of these
-    // choices is even correct! Note also that the ambiguity is suppressed if the constructor of
-    // `AnyValue` is declared with a context bound rather than an implicit parameter.
-    given b.Position is Value = b.Position
+  def apply[Base: Collection](base: Base): AnyCollection[Base.Element] =
 
     def start(): AnyValue =
       AnyValue(base.startPosition)
@@ -28,12 +24,12 @@ object AnyCollection {
       AnyValue(base.endPosition)
 
     def after(p: AnyValue): AnyValue =
-      AnyValue(base.positionAfter(p.unsafelyUnwrappedAs[b.Position]))
+      AnyValue(base.positionAfter(p.unsafelyUnwrappedAs[Base.Position]))
 
-    def at(p: AnyValue): b.Element =
-      base.at(p.unsafelyUnwrappedAs[b.Position])
+    def at(p: AnyValue): Base.Element =
+      base.at(p.unsafelyUnwrappedAs[Base.Position])
 
-    new AnyCollection[b.Element](
+    new AnyCollection[Base.Element](
       _start = start,
       _end = end,
       _after = after,
