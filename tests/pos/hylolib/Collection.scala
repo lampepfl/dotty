@@ -89,7 +89,7 @@ trait Collection[Self] {
 
 }
 
-extension [Self](self: Self)(using s: Collection[Self]) {
+extension [Self: Collection as s](self: Self) {
 
   /** Returns the first element of `self` along with a slice containing the suffix after this
     * element, or `None` if `self` is empty.
@@ -148,7 +148,7 @@ extension [Self](self: Self)(using s: Collection[Self]) {
     * @complexity
     *   O(n) where n is the number of elements in `self`.
     */
-  def map[T](using Value[T])(transform: (s.Element) => T): HyArray[T] =
+  def map[T: Value](transform: (s.Element) => T): HyArray[T] =
     self.reduce(
       HyArray[T](),
       (r, e) => r.append(transform(e), assumeUniqueness = true)
@@ -257,9 +257,8 @@ extension [Self](self: Self)(using s: Collection[Self]) {
 
 }
 
-extension [Self](self: Self)(using
-    s: Collection[Self],
-    e: Value[s.Element]
+extension [Self: Collection as s](self: Self)(using
+    Value[s.Element]
 ) {
 
   /** Returns `true` if `self` contains the same elements as `other`, in the same order. */

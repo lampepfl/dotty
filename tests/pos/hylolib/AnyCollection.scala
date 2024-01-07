@@ -14,7 +14,7 @@ final class AnyCollection[Element] private (
 object AnyCollection {
 
   /** Creates an instance forwarding its operations to `base`. */
-  def apply[Base](using b: Collection[Base])(base: Base): AnyCollection[b.Element] =
+  def apply[Base: Collection as b](base: Base): AnyCollection[b.Element] =
     // NOTE: This evidence is redefined so the compiler won't report ambiguity between `intIsValue`
     // and `anyValueIsValue` when the method is called on a collection of `Int`s. None of these
     // choices is even correct! Note also that the ambiguity is suppressed if the constructor of
@@ -42,7 +42,7 @@ object AnyCollection {
 
 }
 
-given anyCollectionIsCollection[T](using tIsValue: Value[T]): Collection[AnyCollection[T]] with {
+given anyCollectionIsCollection[T: Value]: Collection[AnyCollection[T]] with {
 
   type Element = T
   type Position = AnyValue

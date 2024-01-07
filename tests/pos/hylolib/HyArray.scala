@@ -1,12 +1,11 @@
+//> using options -language:experimental.modularity -source future
 package hylo
 
 import java.util.Arrays
 import scala.collection.mutable
 
 /** An ordered, random-access collection. */
-final class HyArray[Element] private (using
-    elementIsValue: Value[Element]
-)(
+final class HyArray[Element: Value as elementIsCValue](
     private var _storage: scala.Array[AnyRef | Null] | Null,
     private var _count: Int // NOTE: where do I document private fields
 ) {
@@ -155,14 +154,14 @@ final class HyArray[Element] private (using
 object HyArray {
 
   /** Creates an array with the given `elements`. */
-  def apply[T](using t: Value[T])(elements: T*): HyArray[T] =
+  def apply[T: Value](elements: T*): HyArray[T] =
     var a = new HyArray[T](null, 0)
     for (e <- elements) a = a.append(e, assumeUniqueness = true)
     a
 
 }
 
-given hyArrayIsValue[T](using tIsValue: Value[T]): Value[HyArray[T]] with {
+given [T: Value] => Value[HyArray[T]] with {
 
   extension (self: HyArray[T]) {
 
@@ -179,7 +178,7 @@ given hyArrayIsValue[T](using tIsValue: Value[T]): Value[HyArray[T]] with {
 
 }
 
-given hyArrayIsCollection[T](using tIsValue: Value[T]): Collection[HyArray[T]] with {
+given [T: Value] => Collection[HyArray[T]] with {
 
   type Element = T
   type Position = Int

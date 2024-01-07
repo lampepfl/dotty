@@ -1,9 +1,7 @@
 package hylo
 
 /** A view into a collection. */
-final class Slice[Base](using
-    val b: Collection[Base]
-)(
+final class Slice[Base: Collection as b](
     val base: Base,
     val bounds: Range[b.Position]
 ) {
@@ -26,7 +24,7 @@ final class Slice[Base](using
 
 }
 
-given sliceIsCollection[T](using c: Collection[T]): Collection[Slice[T]] with {
+given sliceIsCollection[T: Collection as c]: Collection[Slice[T]] with {
 
   type Element = c.Element
   type Position = c.Position

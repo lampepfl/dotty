@@ -44,7 +44,7 @@ final class AnyValue private (
 object AnyValue {
 
   /** Creates an instance wrapping `wrapped`. */
-  def apply[T](using Value[T])(wrapped: T): AnyValue =
+  def apply[T: Value](wrapped: T): AnyValue =
     def copy(a: AnyRef): AnyValue =
       AnyValue(a.asInstanceOf[Ref[T]].value.copy())
 
