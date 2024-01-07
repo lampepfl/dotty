@@ -2565,7 +2565,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
     val rhs1 = vdef.rhs match {
       case rhs @ Ident(nme.WILDCARD) =>
         rhs.withType(tpt1.tpe)
-      case Ident(nme.deferredSummon) if sym.isAllOf(DeferredGivenFlags, butNot = Param) =>
+      case Ident(nme.deferred) if sym.isAllOf(DeferredGivenFlags, butNot = Param) =>
         EmptyTree
       case rhs =>
         typedExpr(rhs, tpt1.tpe.widenExpr)
@@ -2629,9 +2629,13 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
 
     if sym.isInlineMethod then rhsCtx.addMode(Mode.InlineableBody)
     if sym.is(ExtensionMethod) then rhsCtx.addMode(Mode.InExtensionMethod)
-    val rhs1 = PrepareInlineable.dropInlineIfError(sym,
-      if sym.isScala2Macro then typedScala2MacroBody(ddef.rhs)(using rhsCtx)
-      else typedExpr(ddef.rhs, tpt1.tpe.widenExpr)(using rhsCtx))
+    val rhs1 = ddef.rhs match
+      case Ident(nme.deferred) if sym.isAllOf(DeferredGivenFlags) =>
+        EmptyTree
+      case rhs =>
+        PrepareInlineable.dropInlineIfError(sym,
+          if sym.isScala2Macro then typedScala2MacroBody(ddef.rhs)(using rhsCtx)
+          else typedExpr(ddef.rhs, tpt1.tpe.widenExpr)(using rhsCtx))
 
     if sym.isInlineMethod then
       if StagingLevel.level > 0 then
@@ -2812,7 +2816,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
         case None =>
           body
 
-    /** Implement givens that were declared with a `deferredSummon` rhs.
+    /** Implement givens that were declared with a `deferred` rhs.
      *  The a given value matching the declared type is searched in a
      *  context directly enclosing the current class, in which all given
      *  parameters of the current class are also defined.
@@ -2820,13 +2824,25 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
     def implementDeferredGivens(body: List[Tree]): List[Tree] =
       if cls.is(Trait) then body
       else
+        def isGivenValue(mbr: TermRef) =
+          val dcl = mbr.symbol
+          if dcl.is(Method) then
+            report.error(
+              em"""Cannnot infer the implementation of the deferred ${dcl.showLocated}
+                  |since that given is parameterized. An implementing given needs to be written explicitly.""",
+              cdef.srcPos)
+            false
+          else true
+
         def givenImpl(mbr: TermRef): ValDef =
           val dcl = mbr.symbol
           val target = dcl.info.asSeenFrom(cls.thisType, dcl.owner)
           val constr = cls.primaryConstructor
           val paramScope = newScopeWith(cls.paramAccessors.filter(_.is(Given))*)
           val searchCtx = ctx.outer.fresh.setScope(paramScope)
-          val rhs = implicitArgTree(target, cdef.span)(using searchCtx)
+          val rhs = implicitArgTree(target, cdef.span,
+              where = i"inferring the implementation of the deferred ${dcl.showLocated}"
+            )(using searchCtx)
           val impl = dcl.copy(cls,
             flags = dcl.flags &~ (HasDefault | Deferred) | Final,
             info = target,
@@ -2836,6 +2852,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
         val givenImpls =
           cls.thisType.implicitMembers
             .filter(_.symbol.isAllOf(DeferredGivenFlags, butNot = Param))
+            .filter(isGivenValue)
             .map(givenImpl)
         body ++ givenImpls
     end implementDeferredGivens

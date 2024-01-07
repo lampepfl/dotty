@@ -5,7 +5,7 @@ trait Ord:
 
 trait A:
   type Elem
-  given Elem is Ord = deferredSummon
+  given Elem is Ord = deferred
   def foo = summon[Elem is Ord]
 
 trait B:

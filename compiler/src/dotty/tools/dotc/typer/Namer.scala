@@ -1806,12 +1806,12 @@ class Namer { typer: Typer =>
         WildcardType
     }
 
-    // translate `given T = deferredSummon` to an abstract given with HasDefault flag
-    if sym.is(Given, butNot = Method) then
+    // translate `given T = deferred` to an abstract given with HasDefault flag
+    if sym.is(Given) then
       mdef.rhs match
-        case Ident(nme.deferredSummon) if Feature.enabled(modularity) =>
+        case Ident(nme.deferred) if Feature.enabled(modularity) =>
           if !sym.maybeOwner.is(Trait) then
-            report.error(em"`deferredSummon` can only be used for givens in traits", mdef.rhs.srcPos)
+            report.error(em"`deferred` can only be used for givens in traits", mdef.rhs.srcPos)
           else
             sym.resetFlag(Final | Lazy)
             sym.setFlag(Deferred | HasDefault)
