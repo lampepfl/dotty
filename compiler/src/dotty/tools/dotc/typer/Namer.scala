@@ -1849,10 +1849,12 @@ class Namer { typer: Typer =>
     val paramSymss = normalizeIfConstructor(ddef.paramss.nestedMap(symbolOfTree), isConstructor)
     sym.setParamss(paramSymss)
 
-    /** Set all class parameters with types that have an abstract type member
-     *  to be tracked, provided they are `val` parameters, or context bound
-     *  evidence parameters. In the second case, reset any private and local
-     *  flags for context bound evidence parameter so that it becomes a `val`.
+    /** Set every context bound evidence parameter of a class to be tracked,
+     *  provided it has a type that has an abstract type member. Reset private
+     *  and local flags so that the parameter becomes a `val`. Do the same for all
+     *  context bound evidence parameters of a `given` class. This is because
+     *  in Desugar.addParamRefinements we create refinements for these parameters
+     *  in the result type of the implicit access method.
      */
     def setTracked(param: ValDef): Unit =
       val sym = symbolOfTree(param)
@@ -1860,7 +1862,8 @@ class Namer { typer: Typer =>
         case info: TempClassInfo =>
           if !sym.is(Tracked)
               && param.hasAttachment(ContextBoundParam)
-              && sym.info.memberNames(abstractTypeNameFilter).nonEmpty
+              && (sym.info.memberNames(abstractTypeNameFilter).nonEmpty
+                  || sym.maybeOwner.maybeOwner.is(Given))
           then
             typr.println(i"set tracked $param, $sym: ${sym.info} containing ${sym.info.memberNames(abstractTypeNameFilter).toList}")
             for acc <- info.decls.lookupAll(sym.name) if acc.is(ParamAccessor) do

@@ -241,7 +241,7 @@ object desugar {
             if useParamName then
               useParamName = false
               tparam.name.toTermName
-            else 
+            else
               seenContextBounds += 1 // Start at 1 like FreshNameCreator.
               ContextBoundParamName(EmptyTermName, seenContextBounds)
                 // Just like with `makeSyntheticParameter` on nameless parameters of

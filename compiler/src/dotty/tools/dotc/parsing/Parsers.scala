@@ -2153,7 +2153,7 @@ object Parsers {
     def contextBounds(pname: TypeName): List[Tree] =
       if in.isColon then
         atSpan(in.skipToken()) {
-          AppliedTypeTree(toplevelTyp(), Ident(pname))
+          ContextBoundTypeTree(toplevelTyp(), pname)
         } :: contextBounds(pname)
       else if in.token == VIEWBOUND then
         report.errorOrMigrationWarning(

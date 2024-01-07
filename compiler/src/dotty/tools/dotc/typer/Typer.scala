@@ -2190,6 +2190,19 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
         tree.tpFun(tsyms, vsyms)
     completeTypeTree(InferredTypeTree(), tp, tree)
 
+  def typedContextBoundTypeTree(tree: untpd.ContextBoundTypeTree)(using Context): Tree =
+    val tycon = typedType(tree.tycon)
+    val tyconSplice = untpd.TypedSplice(tycon)
+    val tparam = untpd.Ident(tree.paramName).withSpan(tree.span)
+    if tycon.tpe.typeParams.nonEmpty then
+      typed(untpd.AppliedTypeTree(tyconSplice, tparam :: Nil))
+    else if Feature.enabled(modularity) && tycon.tpe.member(tpnme.This).symbol.isAbstractType then
+      typed(untpd.RefinedTypeTree(tyconSplice, List(untpd.TypeDef(tpnme.This, tparam))))
+    else
+      errorTree(tree,
+        em"""Illegal context bound: ${tycon.tpe} does not take type parameters and
+              does not have an abstract type member named `This` either.""")
+
   def typedSingletonTypeTree(tree: untpd.SingletonTypeTree)(using Context): SingletonTypeTree = {
     val ref1 = typedExpr(tree.ref, SingletonTypeProto)
     checkStable(ref1.tpe, tree.srcPos, "singleton type")
@@ -3179,6 +3192,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
           case tree: untpd.UnApply => typedUnApply(tree, pt)
           case tree: untpd.Tuple => typedTuple(tree, pt)
           case tree: untpd.InLambdaTypeTree => typedInLambdaTypeTree(tree, pt)
+          case tree: untpd.ContextBoundTypeTree => typedContextBoundTypeTree(tree)
           case tree: untpd.InfixOp => typedInfixOp(tree, pt)
           case tree: untpd.ParsedTry => typedTry(tree, pt)
           case tree @ untpd.PostfixOp(qual, Ident(nme.WILDCARD)) => typedAsFunction(tree, pt)
