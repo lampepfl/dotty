@@ -965,7 +965,6 @@ object Parsers {
       lookahead.isColon
       && {
         !in.featureEnabled(Feature.modularity)
-        || paramsSeen
         || { // with modularity language import, a `:` at EOL after an identifier represents a single identifier given
              // Example:
              //    given C:
