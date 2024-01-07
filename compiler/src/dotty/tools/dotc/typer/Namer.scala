@@ -1805,6 +1805,18 @@ class Namer { typer: Typer =>
       case _ =>
         WildcardType
     }
+
+    // translate `given T = deferredSummon` to an abstract given with HasDefault flag
+    if sym.is(Given, butNot = Method) then
+      mdef.rhs match
+        case Ident(nme.deferredSummon) if Feature.enabled(modularity) =>
+          if !sym.maybeOwner.is(Trait) then
+            report.error(em"`deferredSummon` can only be used for givens in traits", mdef.rhs.srcPos)
+          else
+            sym.resetFlag(Final | Lazy)
+            sym.setFlag(Deferred | HasDefault)
+        case _ =>
+
     val mbrTpe = paramFn(checkSimpleKinded(typedAheadType(mdef.tpt, tptProto)).tpe)
     if (ctx.explicitNulls && mdef.mods.is(JavaDefined))
       JavaNullInterop.nullifyMember(sym, mbrTpe, mdef.mods.isAllOf(JavaEnumValue))

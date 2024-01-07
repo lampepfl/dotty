@@ -2558,12 +2558,16 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
     val ValDef(name, tpt, _) = vdef
     checkNonRootName(vdef.name, vdef.nameSpan)
     completeAnnotations(vdef, sym)
-    if (sym.isOneOf(GivenOrImplicit)) checkImplicitConversionDefOK(sym)
+    if sym.is(Implicit) then checkImplicitConversionDefOK(sym)
     if sym.is(Module) then checkNoModuleClash(sym)
     val tpt1 = checkSimpleKinded(typedType(tpt))
     val rhs1 = vdef.rhs match {
-      case rhs @ Ident(nme.WILDCARD) => rhs withType tpt1.tpe
-      case rhs => typedExpr(rhs, tpt1.tpe.widenExpr)
+      case rhs @ Ident(nme.WILDCARD) =>
+        rhs.withType(tpt1.tpe)
+      case Ident(nme.deferredSummon) if sym.isAllOf(Given | Deferred | HasDefault, butNot = Param) =>
+        EmptyTree
+      case rhs =>
+        typedExpr(rhs, tpt1.tpe.widenExpr)
     }
     val vdef1 = assignType(cpy.ValDef(vdef)(name, tpt1, rhs1), sym)
     postProcessInfo(vdef1, sym)
@@ -2807,6 +2811,34 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
         case None =>
           body
 
+    /** Implement givens that were declared with a `deferredSummon` rhs.
+     *  The a given value matching the declared type is searched in a
+     *  context directly enclosing the current class, in which all given
+     *  parameters of the current class are also defined.
+     */
+    def implementDeferredGivens(body: List[Tree]): List[Tree] =
+      if cls.is(Trait) then body
+      else
+        def givenImpl(mbr: TermRef): ValDef =
+          val dcl = mbr.symbol
+          val target = dcl.info.asSeenFrom(cls.thisType, dcl.owner)
+          val constr = cls.primaryConstructor
+          val paramScope = newScopeWith(cls.paramAccessors.filter(_.is(Given))*)
+          val searchCtx = ctx.outer.fresh.setScope(paramScope)
+          val rhs = implicitArgTree(target, cdef.span)(using searchCtx)
+          val impl = dcl.copy(cls,
+            flags = dcl.flags &~ (HasDefault | Deferred) | Final,
+            info = target,
+            coord = rhs.span).entered.asTerm
+          ValDef(impl, rhs)
+
+        val givenImpls =
+          cls.thisType.implicitMembers
+            .filter(_.symbol.isAllOf(Given | Deferred | HasDefault, butNot = Param))
+            .map(givenImpl)
+        body ++ givenImpls
+    end implementDeferredGivens
+
     ensureCorrectSuperClass()
     completeAnnotations(cdef, cls)
     val constr1 = typed(constr).asInstanceOf[DefDef]
@@ -2828,9 +2860,10 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
     else {
       val dummy = localDummy(cls, impl)
       val body1 =
-        addParentRefinements(
-          addAccessorDefs(cls,
-            typedStats(impl.body, dummy)(using ctx.inClassContext(self1.symbol))._1))
+        implementDeferredGivens(
+          addParentRefinements(
+            addAccessorDefs(cls,
+              typedStats(impl.body, dummy)(using ctx.inClassContext(self1.symbol))._1)))
 
       checkNoDoubleDeclaration(cls)
       val impl1 = cpy.Template(impl)(constr1, parents1, Nil, self1, body1)

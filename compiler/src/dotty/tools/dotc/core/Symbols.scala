@@ -397,12 +397,11 @@ object Symbols extends SymUtils {
         flags: FlagSet = this.flags,
         info: Type = this.info,
         privateWithin: Symbol = this.privateWithin,
-        coord: Coord = NoCoord, // Can be `= owner.coord` once we bootstrap
-        compUnitInfo: CompilationUnitInfo | Null = null // Can be `= owner.associatedFile` once we bootstrap
+        coord: Coord = NoCoord, // Can be `= owner.coord` once we have new default args
+        compUnitInfo: CompilationUnitInfo | Null = null // Can be `= owner.compilationUnitInfo` once we have new default args
     ): Symbol = {
       val coord1 = if (coord == NoCoord) owner.coord else coord
       val compilationUnitInfo1 = if (compilationUnitInfo == null) owner.compilationUnitInfo else compilationUnitInfo
-
 
       if isClass then
         newClassSymbol(owner, name.asTypeName, flags, _ => info, privateWithin, coord1, compilationUnitInfo1)

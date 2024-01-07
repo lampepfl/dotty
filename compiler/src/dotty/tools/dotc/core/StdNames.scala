@@ -453,6 +453,7 @@ object StdNames {
     val create: N               = "create"
     val currentMirror: N        = "currentMirror"
     val curried: N              = "curried"
+    val deferredSummon: N       = "deferredSummon"
     val definitions: N          = "definitions"
     val delayedInit: N          = "delayedInit"
     val delayedInitArg: N       = "delayedInit$body"
