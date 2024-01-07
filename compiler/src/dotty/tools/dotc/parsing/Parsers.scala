@@ -1786,7 +1786,9 @@ object Parsers {
 
     def infixTypeRest(t: Tree, operand: Location => Tree = refinedTypeFn): Tree =
       infixOps(t, canStartInfixTypeTokens, operand, Location.ElseWhere, ParseKind.Type,
-        isOperator = !followingIsVararg() && !isPureArrow && !isIdent(nme.as)
+        isOperator = !followingIsVararg()
+                     && !isPureArrow
+                     && !(isIdent(nme.as) && in.featureEnabled(Feature.modularity))
                      && nextCanFollowOperator(canStartInfixTypeTokens))
 
     /** RefinedType   ::=  WithType {[nl] Refinement} [`^` CaptureSet]
@@ -2158,7 +2160,7 @@ object Parsers {
       if (in.token == tok) { in.nextToken(); toplevelTyp() }
       else EmptyTree
 
-    /** TypeParamBounds   ::=  TypeBounds {`<%' Type} {`:' Type}
+    /** TypeParamBounds   ::=  TypeBounds {`<%' Type} [`:` ContextBounds]
      */
     def typeParamBounds(pname: TypeName): Tree = {
       val t = typeBounds()
@@ -2169,8 +2171,16 @@ object Parsers {
 
     /** ContextBound      ::=  Type [`as` id] */
     def contextBound(pname: TypeName): Tree =
-      ContextBoundTypeTree(toplevelTyp(), pname)
+      val t = toplevelTyp()
+      val ownName =
+        if isIdent(nme.as) && in.featureEnabled(Feature.modularity) then
+          in.nextToken()
+          ident()
+        else EmptyTermName
+      ContextBoundTypeTree(t, pname, ownName)
 
+    /** ContextBounds     ::= ContextBound | `{` ContextBound {`,` ContextBound} `}`
+     */
     def contextBounds(pname: TypeName): List[Tree] =
       if in.isColon then
         in.nextToken()

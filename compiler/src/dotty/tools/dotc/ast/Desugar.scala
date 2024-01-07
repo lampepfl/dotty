@@ -238,16 +238,19 @@ object desugar {
         var useParamName = Feature.enabled(Feature.modularity)
         for bound <- cxbounds do
           val paramName =
-            if useParamName then
-              useParamName = false
-              tparam.name.toTermName
-            else
-              seenContextBounds += 1 // Start at 1 like FreshNameCreator.
-              ContextBoundParamName(EmptyTermName, seenContextBounds)
+            bound match
+              case ContextBoundTypeTree(_, _, ownName) if !ownName.isEmpty =>
+                ownName
+              case _ if useParamName =>
+                tparam.name.toTermName
+              case _ =>
+                seenContextBounds += 1 // Start at 1 like FreshNameCreator.
+                ContextBoundParamName(EmptyTermName, seenContextBounds)
                 // Just like with `makeSyntheticParameter` on nameless parameters of
                 // using clauses, we only need names that are unique among the
                 // parameters of the method since shadowing does not affect
                 // implicit resolution in Scala 3.
+          useParamName = false
           val evidenceParam = ValDef(paramName, bound, EmptyTree).withFlags(flags)
           evidenceParam.pushAttachment(ContextBoundParam, ())
           evidenceParamBuf += evidenceParam

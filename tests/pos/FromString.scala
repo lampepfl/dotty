@@ -8,6 +8,5 @@ given Int is FromString = _.toInt
 
 given Double is FromString = _.toDouble
 
-def add[N: {FromString, Numeric}](a: String, b: String): N =
-  val num = summon[Numeric[N]]
+def add[N: {FromString, Numeric as num}](a: String, b: String): N =
   num.plus(N.fromString(a), N.fromString(b))

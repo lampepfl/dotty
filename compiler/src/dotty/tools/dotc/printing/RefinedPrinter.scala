@@ -373,7 +373,7 @@ class RefinedPrinter(_ctx: Context) extends PlainPrinter(_ctx) {
       changePrec(GlobalPrec) { keywordStr("for ") ~ Text(enums map enumText, "; ") ~ sep ~ toText(expr) }
 
     def cxBoundToText(bound: untpd.Tree): Text = bound match { // DD
-      case ContextBoundTypeTree(tpt, _) => " : " ~ toText(tpt)
+      case ContextBoundTypeTree(tpt, _, _) => " : " ~ toText(tpt)
       case untpd.Function(_, tpt) => " <% " ~ toText(tpt)
     }
 
@@ -729,9 +729,18 @@ class RefinedPrinter(_ctx: Context) extends PlainPrinter(_ctx) {
       case GenAlias(pat, expr) =>
         toText(pat) ~ " = " ~ toText(expr)
       case ContextBounds(bounds, cxBounds) =>
-        cxBounds.foldLeft(toText(bounds)) {(t, cxb) =>
-          t ~ cxBoundToText(cxb)
-        }
+        if Feature.enabled(Feature.modularity) then
+          def boundsText(bounds: Tree) = bounds match
+            case ContextBoundTypeTree(tpt, _, ownName) =>
+              toText(tpt) ~ (" as " ~ toText(ownName) `provided` !ownName.isEmpty)
+            case bounds => toText(bounds)
+          cxBounds match
+            case bound :: Nil => ": " ~ boundsText(bound)
+            case _ => ": {" ~ Text(cxBounds.map(boundsText), ", ") ~ "}"
+        else
+          cxBounds.foldLeft(toText(bounds)) {(t, cxb) =>
+            t ~ cxBoundToText(cxb)
+          }
       case PatDef(mods, pats, tpt, rhs) =>
         modText(mods, NoSymbol, keywordStr("val"), isType = false) ~~
         toText(pats, ", ") ~ optAscription(tpt) ~ optText(rhs)(" = " ~ _)
@@ -776,8 +785,8 @@ class RefinedPrinter(_ctx: Context) extends PlainPrinter(_ctx) {
         prefix ~~ idx.toString ~~ "|" ~~ tpeText ~~ "|" ~~ argsText ~~ "|" ~~ contentText ~~ postfix
       case CapturesAndResult(refs, parent) =>
         changePrec(GlobalPrec)("^{" ~ Text(refs.map(toText), ", ") ~ "}" ~ toText(parent))
-      case ContextBoundTypeTree(tycon, pname) =>
-        toText(pname) ~ " is " ~ toText(tycon)
+      case ContextBoundTypeTree(tycon, pname, ownName) =>
+        toText(pname) ~ " is " ~ toText(tycon) ~ (" as " ~ toText(ownName) `provided` !ownName.isEmpty)
       case _ =>
         tree.fallbackToText(this)
     }
