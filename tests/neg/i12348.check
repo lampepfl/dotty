@@ -1,8 +1,8 @@
--- [E040] Syntax Error: tests/neg/i12348.scala:2:15 --------------------------------------------------------------------
-2 |  given inline x: Int = 0 // error
-  |               ^
-  |               'with' expected, but identifier found
--- [E040] Syntax Error: tests/neg/i12348.scala:3:10 --------------------------------------------------------------------
-3 |} // error
-  |          ^
-  |          '}' expected, but eof found
+-- [E040] Syntax Error: tests/neg/i12348.scala:2:16 --------------------------------------------------------------------
+2 |  given inline x: Int = 0 // error // error
+  |                ^
+  |                an identifier expected, but ':' found
+-- [E067] Syntax Error: tests/neg/i12348.scala:2:8 ---------------------------------------------------------------------
+2 |  given inline x: Int = 0 // error // error
+  |        ^
+  |Declaration of given instance given_x_inline_<error> not allowed here: only classes can have declared but undefined members

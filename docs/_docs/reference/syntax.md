@@ -200,8 +200,8 @@ SimpleType        ::=  SimpleLiteral
                     |  Singleton ‘.’ ‘type’
                     |  ‘(’ Types ‘)’
                     |  Refinement
-                    |  SimpleType1 TypeArgs
-                    |  SimpleType1 ‘#’ id
+                    |  SimpleType TypeArgs
+                    |  SimpleType ‘#’ id
 Singleton         ::=  SimpleRef
                     |  SimpleLiteral
                     |  Singleton ‘.’ id
@@ -392,7 +392,7 @@ LocalModifier     ::=  ‘abstract’
 AccessModifier    ::=  (‘private’ | ‘protected’) [AccessQualifier]
 AccessQualifier   ::=  ‘[’ id ‘]’
 
-Annotation        ::=  ‘@’ SimpleType1 {ParArgumentExprs}
+Annotation        ::=  ‘@’ SimpleType {ParArgumentExprs}
 
 Import            ::=  ‘import’ ImportExpr {‘,’ ImportExpr}
 Export            ::=  ‘export’ ImportExpr {‘,’ ImportExpr}
@@ -443,6 +443,7 @@ ObjectDef         ::=  id [Template]
 EnumDef           ::=  id ClassConstr InheritClauses EnumBody
 GivenDef          ::=  [GivenSig] (AnnotType [‘=’ Expr] | StructuralInstance)
 GivenSig          ::=  [id] [DefTypeParamClause] {UsingParamClause} ‘:’         -- one of `id`, `DefTypeParamClause`, `UsingParamClause` must be present
+GivenType         ::=  AnnotType {id [nl] AnnotType}
 StructuralInstance ::=  ConstrApp {‘with’ ConstrApp} [‘with’ WithTemplateBody]
 Extension         ::=  ‘extension’ [DefTypeParamClause] {UsingParamClause}
                        ‘(’ DefTermParam ‘)’ {UsingParamClause} ExtMethods
@@ -452,7 +453,7 @@ ExtMethod         ::=  {Annotation [nl]} {Modifier} ‘def’ DefDef
 Template          ::=  InheritClauses [TemplateBody]
 InheritClauses    ::=  [‘extends’ ConstrApps] [‘derives’ QualId {‘,’ QualId}]
 ConstrApps        ::=  ConstrApp ({‘,’ ConstrApp} | {‘with’ ConstrApp})
-ConstrApp         ::=  SimpleType1 {Annotation} {ParArgumentExprs}
+ConstrApp         ::=  SimpleType {Annotation} {ParArgumentExprs}
 ConstrExpr        ::=  SelfInvocation
                     |  <<< SelfInvocation {semi BlockStat} >>>
 SelfInvocation    ::=  ‘this’ ArgumentExprs {ArgumentExprs}

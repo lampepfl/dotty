@@ -30,8 +30,8 @@ trait OrdWithMonoid extends Ord, Monoid
 def ordWithMonoid2(ord: Ord, monoid: Monoid{ type This = ord.This }) = //: OrdWithMonoid { type This = ord.This} =
   new OrdWithMonoid with ord.OrdProxy with monoid.MonoidProxy {}
 
-given intOrd: Ord { type This = Int } = ???
-given intMonoid: Monoid { type This = Int } = ???
+given intOrd: (Ord { type This = Int }) = ???
+given intMonoid: (Monoid { type This = Int }) = ???
 
 //given (using ord: Ord, monoid: Monoid{ type This = ord.This }): (Ord & Monoid { type This = ord.This}) =
 //  ordWithMonoid2(ord, monoid)
@@ -42,6 +42,6 @@ val y: Int = ??? : x.This
 // given [A, B](using ord: A is Ord, monoid: A is Monoid) => A is Ord & Monoid =
 //   new ord.OrdProxy with monoid.MonoidProxy {}
 
-given [A](using ord: Ord { type This = A }, monoid: Monoid { type This = A}): (Ord & Monoid) { type This = A} =
+given [A](using ord: Ord { type This = A }, monoid: Monoid { type This = A}): ((Ord & Monoid) { type This = A}) =
   new ord.OrdProxy with monoid.MonoidProxy {}
 

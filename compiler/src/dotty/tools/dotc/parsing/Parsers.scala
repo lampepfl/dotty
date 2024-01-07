@@ -1771,8 +1771,8 @@ object Parsers {
      */
     def infixType(): Tree = infixTypeRest(refinedType())
 
-    def infixTypeRest(t: Tree): Tree =
-      infixOps(t, canStartInfixTypeTokens, refinedTypeFn, Location.ElseWhere, ParseKind.Type,
+    def infixTypeRest(t: Tree, operand: Location => Tree = refinedTypeFn): Tree =
+      infixOps(t, canStartInfixTypeTokens, operand, Location.ElseWhere, ParseKind.Type,
         isOperator = !followingIsVararg() && !isPureArrow
                      && nextCanFollowOperator(canStartInfixTypeTokens))
 
@@ -1836,6 +1836,10 @@ object Parsers {
     /** AnnotType ::= SimpleType {Annotation}
      */
     def annotType(): Tree = annotTypeRest(simpleType())
+
+    /** AnnotType1 ::= SimpleType1 {Annotation}
+     */
+    def annotType1(): Tree = annotTypeRest(simpleType1())
 
     def annotTypeRest(t: Tree): Tree =
       if (in.token == AT)
@@ -4046,8 +4050,10 @@ object Parsers {
         syntaxError(em"extension clause can only define methods", stat.span)
     }
 
-    /** GivenDef          ::=  [GivenSig] (AnnotType [‘=’ Expr] | StructuralInstance)
-     *  GivenSig          ::=  [id] [DefTypeParamClause] {UsingParamClauses} ‘:’
+    /** GivenDef           ::=  [GivenSig] (GivenType [‘=’ Expr] | StructuralInstance)
+     *  GivenSig           ::=  [id] [DefTypeParamClause] {UsingParamClauses} ‘:’
+     *  GivenType          ::=  AnnotType1 {id [nl] AnnotType1}
+     *  StructuralInstance ::=  ConstrApp {‘with’ ConstrApp} [‘with’ WithTemplateBody]
      */
     def givenDef(start: Offset, mods: Modifiers, givenMod: Mod) = atSpan(start, nameStart) {
       var mods1 = addMod(mods, givenMod)
@@ -4073,8 +4079,12 @@ object Parsers {
         val noParams = tparams.isEmpty && vparamss.isEmpty
         if !(name.isEmpty && noParams) then acceptColon()
         val parents =
-          if isSimpleLiteral then rejectWildcardType(annotType()) :: Nil
-          else refinedTypeRest(constrApp()) :: withConstrApps()
+          if isSimpleLiteral then
+            rejectWildcardType(annotType()) :: Nil
+          else constrApp() match
+            case parent: Apply => parent :: withConstrApps()
+            case parent if in.isIdent => infixTypeRest(parent, _ => annotType1()) :: Nil
+            case parent => parent :: withConstrApps()
         val parentsIsType = parents.length == 1 && parents.head.isType
         if in.token == EQUALS && parentsIsType then
           accept(EQUALS)
@@ -4168,10 +4178,10 @@ object Parsers {
 
 /* -------- TEMPLATES ------------------------------------------- */
 
-    /** ConstrApp  ::=  SimpleType1 {Annotation} {ParArgumentExprs}
+    /** ConstrApp  ::=  AnnotType1 {ParArgumentExprs}
      */
     val constrApp: () => Tree = () =>
-      val t = rejectWildcardType(annotTypeRest(simpleType1()),
+      val t = rejectWildcardType(annotType1(),
         fallbackTree = Ident(tpnme.ERROR))
         // Using Ident(tpnme.ERROR) to avoid causing cascade errors on non-user-written code
       if in.token == LPAREN then parArgumentExprss(wrapNew(t)) else t
