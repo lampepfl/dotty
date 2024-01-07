@@ -4150,7 +4150,7 @@ object Parsers {
             ValDef(name, parents.head, subExpr())
           else
             DefDef(name, adjustDefParams(joinParams(tparams, vparamss)), parents.head, subExpr())
-        else if (isStatSep || isStatSeqEnd) && parentsIsType then
+        else if (isStatSep || isStatSeqEnd) && parentsIsType && !newSyntaxAllowed then
           if name.isEmpty then
             syntaxError(em"anonymous given cannot be abstract")
           DefDef(name, adjustDefParams(joinParams(tparams, vparamss)), parents.head, EmptyTree)

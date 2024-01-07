@@ -43,4 +43,4 @@ given Int is Comparable:
 
     def lt(other: Int): Boolean = self < other
 
-given Int is StringConvertible {}
+given Int is StringConvertible

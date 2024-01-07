@@ -1,4 +1,4 @@
-//> using options -YXtypeclass -source future
+//> using options -language:experimental.modularity -source future
 class Ctx
 class Ctx2
 
