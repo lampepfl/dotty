@@ -29,10 +29,7 @@ final class Slice[Base](using
 given sliceIsCollection[T](using c: Collection[T]): Collection[Slice[T]] with {
 
   type Element = c.Element
-  //given elementIsValue: Value[Element] = c.elementIsValue
-
   type Position = c.Position
-  given positionIsValue: Value[Position] = c.positionIsValue
 
   extension (self: Slice[T]) {
 

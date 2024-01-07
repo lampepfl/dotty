@@ -5,12 +5,10 @@ package hylo
 trait Collection[Self] {
 
   /** The type of the elements in the collection. */
-  type Element
-  given elementIsValue: Value[Element] = deferredSummon
+  type Element: Value
 
   /** The type of a position in the collection. */
-  type Position
-  given positionIsValue: Value[Position]
+  type Position: Value as positionIsValue
 
   extension (self: Self) {
 

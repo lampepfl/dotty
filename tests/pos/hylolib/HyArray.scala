@@ -182,10 +182,7 @@ given hyArrayIsValue[T](using tIsValue: Value[T]): Value[HyArray[T]] with {
 given hyArrayIsCollection[T](using tIsValue: Value[T]): Collection[HyArray[T]] with {
 
   type Element = T
-  //given elementIsValue: Value[T] = tIsValue
-
   type Position = Int
-  given positionIsValue: Value[Int] = intIsValue
 
   extension (self: HyArray[T]) {
 

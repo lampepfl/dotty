@@ -2160,9 +2160,9 @@ object Parsers {
       if (in.token == tok) { in.nextToken(); toplevelTyp() }
       else EmptyTree
 
-    /** TypeParamBounds   ::=  TypeBounds {`<%' Type} [`:` ContextBounds]
+    /** TypeAndCtxBounds  ::=  TypeBounds {`<%' Type} [`:` ContextBounds]
      */
-    def typeParamBounds(pname: TypeName): Tree = {
+    def typeAndCtxBounds(pname: TypeName): Tree = {
       val t = typeBounds()
       val cbs = contextBounds(pname)
       if (cbs.isEmpty) t
@@ -3377,7 +3377,7 @@ object Parsers {
             }
             else ident().toTypeName
           val hkparams = typeParamClauseOpt(ParamOwner.Type)
-          val bounds = if (isAbstractOwner) typeBounds() else typeParamBounds(name)
+          val bounds = if (isAbstractOwner) typeBounds() else typeAndCtxBounds(name)
           TypeDef(name, lambdaAbstract(hkparams, bounds)).withMods(mods)
         }
       }
@@ -3888,14 +3888,16 @@ object Parsers {
         argumentExprss(mkApply(Ident(nme.CONSTRUCTOR), argumentExprs()))
       }
 
-    /** TypeDef ::=  id [TypeParamClause] {FunParamClause} TypeBounds [‘=’ Type]
+    /** TypeDef ::=  id [TypeParamClause] {FunParamClause} TypeAndCtxBounds [‘=’ Type]
      */
     def typeDefOrDcl(start: Offset, mods: Modifiers): Tree = {
       newLinesOpt()
       atSpan(start, nameStart) {
         val nameIdent = typeIdent()
+        val tname = nameIdent.name.asTypeName
         val tparams = typeParamClauseOpt(ParamOwner.Type)
         val vparamss = funParamClauses()
+
         def makeTypeDef(rhs: Tree): Tree = {
           val rhs1 = lambdaAbstractAll(tparams :: vparamss, rhs)
           val tdef = TypeDef(nameIdent.name.toTypeName, rhs1)
@@ -3903,36 +3905,37 @@ object Parsers {
             tdef.pushAttachment(Backquoted, ())
           finalizeDef(tdef, mods, start)
         }
+
         in.token match {
           case EQUALS =>
             in.nextToken()
             makeTypeDef(toplevelTyp())
           case SUBTYPE | SUPERTYPE =>
-            val bounds = typeBounds()
-            if (in.token == EQUALS) {
-              val eqOffset = in.skipToken()
-              var rhs = toplevelTyp()
-              rhs match {
-                case mtt: MatchTypeTree =>
-                  bounds match {
-                    case TypeBoundsTree(EmptyTree, upper, _) =>
-                      rhs = MatchTypeTree(upper, mtt.selector, mtt.cases)
-                    case _ =>
-                      syntaxError(em"cannot combine lower bound and match type alias", eqOffset)
-                  }
-                case _ =>
-                  if mods.is(Opaque) then
-                    rhs = TypeBoundsTree(bounds.lo, bounds.hi, rhs)
-                  else
-                    syntaxError(em"cannot combine bound and alias", eqOffset)
-              }
-              makeTypeDef(rhs)
-            }
-            else makeTypeDef(bounds)
+            typeAndCtxBounds(tname) match
+              case bounds: TypeBoundsTree if in.token == EQUALS =>
+                val eqOffset = in.skipToken()
+                var rhs = toplevelTyp()
+                rhs match {
+                  case mtt: MatchTypeTree =>
+                    bounds match {
+                      case TypeBoundsTree(EmptyTree, upper, _) =>
+                        rhs = MatchTypeTree(upper, mtt.selector, mtt.cases)
+                      case _ =>
+                        syntaxError(em"cannot combine lower bound and match type alias", eqOffset)
+                    }
+                  case _ =>
+                    if mods.is(Opaque) then
+                      rhs = TypeBoundsTree(bounds.lo, bounds.hi, rhs)
+                    else
+                      syntaxError(em"cannot combine bound and alias", eqOffset)
+                }
+                makeTypeDef(rhs)
+              case bounds => makeTypeDef(bounds)
           case SEMI | NEWLINE | NEWLINES | COMMA | RBRACE | OUTDENT | EOF =>
-            makeTypeDef(typeBounds())
-          case _ if (staged & StageKind.QuotedPattern) != 0 =>
-            makeTypeDef(typeBounds())
+            makeTypeDef(typeAndCtxBounds(tname))
+          case _ if (staged & StageKind.QuotedPattern) != 0
+              || in.featureEnabled(Feature.modularity) && in.isColon =>
+            makeTypeDef(typeAndCtxBounds(tname))
           case _ =>
             syntaxErrorOrIncomplete(ExpectedTypeBoundOrEquals(in.token))
             return EmptyTree // return to avoid setting the span to EmptyTree

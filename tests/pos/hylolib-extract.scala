@@ -7,8 +7,7 @@ trait Value[Self]
 trait Collection[Self]:
 
   /** The type of the elements in the collection. */
-  type Element
-  given elementIsValue: Value[Element] = deferredSummon
+  type Element: Value
 
 class BitArray
 

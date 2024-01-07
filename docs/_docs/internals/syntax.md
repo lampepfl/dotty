@@ -221,7 +221,7 @@ IntoTargetType    ::=  Type
 TypeArgs          ::=  ‘[’ Types ‘]’                                            ts
 Refinement        ::=  :<<< [RefineDcl] {semi [RefineDcl]} >>>                  ds
 TypeBounds        ::=  [‘>:’ Type] [‘<:’ Type]                                  TypeBoundsTree(lo, hi)
-TypeParamBounds   ::=  TypeBounds [‘:’ ContextBounds]                           ContextBounds(typeBounds, tps)
+TypeAndCtxBounds  ::=  TypeBounds [‘:’ ContextBounds]                           ContextBounds(typeBounds, tps)
 ContextBounds     ::=  ContextBound | '{' ContextBound {',' ContextBound} '}'
 ContextBound      ::=  Type ['as' id]
 Types             ::=  Type {‘,’ Type}
@@ -354,7 +354,7 @@ ArgumentPatterns  ::=  ‘(’ [Patterns] ‘)’                               
 ```ebnf
 ClsTypeParamClause::=  ‘[’ ClsTypeParam {‘,’ ClsTypeParam} ‘]’
 ClsTypeParam      ::=  {Annotation} [‘+’ | ‘-’]                                 TypeDef(Modifiers, name, tparams, bounds)
-                       id [HkTypeParamClause] TypeParamBounds                   Bound(below, above, context)
+                       id [HkTypeParamClause] TypeAndCtxBounds                  Bound(below, above, context)
 
 TypTypeParamClause::=  ‘[’ TypTypeParam {‘,’ TypTypeParam} ‘]’
 TypTypeParam      ::=  {Annotation} id [HkTypeParamClause] TypeBounds
@@ -379,7 +379,7 @@ TypelessClause    ::=  DefTermParamClause
                     |  UsingParamClause
 
 DefTypeParamClause::=  [nl] ‘[’ DefTypeParam {‘,’ DefTypeParam} ‘]’
-DefTypeParam      ::=  {Annotation} id [HkTypeParamClause] TypeParamBounds
+DefTypeParam      ::=  {Annotation} id [HkTypeParamClause] TypeAndCtxBounds
 DefTermParamClause::=  [nl] ‘(’ [DefTermParams] ‘)’
 UsingParamClause  ::=  [nl] ‘(’ ‘using’ (DefTermParams | FunArgTypes) ‘)’
 DefImplicitClause ::=  [nl] ‘(’ ‘implicit’ DefTermParams ‘)’
@@ -449,7 +449,7 @@ PatDef            ::=  ids [‘:’ Type] [‘=’ Expr]
 DefDef            ::=  DefSig [‘:’ Type] [‘=’ Expr]                             DefDef(_, name, paramss, tpe, expr)
                     |  ‘this’ TypelessClauses [DefImplicitClause] ‘=’ ConstrExpr     DefDef(_, <init>, vparamss, EmptyTree, expr | Block)
 DefSig            ::=  id [DefParamClauses] [DefImplicitClause]
-TypeDef           ::=  id [TypeParamClause] {FunParamClause} TypeBounds         TypeDefTree(_, name, tparams, bound
+TypeDef           ::=  id [TypeParamClause] {FunParamClause} TypeAndCtxBounds   TypeDefTree(_, name, tparams, bound
                        [‘=’ Type]
 
 TmplDef           ::=  ([‘case’] ‘class’ | ‘trait’) ClassDef

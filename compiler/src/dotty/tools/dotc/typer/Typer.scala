@@ -2564,7 +2564,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
     val rhs1 = vdef.rhs match {
       case rhs @ Ident(nme.WILDCARD) =>
         rhs.withType(tpt1.tpe)
-      case Ident(nme.deferredSummon) if sym.isAllOf(Given | Deferred | HasDefault, butNot = Param) =>
+      case Ident(nme.deferredSummon) if sym.isAllOf(DeferredGivenFlags, butNot = Param) =>
         EmptyTree
       case rhs =>
         typedExpr(rhs, tpt1.tpe.widenExpr)
@@ -2834,7 +2834,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
 
         val givenImpls =
           cls.thisType.implicitMembers
-            .filter(_.symbol.isAllOf(Given | Deferred | HasDefault, butNot = Param))
+            .filter(_.symbol.isAllOf(DeferredGivenFlags, butNot = Param))
             .map(givenImpl)
         body ++ givenImpls
     end implementDeferredGivens

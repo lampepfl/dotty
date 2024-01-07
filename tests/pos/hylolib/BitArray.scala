@@ -338,10 +338,7 @@ given bitArrayPositionIsValue: Value[BitArray.Position] with {
 given bitArrayIsCollection: Collection[BitArray] with {
 
   type Element = Boolean
-  //given elementIsValue: Value[Boolean] = booleanIsValue
-
   type Position = BitArray.Position
-  given positionIsValue: Value[BitArray.Position] = bitArrayPositionIsValue
 
   extension (self: BitArray) {
 
