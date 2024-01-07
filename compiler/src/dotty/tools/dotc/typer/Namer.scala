@@ -122,7 +122,8 @@ class Namer { typer: Typer =>
 
   /** Record `sym` as the symbol defined by `tree` */
   def recordSym(sym: Symbol, tree: Tree)(using Context): Symbol = {
-    for (refs <- tree.removeAttachment(References); ref <- refs) ref.watching(sym)
+    for refs <- tree.removeAttachment(References); ref <- refs do
+      ref.watching(sym)
     tree.pushAttachment(SymOfTree, sym)
     sym
   }
@@ -525,11 +526,9 @@ class Namer { typer: Typer =>
     }
 
     /** Transfer all references to `from` to `to` */
-    def transferReferences(from: ValDef, to: ValDef): Unit = {
-      val fromRefs = from.removeAttachment(References).getOrElse(Nil)
-      val toRefs = to.removeAttachment(References).getOrElse(Nil)
-      to.putAttachment(References, fromRefs ++ toRefs)
-    }
+    def transferReferences(from: ValDef, to: ValDef): Unit =
+      for ref <- from.removeAttachment(References).getOrElse(Nil) do
+        ref.watching(to)
 
     /** Merge the module class `modCls` in the expanded tree of `mdef` with the
      *  body and derived clause of the synthetic module class `fromCls`.
@@ -1855,17 +1854,20 @@ class Namer { typer: Typer =>
      *  evidence parameters. In the second case, reset any private and local
      *  flags for context bound evidence parameter so that it becomes a `val`.
      */
-    def setTracked(sym: Symbol): Unit = sym.maybeOwner.maybeOwner.infoOrCompleter match
-      case info: TempClassInfo
-      if !sym.is(Tracked)
-          && sym.name.is(ContextBoundParamName)
-          && sym.info.memberNames(abstractTypeNameFilter).nonEmpty =>
-        typr.println(i"set tracked $sym: ${sym.info} containing ${sym.info.memberNames(abstractTypeNameFilter).toList}")
-        for acc <- info.decls.lookupAll(sym.name) if acc.is(ParamAccessor) do
-          acc.resetFlag(PrivateLocal)
-          acc.setFlag(Tracked)
-          sym.setFlag(Tracked)
-      case _ =>
+    def setTracked(param: ValDef): Unit =
+      val sym = symbolOfTree(param)
+      sym.maybeOwner.maybeOwner.infoOrCompleter match
+        case info: TempClassInfo =>
+          if !sym.is(Tracked)
+              && param.hasAttachment(ContextBoundParam)
+              && sym.info.memberNames(abstractTypeNameFilter).nonEmpty
+          then
+            typr.println(i"set tracked $param, $sym: ${sym.info} containing ${sym.info.memberNames(abstractTypeNameFilter).toList}")
+            for acc <- info.decls.lookupAll(sym.name) if acc.is(ParamAccessor) do
+              acc.resetFlag(PrivateLocal)
+              acc.setFlag(Tracked)
+              sym.setFlag(Tracked)
+        case _ =>
 
     def wrapMethType(restpe: Type): Type =
       instantiateDependent(restpe, paramSymss)
@@ -1873,7 +1875,7 @@ class Namer { typer: Typer =>
 
     if isConstructor then
       if sym.isPrimaryConstructor && Feature.enabled(modularity) then
-        paramSymss.foreach(_.foreach(setTracked))
+        ddef.termParamss.foreach(_.foreach(setTracked))
       // set result type tree to unit, but take the current class as result type of the symbol
       typedAheadType(ddef.tpt, defn.UnitType)
       wrapMethType(effectiveResultType(sym, paramSymss))

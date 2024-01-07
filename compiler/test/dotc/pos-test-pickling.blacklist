@@ -117,3 +117,4 @@ i7445b.scala
 
 # alias types at different levels of dereferencing
 parsercombinators-givens.scala
+parsercombinators-ctx-bounds.scala
