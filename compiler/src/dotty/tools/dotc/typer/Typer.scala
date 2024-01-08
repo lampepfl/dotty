@@ -2822,7 +2822,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
      *  parameters of the current class are also defined.
      */
     def implementDeferredGivens(body: List[Tree]): List[Tree] =
-      if cls.is(Trait) then body
+      if cls.is(Trait) || ctx.isAfterTyper then body
       else
         def isGivenValue(mbr: TermRef) =
           val dcl = mbr.symbol
