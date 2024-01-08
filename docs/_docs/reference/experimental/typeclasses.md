@@ -155,7 +155,7 @@ Context bounds are a convenient and legible abbreviation. A problem so far is th
 
 **Proposal:** Allow to name a context bound, like this:
 ```scala
-  def reduce[M: Monoid as m](xs: List[M] =
+  def reduce[M: Monoid as m](xs: List[M]): A =
     xs.foldLeft(m.unit)(_ `combine` _)
 ```
 
