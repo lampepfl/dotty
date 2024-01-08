@@ -15,7 +15,7 @@ A type class in Scala is a pattern where we define
  - given instances at specific instantiations of that trait,
  - using clauses or context bounds abstracting over that trait.
 
-Type classes as a pattern work overall OK, but if we compare them to native implementations in Haskell, or protocols in Swift, or traits in Rust, then there are some idiosyncracies and rough corners which in the end make them
+Type classes as a pattern work overall OK, but if we compare them to native implementations in Haskell, or protocols in Swift, or traits in Rust, then there are some idiosyncrasies and rough corners which in the end make them
 a bit cumbersome and limiting for standard generic programming patterns. Much has improved since Scala 2's implicits, but there is still some gap to bridge to get to parity with these languages.
 
 This note shows that with some fairly small and reasonable tweaks to Scala's syntax and typing rules we can obtain a much better scheme for working with type classes, or do generic programming in general.
@@ -67,7 +67,7 @@ requires that `Ordering` is a trait or class with a single type parameter (which
       def flatMap[B](f: A => Self[B]): Self[B]
       def map[B](f: A => B) = x.flatMap(f `andThen` pure)
 
-  def reduce[A: Monoid](xs: List[A] =
+  def reduce[A: Monoid](xs: List[A]): A =
     xs.foldLeft(Monoid.unit)(_ `combine` _)
 
   trait ParserCombinator:
@@ -86,7 +86,7 @@ requires that `Ordering` is a trait or class with a single type parameter (which
  - Gives a clear indication of traits intended as type classes. A trait is a type class
    if it has type `Self` as a member
  - Allows to create aggregate type classes that combine givens via intersection types.
- - Allows to use refinements in context bounds (the `combine` example above would be very awkward to express using the old way of context bounds expanding to type copnstructors).
+ - Allows to use refinements in context bounds (the `combine` example above would be very awkward to express using the old way of context bounds expanding to type constructors).
 
 `Self`-based context bounds are a better fit for a dependently typed language like Scala than parameter-based ones. The main reason is that we are dealing with proper types, not type constructors. Proper types can be parameterized, intersected, or refined. This makes `Self`-based designs inherently more compositional than parameterized ones.
 
@@ -120,7 +120,7 @@ and not to:
 
  Why not use `This` for the self type? The name `This` suggests that it is the type of `this`. But this is not true for type class traits. `Self` is the name of the type implementing a distinguished _member type_ of the trait in a `given` definition. `Self` is an established term in both Rust and Swift with the meaning used here.
 
- One possible objection to the `Self` based design is that it does not cover "multi-parameter" type classes. But neither do context bounds! "Multi-parameter" type classes in Scala are simply givens that can be synthesized with the standard mechanisms. Type classes in the strict sense abstract only over a single type, namely the implementatation type of a trait.
+ One possible objection to the `Self` based design is that it does not cover "multi-parameter" type classes. But neither do context bounds! "Multi-parameter" type classes in Scala are simply givens that can be synthesized with the standard mechanisms. Type classes in the strict sense abstract only over a single type, namely the implementation type of a trait.
 
 
 ## Auxiliary Type Alias `is`
@@ -383,7 +383,7 @@ Here are some standard type classes, which were mostly already introduced at the
     def unit: Self
 
   trait Functor:
-    type Self[A]
+    type Self[A] // Here, Self is a type constructor with parameter A
     extension [A](x: Self[A]) def map[B](f: A => B): Self[B]
 
   trait Monad extends Functor:
@@ -547,7 +547,7 @@ given [A: Combinator, B: Combinator { type Input = A.Input }]
         y <- self.b.parse(in)
       yield (x, y)
 ```
-The example is now as expressed as straighforwardly as it should be:
+The example is now as expressed as straightforwardly as it should be:
 
  - `Combinator` is a type class with two associated types, `Input` and `Result`, and a `parse` method.
  - `Apply` and `Combine` are two data constructors representing parser combinators. They are declared to be `Combinators`  in the two subsequent `given` declarations.
@@ -567,12 +567,12 @@ _Note 2:_ One could improve the notation even further by adding equality constra
 given [A: Combinator, B: Combinator with A.Input == B.Input]
     => Combine[A, B] is Combinator:
 ```
-This variant is esthetically pleasing since it makes the equality constraint symmetric. The original version had to use an asymmetric refinement on the second type parameter bound instead. For now, such constraints are neither implemented nor proposed. This is left as a possibility for future work. Note also the analogy with
+This variant is aesthetically pleasing since it makes the equality constraint symmetric. The original version had to use an asymmetric refinement on the second type parameter bound instead. For now, such constraints are neither implemented nor proposed. This is left as a possibility for future work. Note also the analogy with
 the work of @mbovel and @Sporarum on refinement types, where similar `with` clauses can appear for term parameters. If that work goes ahead, we could possibly revisit the issue of `with` clauses also for type parameters.
 
 ### Example 4
 
-Dimi Recordon tried to [port some core elenents](https://github.com/kyouko-taiga/scala-hylolib) of the type class based [Hylo standard library to Scala](https://github.com/hylo-lang/hylo/tree/main/StandardLibrary/Sources). It worked to some degree, but there were some things that could not be expressed, and more things that could be expressed only awkwardly.
+Dimi Racordon tried to [port some core elements](https://github.com/kyouko-taiga/scala-hylolib) of the type class based [Hylo standard library to Scala](https://github.com/hylo-lang/hylo/tree/main/StandardLibrary/Sources). It worked to some degree, but there were some things that could not be expressed, and more things that could be expressed only awkwardly.
 
 With the improvements proposed here, the library can now be expressed quite clearly and straightforwardly. See tests/pos/hylolib in this PR for details.
 
@@ -636,7 +636,7 @@ These would replace the previous syntax using `@`:
 
   val xs @ (x :: xs1) = ys.checkedCast
 ```
-**Advantages:** No unpronouncible and non-standard symbol like `@`. More regularity.
+**Advantages:** No unpronounceable and non-standard symbol like `@`. More regularity.
 
 Generally, we want to use `as name` to attach a name for some entity that could also have been used stand-alone.
 
@@ -668,5 +668,5 @@ type classes in Haskell, or with traits in Rust, or with protocols in Swift, or 
 The proposed scheme has similar expressiveness to Protocols in Swift or Traits in Rust. Both of these were largely influenced by Jeremy Siek's PdD thesis "[A language for generic programming](https://scholarworks.iu.edu/dspace/handle/2022/7067)", which was first proposed as a way to implement concepts in C++. C++ did not follow Siek's approach, but Swift and Rust did.
 
 In Siek's thesis and in the formal treatments of Rust and Swift,
- type class concepts are explained by mapping them to a lower level language of explicit dictionaries with representants for terms and types. Crucially, that lower level is not expressible without loss of granularity in the source language itself, since type representants are mapped to term dictionaries. By contrast, the current proposal expands type class concepts into other well-typed Scala constructs, which ultimately map into well-typed DOT programs. Type classes are simply a convenient notation for something that can already be expressed in Scala. In that sense, we stay true to the philosophy of a _scalable language_, where a small core can support a large range of advanced use cases.
+ type class concepts are explained by mapping them to a lower level language of explicit dictionaries with representations for terms and types. Crucially, that lower level is not expressible without loss of granularity in the source language itself, since type representations are mapped to term dictionaries. By contrast, the current proposal expands type class concepts into other well-typed Scala constructs, which ultimately map into well-typed DOT programs. Type classes are simply a convenient notation for something that can already be expressed in Scala. In that sense, we stay true to the philosophy of a _scalable language_, where a small core can support a large range of advanced use cases.
 
