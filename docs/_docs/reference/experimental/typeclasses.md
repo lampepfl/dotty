@@ -344,7 +344,9 @@ GivenSig          ::=  GivenType ['as' id] ([‘=’ Expr] | TemplateBody)
                    |   ConstrApps ['as' id] TemplateBody
 GivenType         ::=  AnnotType {id [nl] AnnotType}
 
-TypeParamBounds   ::=  TypeBounds [‘:’ ContextBounds]
+TypeDef           ::=  id [TypeParamClause] {FunParamClause} TypeAndCtxBounds
+TypeParamBounds   ::=  TypeAndCtxBounds
+TypeAndCtxBounds  ::=  TypeBounds [‘:’ ContextBounds]
 ContextBounds     ::=  ContextBound | '{' ContextBound {',' ContextBound} '}'
 ContextBound      ::=  Type ['as' id]
 ```
