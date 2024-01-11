@@ -113,7 +113,7 @@ should resolve to:
 ```
 and not to:
 ```scala
-[S](using Sequential[S]
+[S](using Sequential[S])
 ```
 
 **Discussion**
