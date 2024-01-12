@@ -364,7 +364,6 @@ object PatternMatcher {
               val selectors = productSelectors(unappType).take(args.length)
                 .map(ref(unappResult).select(_))
               matchArgsPlan(selectors, args, onSuccess)
-            }
             else if isUnapplySeq && unapplySeqTypeElemTp(unappType.finalResultType).exists then
               unapplySeqPlan(unappResult, args)
             else if isUnapplySeq && isProductSeqMatch(unappType, args.length, unapp.srcPos) then
