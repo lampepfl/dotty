@@ -95,6 +95,8 @@ val experimentalDefinitionInLibrary = Set(
   // New feature: named tuples
   "scala.NamedTuple",
   "scala.NamedTuple$",
+  "scala.NamedTupleDecomposition",
+  "scala.NamedTupleDecomposition$",
 )
 
 

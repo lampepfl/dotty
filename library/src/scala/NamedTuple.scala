@@ -15,6 +15,8 @@ object NamedTuple:
   extension [V <: Tuple](x: V)
     inline def withNames[N <: Tuple]: NamedTuple[N, V] = x
 
+  export NamedTupleDecomposition.{Names, DropNames}
+
   extension [N <: Tuple, V <: Tuple](x: NamedTuple[N, V])
 
     /** The underlying tuple without the names */
@@ -103,14 +105,6 @@ object NamedTuple:
 
   end extension
 
-  /** The names of a named tuple, represented as a tuple of literal string values. */
-  type Names[X <: AnyNamedTuple] <: Tuple = X match
-    case NamedTuple[n, _] => n
-
-  /** The value types of a named tuple represented as a regular tuple. */
-  type DropNames[NT <: AnyNamedTuple] <: Tuple = NT match
-    case NamedTuple[_, x] => x
-
   /** The size of a named tuple, represented as a literal constant subtype of Int */
   type Size[X <: AnyNamedTuple] = Tuple.Size[DropNames[X]]
 
@@ -182,3 +176,16 @@ object NamedTuple:
         NamedTuple[Names[X], Tuple.Zip[DropNames[X], DropNames[Y]]]
 
 end NamedTuple
+
+@experimental
+/** Separate from NamedTuple object so that we can match on the opaque type NamedTuple. */
+object NamedTupleDecomposition:
+  import NamedTuple.*
+
+  /** The names of a named tuple, represented as a tuple of literal string values. */
+  type Names[X <: AnyNamedTuple] <: Tuple = X match
+    case NamedTuple[n, _] => n
+
+  /** The value types of a named tuple represented as a regular tuple. */
+  type DropNames[NT <: AnyNamedTuple] <: Tuple = NT match
+    case NamedTuple[_, x] => x

@@ -62,15 +62,8 @@ object TupleOps:
   inline def concatDistinct[X <: Tuple, Y <: Tuple](xs: X, ys: Y): ConcatDistinct[X, Y] =
     (xs ++ ys.filter[Y, [Elem] =>> ![Contains[X, Elem]]]).asInstanceOf[ConcatDistinct[X, Y]]
 
-object NamedTupleOps:
-  import TupleOps.*
-
-  opaque type AnyNamedTuple = Any
-
-  opaque type NamedTuple[N <: Tuple, +X <: Tuple] >: X <: AnyNamedTuple = X
-
-  object NamedTuple:
-    def apply[N <: Tuple, X <: Tuple](x: X): NamedTuple[N, X] = x
+object NamedTupleDecomposition:
+  import NamedTupleOps.*
 
   /** The names of the named tuple type `NT` */
   type Names[NT <: AnyNamedTuple] <: Tuple = NT match
@@ -79,6 +72,18 @@ object NamedTupleOps:
   /** The value types of the named tuple type `NT` */
   type DropNames[NT <: AnyNamedTuple] <: Tuple = NT match
     case NamedTuple[_, x] => x
+
+object NamedTupleOps:
+  import TupleOps.*
+
+  opaque type AnyNamedTuple = Any
+
+  opaque type NamedTuple[N <: Tuple, +X <: Tuple] >: X <: AnyNamedTuple = X
+
+  export NamedTupleDecomposition.*
+
+  object NamedTuple:
+    def apply[N <: Tuple, X <: Tuple](x: X): NamedTuple[N, X] = x
 
   extension [NT <: AnyNamedTuple](x: NT)
     inline def toTuple: DropNames[NT] = x.asInstanceOf
