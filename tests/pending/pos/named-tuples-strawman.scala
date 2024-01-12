@@ -1,3 +1,4 @@
+// Currently does not compile because of #19434
 object Test:
 
   object Named:
