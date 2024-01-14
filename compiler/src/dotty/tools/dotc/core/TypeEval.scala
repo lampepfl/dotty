@@ -146,7 +146,7 @@ object TypeEval:
         val constantType =
           if defn.isCompiletime_S(sym) then
             constantFold1(natValue, _ + 1)
-          else if defn.isNamedTuple_FieldsOf(sym) then
+          else if defn.isNamedTuple_From(sym) then
             fieldsOf
           else if owner == defn.CompiletimeOpsAnyModuleClass then name match
             case tpnme.Equals     => constantFold2(constValue, _ == _)

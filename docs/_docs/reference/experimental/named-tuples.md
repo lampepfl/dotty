@@ -100,19 +100,19 @@ The translation of named tuples to instances of `NamedTuple` is fixed by the spe
  - All tuple operations also work with named tuples "out of the box".
  - Macro libraries can rely on this expansion.
 
-### The FieldsOf Type
+### The NamedTuple.From Type
 
 The `NamedTuple` object contains a type definition
 ```scala
-  type FieldsOf[T] <: AnyNamedTuple
+  type From[T] <: AnyNamedTuple
 ```
-`FieldsOf` is treated specially by the compiler. When `FieldsOf` is applied to
+`From` is treated specially by the compiler. When `NamedTuple.From` is applied to
 an argument type that is an instance of a case class, the type expands to the named
 tuple consisting of all the fields of that case class. Here, fields means: elements of the first parameter section. For instance, assuming
 ```scala
 case class City(zip: Int, name: String, population: Int)
 ```
-then `FieldsOf[City]` is the named tuple
+then `NamedTuple.From[City]` is the named tuple
 ```scala
 (zip: Int, name: String, population: Int)
 ```

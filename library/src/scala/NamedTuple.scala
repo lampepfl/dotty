@@ -175,7 +175,7 @@ object NamedTuple:
       case true =>
         NamedTuple[Names[X], Tuple.Zip[DropNames[X], DropNames[Y]]]
 
-  type FieldsOf[T] <: AnyNamedTuple
+  type From[T] <: AnyNamedTuple
 
 end NamedTuple
 
