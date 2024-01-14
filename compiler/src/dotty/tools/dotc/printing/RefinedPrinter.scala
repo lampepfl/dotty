@@ -573,7 +573,12 @@ class RefinedPrinter(_ctx: Context) extends PlainPrinter(_ctx) {
           changePrec(AndTypePrec) { toText(args(0)) ~ " & " ~ atPrec(AndTypePrec + 1) { toText(args(1)) } }
         else if defn.isFunctionSymbol(tpt.symbol)
             && tpt.isInstanceOf[TypeTree] && tree.hasType && !printDebug
-        then changePrec(GlobalPrec) { toText(tree.typeOpt) }
+        then
+          changePrec(GlobalPrec) { toText(tree.typeOpt) }
+        else if tpt.symbol == defn.NamedTupleTypeRef.symbol
+            && !printDebug && tree.typeOpt.exists
+        then
+          toText(tree.typeOpt)
         else args match
           case arg :: _ if arg.isTerm =>
             toTextLocal(tpt) ~ "(" ~ Text(args.map(argText), ", ") ~ ")"
