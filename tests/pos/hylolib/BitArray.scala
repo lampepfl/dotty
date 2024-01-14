@@ -318,7 +318,7 @@ object BitArray {
 
 }
 
-given BitArray.Position is Value:
+given BitArray.Position forms Value:
 
   extension (self: BitArray.Position)
 
@@ -331,7 +331,7 @@ given BitArray.Position is Value:
     def hashInto(hasher: Hasher): Hasher =
       self.hashInto(hasher)
 
-given BitArray is Collection:
+given BitArray forms Collection:
 
   type Element = Boolean
   type Position = BitArray.Position
@@ -353,7 +353,7 @@ given BitArray is Collection:
     def at(p: BitArray.Position): Boolean =
       self.at(p)
 
-given BitArray is StringConvertible:
+given BitArray forms StringConvertible:
   extension (self: BitArray)
     override def description: String =
       var contents = mutable.StringBuilder()

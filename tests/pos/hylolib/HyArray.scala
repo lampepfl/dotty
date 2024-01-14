@@ -158,7 +158,7 @@ object HyArray {
 
 }
 
-given [T: Value] => HyArray[T] is Value:
+given [T: Value] => HyArray[T] forms Value:
 
   extension (self: HyArray[T])
 
@@ -171,7 +171,7 @@ given [T: Value] => HyArray[T] is Value:
     def hashInto(hasher: Hasher): Hasher =
       self.reduce(hasher)((h, e) => e.hashInto(h))
 
-given [T: Value] => HyArray[T] is Collection:
+given [T: Value] => HyArray[T] forms Collection:
 
   type Element = T
   type Position = Int
@@ -192,7 +192,7 @@ given [T: Value] => HyArray[T] is Collection:
 
     def at(p: Int) = self.at(p)
 
-given [T: {Value, StringConvertible}] => HyArray[T] is StringConvertible:
+given [T: {Value, StringConvertible}] => HyArray[T] forms StringConvertible:
   extension (self: HyArray[T])
     override def description: String =
       val contents = mutable.StringBuilder()

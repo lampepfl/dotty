@@ -71,6 +71,6 @@ object Predef:
    *
    *  which is what is needed for a context bound `[A: TC]`.
    */
-  infix type is[A <: AnyKind, B <: {type Self <: AnyKind}] = B { type Self = A }
+  infix type forms[A <: AnyKind, B <: {type Self <: AnyKind}] = B { type Self = A }
 
 end Predef

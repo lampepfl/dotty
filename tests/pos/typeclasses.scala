@@ -31,7 +31,7 @@ end Common
 
 object Instances extends Common:
 
-  given intOrd: (Int is Ord) with
+  given intOrd: (Int forms Ord) with
     type Self = Int
     extension (x: Int)
       def compareTo(y: Int) =
@@ -39,7 +39,7 @@ object Instances extends Common:
         else if x > y then +1
         else 0
 
-  given listOrd[T](using ord: T is Ord): (List[T] is Ord) with
+  given listOrd[T](using ord: T forms Ord): (List[T] forms Ord) with
     extension (xs: List[T]) def compareTo(ys: List[T]): Int = (xs, ys) match
       case (Nil, Nil) => 0
       case (Nil, _) => -1
@@ -49,7 +49,7 @@ object Instances extends Common:
         if (fst != 0) fst else xs1.compareTo(ys1)
   end listOrd
 
-  given listMonad: (List is Monad) with
+  given listMonad: (List forms Monad) with
     extension [A](xs: List[A]) def flatMap[B](f: A => List[B]): List[B] =
       xs.flatMap(f)
     def pure[A](x: A): List[A] =
@@ -58,9 +58,9 @@ object Instances extends Common:
 
   type Reader[Ctx] = [X] =>> Ctx => X
 
-  //given [Ctx] => Reader[Ctx] is Monad as readerMonad:
+  //given [Ctx] => Reader[Ctx] forms Monad as readerMonad:
 
-  given readerMonad[Ctx]: (Reader[Ctx] is Monad) with
+  given readerMonad[Ctx]: (Reader[Ctx] forms Monad) with
     extension [A](r: Ctx => A) def flatMap[B](f: A => Ctx => B): Ctx => B =
       ctx => f(r(ctx))(ctx)
     def pure[A](x: A): Ctx => A =
@@ -79,13 +79,13 @@ object Instances extends Common:
     def flatten: m.Self[A] =
       xss.flatMap(identity)
 
-  def maximum[T](xs: List[T])(using T is Ord): T =
+  def maximum[T](xs: List[T])(using T forms Ord): T =
     xs.reduceLeft((x, y) => if (x < y) y else x)
 
-  def descending[T](using asc: T is Ord): T is Ord = new:
+  def descending[T](using asc: T forms Ord): T forms Ord = new:
     extension (x: T) def compareTo(y: T) = asc.compareTo(y)(x)
 
-  def minimum[T](xs: List[T])(using T is Ord) =
+  def minimum[T](xs: List[T])(using T forms Ord) =
     maximum(xs)(using descending)
 
   def test(): Unit =
@@ -132,7 +132,7 @@ instance Sheep: Animal with
 */
 
 // Implement the `Animal` trait for `Sheep`.
-given (Sheep is Animal) with
+given (Sheep forms Animal) with
   def apply(name: String) = Sheep(name)
   extension (self: Self)
     def name: String = self.name

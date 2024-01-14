@@ -134,11 +134,11 @@ We introduce a standard type alias `is` in the Scala package or in `Predef`, def
 This makes writing instance definitions quite pleasant. Examples:
 
 ```scala
-  given Int is Ord ...
-  given Int is Monoid ...
+  given Int forms Ord ...
+  given Int forms Monoid ...
 
   type Reader = [X] =>> Env => X
-  given Reader is Monad ...
+  given Reader forms Monad ...
 ```
 
 (more examples will follow below)
@@ -149,7 +149,7 @@ This makes writing instance definitions quite pleasant. Examples:
 
 Context bounds are a convenient and legible abbreviation. A problem so far is that they are always anonymous, one cannot name the using parameter to which a context bound expands. For instance, without the trick of defining a universal "trampoline" `unit` in the `Monoid` companion object, we would have to write `reduce` like this:
 ```scala
-  def reduce[A](xs: List[A])(using m: A is Monoid) =
+  def reduce[A](xs: List[A])(using m: A forms Monoid) =
     xs.foldLeft(m.unit)(_ `combine` _)
 ```
 
@@ -197,7 +197,7 @@ Context bounds are currently translated to implicit parameters in the last param
 ```
 With the current translation, this would give
 ```scala
-  def f[C](x: C.input)(using C: C is ParserCombinator)
+  def f[C](x: C.input)(using C: C forms ParserCombinator)
 ```
 But this is ill-typed, since the `C` in `C.input` refers to the `C` introduced in the using clause, which comes later.
 
@@ -254,7 +254,7 @@ type T: C
 in a trait will then expand to
 ```scala
 type T
-given T is C = deferred
+given T forms C = deferred
 ```
 
 
@@ -281,14 +281,14 @@ The awkwardness of the given syntax was forced upon us since we insisted that gi
 and we can use a more intuitive syntax for givens like this:
 
 ```scala
-given Int is Ord:
+given Int forms Ord:
   def compare(x: A, y: A) = ...
 
-given [A: Ord] => List[A] is Ord:
+given [A: Ord] => List[A] forms Ord:
   def compare(x: A, y: A) =
     ...
 
-given Int is Monoid as intMonoid:
+given Int forms Monoid as intMonoid:
   extension (x: Int) def combine(y: Int) = x + y
   def unit = 0
 ```
@@ -303,7 +303,7 @@ The underlying principles are:
     - an implementation which consists of either an `=` and an expression,
       or a template body.
 
- - We get the pleasing `<instance-type> is <type-class>` syntax simply by using the predefined infix type `is`.
+ - We get the pleasing `<instance-type> forms <type-class>` syntax simply by using the predefined infix type `forms`.
  - Since there is no more middle `:` separating name and parameters from the implemented type, we can use a `:` to start the class body without looking unnatural. That eliminates the special case where `with` was used before.
 
 This will be a fairly significant change to the given syntax. I believe there's still a possibility to do this,
@@ -326,7 +326,7 @@ This is less of a disruption than it might appear at first:
  - `given T` was illegal before since abstract givens could not be anonymous.
    It now means a concrete given of class `T` with no member definitions. This
    is the natural interpretation for simple tagging given clauses such as
-   `given String is Value`.
+   `given String forms Value`.
  - `given x: T` is legacy syntax for a deferred given.
  - `given T as x = deferred` is the analogous new syntax, which is more powerful since
     it allows for automatic instantiation.
@@ -396,14 +396,14 @@ Here are some standard type classes, which were mostly already introduced at the
 
   // Instances
 
-  given Int is Ord:
+  given Int forms Ord:
     extension (x: Int)
       def compareTo(y: Int) =
         if x < y then -1
         else if x > y then +1
         else 0
 
-  given [T: Ord] => List[T] is Ord:
+  given [T: Ord] => List[T] forms Ord:
     extension (xs: List[T]) def compareTo(ys: List[T]): Int =
       (xs, ys) match
       case (Nil, Nil) => 0
@@ -413,7 +413,7 @@ Here are some standard type classes, which were mostly already introduced at the
         val fst = x.compareTo(y)
         if (fst != 0) fst else xs1.compareTo(ys1)
 
-  given List is Monad:
+  given List forms Monad:
     extension [A](xs: List[A])
       def flatMap[B](f: A => List[B]): List[B] =
         xs.flatMap(f)
@@ -422,7 +422,7 @@ Here are some standard type classes, which were mostly already introduced at the
 
   type Reader[Ctx] = [X] =>> Ctx => X
 
-  given [Ctx] => Reader[Ctx] is Monad:
+  given [Ctx] => Reader[Ctx] forms Monad:
     extension [A](r: Ctx => A)
       def flatMap[B](f: A => Ctx => B): Ctx => B =
         ctx => f(r(ctx))(ctx)
@@ -443,7 +443,7 @@ Here are some standard type classes, which were mostly already introduced at the
   def maximum[T: Ord](xs: List[T]): T =
     xs.reduce(_ `max` _)
 
-  given [T: Ord] => T is Ord as descending:
+  given [T: Ord] => T forms Ord as descending:
     extension (x: T) def compareTo(y: T) = T.compareTo(y)(x)
 
   def minimum[T: Ord](xs: List[T]) =
@@ -483,11 +483,11 @@ trait TupleOf[+A]:
 
 object TupleOf:
 
-  given EmptyTuple is TupleOf[Nothing]:
+  given EmptyTuple forms TupleOf[Nothing]:
     type Mapped[+A] = EmptyTuple
     def map[B](x: EmptyTuple)(f: Nothing => B): Mapped[B] = x
 
-  given [A, Rest <: Tuple : TupleOf[A]] => A *: Rest is TupleOf[A]:
+  given [A, Rest <: Tuple : TupleOf[A]] => A *: Rest forms TupleOf[A]:
     type Mapped[+A] = A *: Rest.Mapped[A]
     def map[B](x: A *: Rest)(f: A => B): Mapped[B] =
       f(x.head) *: Rest.map(x.tail)(f)
@@ -532,14 +532,14 @@ end Combinator
 case class Apply[I, R](action: I => Option[R])
 case class Combine[A, B](a: A, b: B)
 
-given [I, R] => Apply[I, R] is Combinator:
+given [I, R] => Apply[I, R] forms Combinator:
   type Input = I
   type Result = R
   extension (self: Apply[I, R])
     def parse(in: I): Option[R] = self.action(in)
 
 given [A: Combinator, B: Combinator { type Input = A.Input }]
-    => Combine[A, B] is Combinator:
+    => Combine[A, B] forms Combinator:
   type Input = A.Input
   type Result = (A.Result, B.Result)
   extension (self: Combine[A, B])
@@ -567,7 +567,7 @@ to take the original example and show how it can be made to work with the new co
 _Note 2:_ One could improve the notation even further by adding equality constraints in the style of Swift, which in turn resemble the _sharing constraints_ of SML. A hypothetical syntax applied to the second given would be:
 ```scala
 given [A: Combinator, B: Combinator with A.Input == B.Input]
-    => Combine[A, B] is Combinator:
+    => Combine[A, B] forms Combinator:
 ```
 This variant is aesthetically pleasing since it makes the equality constraint symmetric. The original version had to use an asymmetric refinement on the second type parameter bound instead. For now, such constraints are neither implemented nor proposed. This is left as a possibility for future work. Note also the analogy with
 the work of @mbovel and @Sporarum on refinement types, where similar `with` clauses can appear for term parameters. If that work goes ahead, we could possibly revisit the issue of `with` clauses also for type parameters.

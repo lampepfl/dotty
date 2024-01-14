@@ -5,15 +5,15 @@ trait Ord:
 
 trait A:
   type Elem
-  given Elem is Ord = deferred
-  def foo = summon[Elem is Ord]
+  given Elem forms Ord = deferred
+  def foo = summon[Elem forms Ord]
 
 trait B:
   type Elem: Ord
-  def foo = summon[Elem is Ord]
+  def foo = summon[Elem forms Ord]
 
 object Inst:
-  given Int is Ord:
+  given Int forms Ord:
     def less(x: Int, y: Int) = x < y
 
 object Test1:

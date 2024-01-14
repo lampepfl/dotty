@@ -58,7 +58,7 @@ object AnyValue {
 
 }
 
-given AnyValue is Value:
+given AnyValue forms Value:
 
   extension (self: AnyValue)
     def copy(): AnyValue = self.copy()

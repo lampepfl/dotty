@@ -24,7 +24,7 @@ final class Slice[Base: Collection](
 
 }
 
-given [C: Collection] => Slice[C] is Collection:
+given [C: Collection] => Slice[C] forms Collection:
 
   type Element = C.Element
   type Position = C.Position
@@ -51,7 +51,7 @@ given [C: Collection] => Slice[C] is Collection:
 
     def at(p: Position) = self.base.at(p)
 
-given [C: Collection] => C.Slice2 is Collection:
+given [C: Collection] => C.Slice2 forms Collection:
   type Element = C.Element
   type Position = C.Position
 

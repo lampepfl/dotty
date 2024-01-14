@@ -6,11 +6,11 @@ trait TupleOf[+A]:
 
 object TupleOf:
 
-  given EmptyTuple is TupleOf[Nothing]:
+  given EmptyTuple forms TupleOf[Nothing]:
     type Mapped[+A] = EmptyTuple
     def map[B](x: EmptyTuple)(f: Nothing => B): Mapped[B] = x
 
-  given [A, Rest <: Tuple : TupleOf[A]] => A *: Rest is TupleOf[A]:
+  given [A, Rest <: Tuple : TupleOf[A]] => A *: Rest forms TupleOf[A]:
     type Mapped[+A] = A *: Rest.Mapped[A]
     def map[B](x: A *: Rest)(f: A => B): Mapped[B] =
       (f(x.head) *: Rest.map(x.tail)(f))

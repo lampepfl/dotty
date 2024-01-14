@@ -19,14 +19,14 @@ end Combinator
 final case class Apply[C, E](action: C => Option[E])
 final case class Combine[A, B](first: A, second: B)
 
-given [C, E] => Apply[C, E] is Combinator:
+given [C, E] => Apply[C, E] forms Combinator:
   type Context = C
   type Element = E
   extension(self: Apply[C, E])
     def parse(context: C): Option[E] = self.action(context)
 
 given [A: Combinator, B: Combinator { type Context = A.Context }]
-    => Combine[A, B] is Combinator:
+    => Combine[A, B] forms Combinator:
   type Context = A.Context
   type Element = (A.Element, B.Element)
   extension(self: Combine[A, B])

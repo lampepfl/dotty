@@ -38,7 +38,7 @@ object AnyCollection {
 
 }
 
-given [T: Value] => AnyCollection[T] is Collection:
+given [T: Value] => AnyCollection[T] forms Collection:
 
   type Element = T
   type Position = AnyValue

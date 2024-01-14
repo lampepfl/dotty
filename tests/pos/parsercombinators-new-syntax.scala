@@ -15,14 +15,14 @@ end Combinator
 case class Apply[I, R](action: I => Option[R])
 case class Combine[A, B](first: A, second: B)
 
-given [I, R] => Apply[I, R] is Combinator:
+given [I, R] => Apply[I, R] forms Combinator:
   type Input = I
   type Result = R
   extension (self: Apply[I, R])
     def parse(in: I): Option[R] = self.action(in)
 
 given [A: Combinator, B: Combinator { type Input = A.Input }]
-    => Combine[A, B] is Combinator:
+    => Combine[A, B] forms Combinator:
   type Input = A.Input
   type Result = (A.Result, B.Result)
   extension (self: Combine[A, B])

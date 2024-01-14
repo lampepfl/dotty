@@ -39,7 +39,7 @@ given intMonoid: (Monoid { type Self = Int }) = ???
 val x = summon[Ord & Monoid { type Self = Int}]
 val y: Int = ??? : x.Self
 
-// given [A, B](using ord: A is Ord, monoid: A is Monoid) => A is Ord & Monoid =
+// given [A, B](using ord: A forms Ord, monoid: A forms Monoid) => A forms Ord & Monoid =
 //   new ord.OrdProxy with monoid.MonoidProxy {}
 
 given [A](using ord: Ord { type Self = A }, monoid: Monoid { type Self = A}): ((Ord & Monoid) { type Self = A}) =

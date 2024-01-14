@@ -1,6 +1,6 @@
 package hylo
 
-given Boolean is Value:
+given Boolean forms Value:
 
   extension (self: Boolean)
 
@@ -14,7 +14,7 @@ given Boolean is Value:
     def hashInto(hasher: Hasher): Hasher =
       hasher.combine(if self then 1 else 0)
 
-given Int is Value:
+given Int forms Value:
 
   extension (self: Int)
 
@@ -28,7 +28,7 @@ given Int is Value:
     def hashInto(hasher: Hasher): Hasher =
       hasher.combine(self)
 
-given Int is Comparable:
+given Int forms Comparable:
 
   extension (self: Int)
 
@@ -43,4 +43,4 @@ given Int is Comparable:
 
     def lt(other: Int): Boolean = self < other
 
-given Int is StringConvertible
+given Int forms StringConvertible

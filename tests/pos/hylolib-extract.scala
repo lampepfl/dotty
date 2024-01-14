@@ -14,11 +14,11 @@ trait Collection:
 
 class BitArray
 
-given Boolean is Value:
+given Boolean forms Value:
   extension (self: Self) def eq(other: Self): Boolean =
     self == other
 
-given BitArray is Collection:
+given BitArray forms Collection:
   type Element = Boolean
 
 extension [Self: Value](self: Self)
