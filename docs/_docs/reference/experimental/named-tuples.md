@@ -174,3 +174,24 @@ This revives SIP 43, with a much simpler desugaring than originally proposed.
 Named patterns are compatible with extensible pattern matching simply because
 `unapply` results can be named tuples.
 
+### Source Incompatibilities
+
+There are some source incompatibilities involving named tuples of length one.
+First, what was previously classified as an assignment could now be interpreted as a named tuple. Example:
+```scala
+var age: Int
+(age = 1)
+```
+This was an assignment in parentheses before, and is a named tuple of arity one now. It is however not idiomatic Scala code, since assignments are not usually enclosed in parentheses.
+
+Second, what was a named argument to an infix operator can now be interpreted as a named tuple.
+```scala
+class C:
+  infix def f(age: Int)
+val c: C
+```
+then
+```scala
+c f (age = 1)
+```
+will now construct a tuple as second operand instead of passing a named parameter.
