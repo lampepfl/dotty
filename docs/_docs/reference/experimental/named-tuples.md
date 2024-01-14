@@ -100,6 +100,24 @@ The translation of named tuples to instances of `NamedTuple` is fixed by the spe
  - All tuple operations also work with named tuples "out of the box".
  - Macro libraries can rely on this expansion.
 
+### The FieldsOf Type
+
+The `NamedTuple` object contains a type definition
+```scala
+  type FieldsOf[T] <: AnyNamedTuple
+```
+`FieldsOf` is treated specially by the compiler. When `FieldsOf` is applied to
+an argument type that is an instance of a case class, the type expands to the named
+tuple consisting of all the fields of that case class. Here, fields means: elements of the first parameter section. For instance, assuming
+```scala
+case class City(zip: Int, name: String, population: Int)
+```
+then `FieldsOf[City]` is the named tuple
+```scala
+(zip: Int, name: String, population: Int)
+```
+The same works for enum cases expanding to case classes.
+
 ### Restrictions
 
 The following restrictions apply to named tuple elements:
@@ -130,7 +148,29 @@ SimpleExpr        ::=  ...
                     |  '(' NamedExprInParens {‘,’ NamedExprInParens} ')'
 NamedExprInParens ::=  id '=' ExprInParens
 
-SimplePattern     ::=  ...
-                    |  '(' NamedPattern {‘,’ NamedPattern} ')'
+Patterns          ::=  Pattern {‘,’ Pattern}
+                    |  NamedPattern {‘,’ NamedPattern}
 NamedPattern      ::=  id '=' Pattern
 ```
+
+### Named Pattern Matching
+
+We allow named patterns not just for named tuples but also for case classes.
+For instance:
+```scala
+city match
+  case c @ City(name = "London") => println(p.population)
+  case City(name = n, zip = 1026, population = pop) => println(pop)
+```
+
+Named constructor patterns are analogous to named tuple patterns. In both cases
+
+ - either all fields are named or none is,
+ - every name must match the name some field of the selector,
+ - names can come in any order,
+ - not all fields of the selector need to be matched.
+
+This revives SIP 43, with a much simpler desugaring than originally proposed.
+Named patterns are compatible with extensible pattern matching simply because
+`unapply` results can be named tuples.
+

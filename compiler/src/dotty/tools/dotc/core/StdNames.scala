@@ -361,6 +361,7 @@ object StdNames {
     val Eql: N                  = "Eql"
     val EnumValue: N            = "EnumValue"
     val ExistentialTypeTree: N  = "ExistentialTypeTree"
+    val FieldsOf: N             = "FieldsOf"
     val Flag : N                = "Flag"
     val Ident: N                = "Ident"
     val Import: N               = "Import"

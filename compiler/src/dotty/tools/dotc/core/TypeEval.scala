@@ -6,11 +6,14 @@ import Types.*, Contexts.*, Symbols.*, Constants.*, Decorators.*
 import config.Printers.typr
 import reporting.trace
 import StdNames.tpnme
+import Flags.CaseClass
+import TypeOps.nestedPairs
 
 object TypeEval:
 
   def tryCompiletimeConstantFold(tp: AppliedType)(using Context): Type = tp.tycon match
     case tycon: TypeRef if defn.isCompiletimeAppliedType(tycon.symbol) =>
+
       extension (tp: Type) def fixForEvaluation: Type =
         tp.normalized.dealias match
           // enable operations for constant singleton terms. E.g.:
@@ -94,6 +97,21 @@ object TypeEval:
             throw TypeError(em"${e.getMessage.nn}")
         ConstantType(Constant(result))
 
+      def fieldsOf: Option[Type] =
+        expectArgsNum(1)
+        val arg = tp.args.head
+        val cls = arg.classSymbol
+        if cls.is(CaseClass) then
+          val fields = cls.caseAccessors
+          val fieldLabels = fields.map: field =>
+            ConstantType(Constant(field.name.toString))
+          val fieldTypes = fields.map(arg.memberInfo)
+          Some:
+            defn.NamedTupleTypeRef.appliedTo:
+              nestedPairs(fieldLabels) :: nestedPairs(fieldTypes) :: Nil
+        else
+          None
+
       def constantFold1[T](extractor: Type => Option[T], op: T => Any): Option[Type] =
         expectArgsNum(1)
         extractor(tp.args.head).map(a => runConstantOp(op(a)))
@@ -122,11 +140,14 @@ object TypeEval:
         yield runConstantOp(op(a, b, c))
 
       trace(i"compiletime constant fold $tp", typr, show = true) {
-        val name = tycon.symbol.name
-        val owner = tycon.symbol.owner
+        val sym = tycon.symbol
+        val name = sym.name
+        val owner = sym.owner
         val constantType =
-          if defn.isCompiletime_S(tycon.symbol) then
+          if defn.isCompiletime_S(sym) then
             constantFold1(natValue, _ + 1)
+          else if defn.isNamedTuple_FieldsOf(sym) then
+            fieldsOf
           else if owner == defn.CompiletimeOpsAnyModuleClass then name match
             case tpnme.Equals     => constantFold2(constValue, _ == _)
             case tpnme.NotEquals  => constantFold2(constValue, _ != _)

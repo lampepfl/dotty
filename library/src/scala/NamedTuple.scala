@@ -175,10 +175,12 @@ object NamedTuple:
       case true =>
         NamedTuple[Names[X], Tuple.Zip[DropNames[X], DropNames[Y]]]
 
+  type FieldsOf[T] <: AnyNamedTuple
+
 end NamedTuple
 
-@experimental
 /** Separate from NamedTuple object so that we can match on the opaque type NamedTuple. */
+@experimental
 object NamedTupleDecomposition:
   import NamedTuple.*
 
