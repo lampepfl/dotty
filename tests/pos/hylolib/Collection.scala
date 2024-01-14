@@ -213,7 +213,7 @@ extension [Self: Collection](self: Self)
     * @complexity
     *   O(n) where n is the number of elements in `self`.
     */
-  def minElement()(using Self.Element is Comparable): Option[Self.Element] =
+  def minElement()(using Self.Element forms Comparable): Option[Self.Element] =
     self.minElement(isLessThan = _ `lt` _)
 
   /** Returns the maximum element in `self`, using `isGreaterThan` to compare elements.
@@ -229,7 +229,7 @@ extension [Self: Collection](self: Self)
     * @complexity
     *   O(n) where n is the number of elements in `self`.
     */
-  def maxElement()(using Self.Element is Comparable): Option[Self.Element] =
+  def maxElement()(using Self.Element forms Comparable): Option[Self.Element] =
     self.maxElement(isGreaterThan = _ `gt` _)
 
   /** Returns the maximum element in `self`, using `isOrderedBefore` to compare elements.
