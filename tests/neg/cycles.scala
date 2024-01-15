@@ -30,12 +30,12 @@ class E {
 }
 
 class T1 {
-  type X = (U, U) // error: cycle
-  type U = X & Int
+  type X = (U, U)
+  type U = X & Int // error: cycle
 }
 class T2 {
-  type X = (U, U) // error: cycle
-  type U = X | Int
+  type X = (U, U)
+  type U = X | Int // error: cycle
 }
 object T12 {
   val _ : (T1 {})#U = ??? // old-error: conflicting bounds

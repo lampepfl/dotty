@@ -181,7 +181,7 @@ object Checking {
    *  A NoType paramBounds is used as a sign that checking should be suppressed.
    */
   def preCheckKind(arg: Tree, paramBounds: Type)(using Context): Tree =
-    if (arg.tpe.widen.isRef(defn.NothingClass) ||
+    if (arg.tpe.isExactlyNothing ||
         !paramBounds.exists ||
         arg.tpe.hasSameKindAs(paramBounds.bounds.hi)) arg
     else errorTree(arg, em"Type argument ${arg.tpe} does not have the same kind as its bound $paramBounds")
@@ -347,7 +347,29 @@ object Checking {
             if (locked.contains(tp) || tp.symbol.infoOrCompleter.isInstanceOf[NoCompleter])
               throw CyclicReference(tp.symbol)
             locked += tp
-            try if (!tp.symbol.isClass) checkInfo(tp.info)
+            try
+              if !tp.symbol.isClass
+                && (!cycleOK || tp.symbol.isTouched)
+                // from pos/i8900-cycle.scala
+                //     [T <: Cov[U], U <: T]
+                //
+                // if we force U while checking T
+                // then U <: T will encounter T with a NoCompleter
+                // and throw while cycleOK=false (bad)
+                //
+                // so instead we delay U to later
+                // then U <: T will see T <: Cov[U] and then encounter U with a NoCompleter
+                // and throw but then cycleOK=true because it's a type argument
+                //
+                // for any case of true illegal cycles, e.g. T1 in neg/cycles.scala
+                //     type X = (U, U)   // error: cycle (old)
+                //     type U = X & Int  // error: cycle (new)
+                // skipping untouched U will move the error to when U is completed
+                //
+                // previously running preCheckKind while typing Cov[U] and (U, U) forced the `U`s
+                // now completion is avoided in hasSameKindAs by looking at type parameters, leaving the `U`s untouched
+              then
+                checkInfo(tp.info)
             finally locked -= tp
             tp.withPrefix(pre1)
           }

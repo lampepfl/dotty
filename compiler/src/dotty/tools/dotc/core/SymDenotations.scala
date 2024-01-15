@@ -707,6 +707,9 @@ object SymDenotations {
       containsOpaques ||
       is(Module, butNot = Package) && owner.seesOpaques
 
+    def isTouched(using Context): Boolean =
+      flagsUNSAFE.is(Touched) // do not force the info to check the flag
+
     def isProvisional(using Context): Boolean =
       flagsUNSAFE.is(Provisional) // do not force the info to check the flag
 

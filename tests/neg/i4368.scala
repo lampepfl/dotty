@@ -98,8 +98,8 @@ object Test6 {
 
 object Test7 {
   class Fix[F[_]] {
-    class Foo { type R >: F[T] <: F[T] } // error: cyclic
-    type T = F[Foo#R]
+    class Foo { type R >: F[T] <: F[T] }
+    type T = F[Foo#R] // error: cyclic
   }
 
   object App {

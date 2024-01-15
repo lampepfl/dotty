@@ -277,16 +277,16 @@ class TypeApplications(val self: Type) extends AnyVal {
       case tp: TypeRef => tp.symbol == defn.AnyKindClass
       case _ => false
     }
-    val selfResult = self.hkResult
-    val otherResult = other.hkResult
-    isAnyKind(selfResult) || isAnyKind(otherResult) ||
-    { if (selfResult.exists)
-        otherResult.exists &&
-        selfResult.hasSameKindAs(otherResult) &&
-        self.typeParams.corresponds(other.typeParams)((sparam, oparam) =>
-          sparam.paramInfo.hasSameKindAs(oparam.paramInfo))
-      else !otherResult.exists
-    }
+    val sparams = self.typeParams
+    val oparams = other.typeParams
+    if sparams.isEmpty && oparams.isEmpty then true // defer calling hkResult to avoid completing types
+    else
+      val selfResult  = self.hkResult
+      val otherResult = other.hkResult
+      isAnyKind(selfResult) || isAnyKind(otherResult)
+      || !selfResult.exists && !otherResult.exists
+      || selfResult.hasSameKindAs(otherResult)
+        && sparams.corresponds(oparams)((sp, op) => sp.paramInfo.hasSameKindAs(op.paramInfo))
   }
 
   /** Dealias type if it can be done without forcing the TypeRef's info */
