@@ -300,32 +300,47 @@ class MemberRenderer(signatureRenderer: SignatureRenderer)(using DocContext) ext
         groupBody :: Nil
 
 
-  private def isDeprecated(m: Member | MGroup): Boolean = m match
-    case m: Member => m.deprecated.nonEmpty
-    case g: MGroup => g.members.exists(isDeprecated)
+  private def splitByCondition(m: Seq[Member | MGroup])(cond: Member => Boolean): (Seq[Member | MGroup], Seq[Member | MGroup]) =
+    m.map {
+      case m: Member => if cond(m) then (Nil, Seq[Member | MGroup](m)) else (Seq[Member | MGroup](m), Nil)
+      case g: MGroup => 
+        val (pos, neg) = g.members.partition(m => cond(m))
+        (if pos.nonEmpty then Seq[Member | MGroup](g.copy(members = pos)) else Nil, if neg.nonEmpty then Seq[Member | MGroup](g.copy(members = neg)) else Nil)
+    }.reduceLeftOption {
+      case ((posacc, negacc), (pos, neg)) => (posacc ++ pos, negacc ++ neg)
+    }.fold((Nil, Nil))(identity)
 
-  private def isExperimental(m: Member | MGroup): Boolean = m match
-    case m: Member => m.experimental.nonEmpty
-    case g: MGroup => g.members.exists(isExperimental)
+  private def splitExperimental(m: Seq[Member | MGroup]): (Seq[Member | MGroup], Seq[Member | MGroup]) = 
+    splitByCondition(m) {
+      m => m.experimental.nonEmpty
+    }
 
-  private def isInherited(m: Member | MGroup): Boolean = m match
-    case m: Member => m.inheritedFrom.nonEmpty
-    case g: MGroup => g.members.exists(isInherited)
+  private def splitDeprecated(m: Seq[Member | MGroup]): (Seq[Member | MGroup], Seq[Member | MGroup]) = 
+    splitByCondition(m) {
+      m => m.deprecated.nonEmpty
+    }
 
-  private def isAbstract(m: Member | MGroup): Boolean = m match
-    case m: Member => m.modifiers.exists(Set(Modifier.Abstract, Modifier.Deferred).contains)
-    case g: MGroup => g.members.exists(isAbstract)
+  private def splitInherited(m: Seq[Member | MGroup]): (Seq[Member | MGroup], Seq[Member | MGroup]) =
+    splitByCondition(m) {
+      m => m.inheritedFrom.nonEmpty
+    }
+
+  private def splitAbstract(m: Seq[Member | MGroup]): (Seq[Member | MGroup], Seq[Member | MGroup]) =
+    splitByCondition(m) {
+      m => m.modifiers.exists(Set(Modifier.Abstract, Modifier.Deferred).contains)
+    }
 
   private type SubGroup = (String, Seq[Member | MGroup])
   private def buildGroup(name: String, subgroups: Seq[SubGroup]): Tab =
     val all = subgroups.map { case (name, members) =>
-      val (experimental, nonExperimental) = members.partition(isExperimental)
-      val (allInherited, allDefined) = nonExperimental.partition(isInherited)
-      val (depDefined, defined) = allDefined.partition(isDeprecated)
-      val (depInherited, inherited) = allInherited.partition(isDeprecated)
+      val (experimental, nonExperimental) = splitExperimental(members)
+      val (allInherited, allDefined) = splitInherited(nonExperimental)
+      val (depDefined, defined) = splitDeprecated(allDefined)
+      val (depInherited, inherited) = splitDeprecated(allInherited)
+      
       val normalizedName = name.toLowerCase
       val definedWithGroup = if Set("methods", "fields").contains(normalizedName) then
-          val (abstr, concr) = defined.partition(isAbstract)
+          val (abstr, concr) = splitAbstract(defined)
           Seq(
             actualGroup(s"Abstract ${normalizedName}", abstr),
             actualGroup(s"Concrete ${normalizedName}", concr)
