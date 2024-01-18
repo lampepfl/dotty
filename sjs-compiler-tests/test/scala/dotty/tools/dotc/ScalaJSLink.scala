@@ -45,7 +45,7 @@ object ScalaJSLink:
     val result = PathIRContainer
       .fromClasspath(cpEntries.toSeq.map(entry => new File(entry).toPath()))
       .map(_._1)
-      .flatMap(cache.cached _)
+      .flatMap(cache.cached)
       .flatMap(linker.link(_, moduleInitializers, PathOutputDirectory(dir), logger))
 
     val report = Await.result(result, Duration.Inf)
