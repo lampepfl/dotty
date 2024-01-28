@@ -4908,20 +4908,21 @@ object Types extends TypeUtils {
     def isInstantiated(using Context): Boolean = instanceOpt.exists
 
     /** Instantiate variable with given type */
-    def instantiateWith(tp: Type)(using Context): Type = {
-      assert(tp ne this, i"self instantiation of $origin, constraint = ${ctx.typerState.constraint}")
-      assert(!myInst.exists, i"$origin is already instantiated to $myInst but we attempted to instantiate it to $tp")
-      typr.println(i"instantiating $this with $tp")
+    def instantiateWith(tp: Type)(using Context): Type =
+      if myInst.exists then myInst
+      else
+        assert(tp ne this, i"self instantiation of $origin, constraint = ${ctx.typerState.constraint}")
+        assert(!myInst.exists, i"$origin is already instantiated to $myInst but we attempted to instantiate it to $tp")
+        typr.println(i"instantiating $this with $tp")
 
-      if Config.checkConstraintsSatisfiable then
-        assert(currentEntry.bounds.contains(tp),
-          i"$origin is constrained to be $currentEntry but attempted to instantiate it to $tp")
+        if Config.checkConstraintsSatisfiable then
+          assert(currentEntry.bounds.contains(tp),
+            i"$origin is constrained to be $currentEntry but attempted to instantiate it to $tp")
 
-      if ((ctx.typerState eq owningState.nn.get.uncheckedNN) && !TypeComparer.subtypeCheckInProgress)
-        setInst(tp)
-      ctx.typerState.constraint = ctx.typerState.constraint.replace(origin, tp)
-      tp
-    }
+        if ((ctx.typerState eq owningState.nn.get.uncheckedNN) && !TypeComparer.subtypeCheckInProgress)
+          setInst(tp)
+        ctx.typerState.constraint = ctx.typerState.constraint.replace(origin, tp)
+        tp
 
     def typeToInstantiateWith(fromBelow: Boolean)(using Context): Type =
       TypeComparer.instanceType(origin, fromBelow, widenUnions, nestingLevel)
@@ -4935,10 +4936,7 @@ object Types extends TypeUtils {
      */
     def instantiate(fromBelow: Boolean)(using Context): Type =
       val tp = typeToInstantiateWith(fromBelow)
-      if myInst.exists then // The line above might have triggered instantiation of the current type variable
-        myInst
-      else
-        instantiateWith(tp)
+      instantiateWith(tp)
 
     /** Widen unions when instantiating this variable in the current context? */
     def widenUnions(using Context): Boolean = !ctx.typerState.constraint.isHard(this)
