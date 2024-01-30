@@ -123,9 +123,9 @@ and not to:
  One possible objection to the `Self` based design is that it does not cover "multi-parameter" type classes. But neither do context bounds! "Multi-parameter" type classes in Scala are simply givens that can be synthesized with the standard mechanisms. Type classes in the strict sense abstract only over a single type, namely the implementation type of a trait.
 
 
-## Auxiliary Type Alias `is`
+## Auxiliary Type Alias `forms`
 
-We introduce a standard type alias `is` in the Scala package or in `Predef`, defined like this:
+We introduce a standard type alias `forms` in the Scala package or in `Predef`, defined like this:
 
 ```scala
   infix type is[A <: AnyKind, B <: {type Self <: AnyKind}] = B { type Self = A }
@@ -656,7 +656,7 @@ I have proposed some tweaks to Scala 3, which would greatly increase its usabili
  1. Allow context bounds to be named with `as`. Use the bound parameter name as a default name for the generated context bound evidence.
  1. Add a new `{...}` syntax for multiple context bounds.
  1. Make context bounds also available for type members, which expand into a new form of deferred given. Phase out the previous abstract givens in favor of the new form.
- 1. Add a predefined type alias `is`.
+ 1. Add a predefined type alias `forms`.
  1. Introduce a new cleaner syntax of given clauses.
 
 It's interesting that givens, which are a very general concept in Scala, were "almost there" when it comes to full support of concepts and generic programming. We only needed to add a few usability tweaks to context bounds,
