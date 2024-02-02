@@ -1079,6 +1079,10 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
     tree.lhs match {
       case lhs @ Apply(fn, args) =>
         typed(untpd.Apply(untpd.Select(fn, nme.update), args :+ tree.rhs), pt)
+      case untpd.Tuple(lhs) =>
+        val locked = ctx.typerState.ownedVars
+        val rhs = typed(tree.rhs, WildcardType)
+        typedPairwiseAssignments(lhs, rhs)
       case untpd.TypedSplice(Apply(MaybePoly(Select(fn, app), targs), args)) if app == nme.apply =>
         val rawUpdate: untpd.Tree = untpd.Select(untpd.TypedSplice(fn), nme.update)
         val wrappedUpdate =
@@ -1186,6 +1190,74 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
             case tpe =>
               reassignmentToVal
         }
+    }
+
+  /** Returns a block assigning to `targets` the corresponding values in `rhs`.
+   *
+   *  @param targets A sequence of untyped trees on the LHS of a multiple assignment.
+   *  @param rhs The RHS of a multuple assignment.
+   */
+  private def typedPairwiseAssignments(
+      targets: List[untpd.Tree], rhs: Tree
+  )(using Context): Tree =
+    val s = mutable.ListBuffer[untpd.Tree]()
+    val u = formPairwiseAssignments(
+      s, targets, untpd.TypedSplice(rhs), rhs.tpe,
+      EmptyTermName)
+    u.map((b) => typed(b)).getOrElse(unitLiteral)
+
+  /** Appends to `statements` the assignments of `targets` to corresponding values in `rhs`.
+   *
+   *  @param statements A partially constructed sequence representing the desugaring of a
+   *  multiple assignment.
+   *  @param targets A sequence of expression representing variables to assign.
+   *  @param rhs The expression of the values to assign..
+   *  @param rhsType The type of `rhs`.
+   *  @param prefix A prefix for the name of syntactic vals created by the methods.
+   */
+  private def formPairwiseAssignments(
+      statements: mutable.ListBuffer[untpd.Tree],
+      targets: List[untpd.Tree],
+      rhs: untpd.Tree,
+      rhsType: Type,
+      prefix: TermName
+  )(using Context): Option[untpd.Block] =
+    val source = UniqueName.fresh(prefix)
+    val d = untpd.ValDef(source, untpd.TypeTree(rhsType), rhs)
+      .withSpan(rhs.span)
+      .withFlags(Synthetic)
+    statements.append(d)
+
+    rhsType.tupleElementTypes match {
+      case None =>
+        report.error(InvalidMultipleAssignmentSource(rhsType), rhs.srcPos)
+        None
+
+      case Some(e) if targets.length != e.length =>
+        report.error(MultipleAssignmentShapeMismatch(e.length, targets.length), rhs.srcPos)
+        None
+
+      case Some(sourceTypes) =>
+        /** The value to assign to the `i`-th source. */
+        def rhsElement(i: Int): untpd.Tree =
+          untpd.Select(untpd.Ident(source), nme.productAccessorName(i))
+            .withSpan(rhs.span)
+
+        /** Forms the assignments of the targets in the range [`i`, `targets.length`). */
+        @tailrec def loop(i: Int): Option[untpd.Block] =
+          if (i == targets.length) then
+            Some(untpd.Block(statements.toList, untpd.TypedSplice(unitLiteral)))
+          else targets(i) match {
+            case untpd.Tuple(lhs) =>
+              formPairwiseAssignments(statements, lhs, rhsElement(i + 1), sourceTypes(i), source)
+              loop(i + 1)
+            case lhs =>
+              val u = untpd.Assign(lhs, rhsElement(i + 1))
+              statements.append(u)
+              loop(i + 1)
+          }
+
+        loop(0)
     }
 
   def typedBlockStats(stats: List[untpd.Tree])(using Context): (List[tpd.Tree], Context) =
