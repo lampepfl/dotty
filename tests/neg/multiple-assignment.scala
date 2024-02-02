@@ -1,3 +1,4 @@
+
 def tu(): (Int, Boolean) = (1, true)
 
 @main def ma(): Unit =
@@ -5,5 +6,5 @@ def tu(): (Int, Boolean) = (1, true)
   var y = false
   var z = "a"
 
-  ((x, y), z) = (tu(), "b")
-
+  ((x, y), z) = 1
+  (x, y) = (1, 1, 1)
