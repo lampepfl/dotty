@@ -180,8 +180,6 @@ class ImportInfo(symf: Context ?=> Symbol,
       assert(myUnimported != null)
     myUnimported.uncheckedNN
 
-  private val isLanguageImport: Boolean = untpd.languageImport(qualifier).isDefined
-
   private var myUnimported: Symbol | Null = uninitialized
 
   private var featureCache: SimpleIdentityMap[TermName, java.lang.Boolean] = SimpleIdentityMap.empty

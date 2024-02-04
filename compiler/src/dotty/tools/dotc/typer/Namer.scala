@@ -296,11 +296,14 @@ class Namer { typer: Typer =>
         createOrRefine[Symbol](tree, name, flags, ctx.owner, _ => info,
           (fs, _, pwithin) => newSymbol(ctx.owner, name, fs, info, pwithin, tree.nameSpan))
       case tree: Import =>
-        recordSym(newImportSymbol(ctx.owner, Completer(tree)(ctx), tree.span), tree)
+        recordSym(newImportSym(tree), tree)
       case _ =>
         NoSymbol
     }
   }
+
+  private def newImportSym(imp: Import)(using Context): Symbol =
+    newImportSymbol(ctx.owner, Completer(imp)(ctx), imp.span)
 
    /** If `sym` exists, enter it in effective scope. Check that
     *  package members are not entered twice in the same run.
@@ -706,7 +709,18 @@ class Namer { typer: Typer =>
                   enterSymbol(companion)
     end addAbsentCompanions
 
-    stats.foreach(expand)
+    /** Expand each statement, keeping track of language imports in the context. This is
+     *  necessary since desugaring might depend on language imports.
+     */
+    def expandTopLevel(stats: List[Tree])(using Context): Unit = stats match
+      case (imp @ Import(qual, _)) :: stats1 if untpd.languageImport(qual).isDefined =>
+        expandTopLevel(stats1)(using ctx.importContext(imp, newImportSym(imp)))
+      case stat :: stats1 =>
+        expand(stat)
+        expandTopLevel(stats1)
+      case Nil =>
+
+    expandTopLevel(stats)
     mergeCompanionDefs()
     val ctxWithStats = stats.foldLeft(ctx)((ctx, stat) => indexExpanded(stat)(using ctx))
     inContext(ctxWithStats) {
