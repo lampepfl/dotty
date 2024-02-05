@@ -782,6 +782,19 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
           else
             typedDynamicSelect(tree2, Nil, pt)
         else
+          if qual.tpe.derivesFrom(defn.SelectableClass)
+            && selName.isTermName && !isDynamicExpansion(tree)
+            && !pt.isInstanceOf[FunOrPolyProto] && pt != LhsProto
+          then
+            val fieldsType = qual.tpe.select(tpnme.Fields).dealias.simplified
+            val fields = fieldsType.namedTupleElementTypes
+            typr.println(i"try dyn select $qual, $selName, $fields")
+            fields.find(_._1 == selName) match
+              case Some((fieldName, fieldType)) =>
+                val tree2 = cpy.Select(tree0)(untpd.TypedSplice(qual), selName)
+                val sel = typedDynamicSelect(tree2, Nil, pt)
+                return sel.cast(fieldType)
+              case _ =>
           assignType(tree,
             rawType match
               case rawType: NamedType =>
