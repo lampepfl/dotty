@@ -195,3 +195,44 @@ then
 c f (age = 1)
 ```
 will now construct a tuple as second operand instead of passing a named parameter.
+
+### Computed Field Names
+
+The `Selectable` trait now has a `Fields` type member that can be instantiated
+to a named tuple.
+
+```scala
+trait Selectable:
+  type Fields <: NamedTuple.AnyNamedTuple
+```
+
+If `Fields` is instantiated in a subclass of `Selectable` to some named tuple type,
+then the available fields and their types will be defined by that type. Assume `n: T`
+is an element of the `Fields` type in some class `C` that implements `Selectable`,
+that `c: C`, and that `n` is not otherwise legal as a name of a selection on `c`.
+Then `c.n` is a legal selection, which expands to `c.selectDynamic("n").asInstanceOf[T]`.
+
+It is the task of the implementation of `selectDynamic` in `C` to ensure that its
+computed result conforms to the predicted type `T`
+
+As an example, assume we have a query type `Q[T]` defined as follows:
+
+```scala
+trait Q[T] extends Selectable:
+  type Fields = NamedTuple.Map[NamedTuple.From[T], Q]
+  def selectDynamic(fieldName: String) = ...
+```
+
+Assume in the user domain:
+```scala
+case class City(zipCode: Int, name: String, population: Int)
+val city: Q[City]
+```
+Then
+```scala
+city.zipCode
+```
+has type `Q[Int]` and it expands to
+```scala
+city.selectDynamic("zipCode").asInstanceOf[Q[Int]]
+```
