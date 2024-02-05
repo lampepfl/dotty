@@ -5,6 +5,7 @@ package core
 import Contexts.*, Symbols.*, Types.*, Flags.*, Scopes.*, Decorators.*, Names.*, NameOps.*
 import SymDenotations.{LazyType, SymDenotation}, StdNames.nme
 import TypeApplications.EtaExpansion
+import collection.mutable
 
 /** Operations that are shared between Namer and TreeUnpickler */
 object NamerOps:
@@ -14,9 +15,34 @@ object NamerOps:
    *  @param ctor the constructor
    */
   def effectiveResultType(ctor: Symbol, paramss: List[List[Symbol]])(using Context): Type =
-    paramss match
-      case TypeSymbols(tparams) :: _ => ctor.owner.typeRef.appliedTo(tparams.map(_.typeRef))
-      case _ => ctor.owner.typeRef
+    val (resType, termParamss) = paramss match
+      case TypeSymbols(tparams) :: rest =>
+        (ctor.owner.typeRef.appliedTo(tparams.map(_.typeRef)), rest)
+      case _ =>
+        (ctor.owner.typeRef, paramss)
+    termParamss.flatten.foldLeft(resType): (rt, param) =>
+      if param.is(Tracked) then RefinedType(rt, param.name, param.termRef)
+      else rt
+
+  /** Split dependent class refinements off parent type. Add them to `refinements`,
+   *  unless it is null.
+   */
+  extension (tp: Type)
+    def separateRefinements(cls: ClassSymbol, refinements: mutable.LinkedHashMap[Name, Type] | Null)(using Context): Type =
+      tp match
+        case RefinedType(tp1, rname, rinfo) =>
+          try tp1.separateRefinements(cls, refinements)
+          finally
+            if refinements != null then
+              refinements(rname) = refinements.get(rname) match
+                case Some(tp) => tp & rinfo
+                case None => rinfo
+        case tp @ AnnotatedType(tp1, ann) =>
+          tp.derivedAnnotatedType(tp1.separateRefinements(cls, refinements), ann)
+        case tp: RecType =>
+          tp.parent.substRecThis(tp, cls.thisType).separateRefinements(cls, refinements)
+        case tp =>
+          tp
 
   /** If isConstructor, make sure it has at least one non-implicit parameter list
    *  This is done by adding a () in front of a leading old style implicit parameter,

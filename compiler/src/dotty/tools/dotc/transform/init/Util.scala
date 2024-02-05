@@ -20,6 +20,7 @@ object Util:
 
   def typeRefOf(tp: Type)(using Context): TypeRef = tp.dealias.typeConstructor match
     case tref: TypeRef => tref
+    case RefinedType(parent, _, _) => typeRefOf(parent)
     case hklambda: HKTypeLambda => typeRefOf(hklambda.resType)
 
 

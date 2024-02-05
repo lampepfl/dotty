@@ -26,7 +26,7 @@ import Nullables.*
 import transform.ValueClasses.*
 import TypeErasure.erasure
 import reporting.*
-import config.Feature.sourceVersion
+import config.Feature.{sourceVersion, modularity}
 import config.SourceVersion.*
 
 import scala.compiletime.uninitialized
@@ -55,11 +55,12 @@ class Namer { typer: Typer =>
 
   import untpd.*
 
-  val TypedAhead      : Property.Key[tpd.Tree]            = new Property.Key
-  val ExpandedTree    : Property.Key[untpd.Tree]          = new Property.Key
-  val ExportForwarders: Property.Key[List[tpd.MemberDef]] = new Property.Key
-  val SymOfTree       : Property.Key[Symbol]              = new Property.Key
-  val AttachedDeriver : Property.Key[Deriver]             = new Property.Key
+  val TypedAhead       : Property.Key[tpd.Tree]            = new Property.Key
+  val ExpandedTree     : Property.Key[untpd.Tree]          = new Property.Key
+  val ExportForwarders : Property.Key[List[tpd.MemberDef]] = new Property.Key
+  val ParentRefinements: Property.Key[List[Symbol]]        = new Property.Key
+  val SymOfTree        : Property.Key[Symbol]              = new Property.Key
+  val AttachedDeriver  : Property.Key[Deriver]             = new Property.Key
     // was `val Deriver`, but that gave shadowing problems with constructor proxies
 
   /** A partial map from unexpanded member and pattern defs and to their expansions.
@@ -1199,7 +1200,7 @@ class Namer { typer: Typer =>
                 target = target.etaExpand(target.typeParams)
               newSymbol(
                 cls, forwarderName,
-                Exported | Final,
+                Exported | (if Feature.enabled(modularity) then EmptyFlags else Final),
                 TypeAlias(target),
                 coord = span)
               // Note: This will always create unparameterzied aliases. So even if the original type is
@@ -1499,6 +1500,7 @@ class Namer { typer: Typer =>
     /** The type signature of a ClassDef with given symbol */
     override def completeInCreationContext(denot: SymDenotation): Unit = {
       val parents = impl.parents
+      val parentRefinements = new mutable.LinkedHashMap[Name, Type]
 
       /* The type of a parent constructor. Types constructor arguments
        * only if parent type contains uninstantiated type parameters.
@@ -1512,8 +1514,9 @@ class Namer { typer: Typer =>
           core match
             case Select(New(tpt), nme.CONSTRUCTOR) =>
               val targs1 = targs map (typedAheadType(_))
-              val ptype = typedAheadType(tpt).tpe appliedTo targs1.tpes
-              if (ptype.typeParams.isEmpty) ptype
+              val ptype = typedAheadType(tpt).tpe.appliedTo(targs1.tpes)
+              if ptype.typeParams.isEmpty && !ptype.dealias.typeSymbol.is(Dependent) then
+                ptype
               else
                 if (denot.is(ModuleClass) && denot.sourceModule.isOneOf(GivenOrImplicit))
                   missingType(denot.symbol, "parent ")(using creationContext)
@@ -1550,8 +1553,13 @@ class Namer { typer: Typer =>
         val ptype = parentType(parent)(using completerCtx.superCallContext).dealiasKeepAnnots
         if (cls.isRefinementClass) ptype
         else {
-          val pt = checkClassType(ptype, parent.srcPos,
-              traitReq = parent ne parents.head, stablePrefixReq = true)
+          val pt = checkClassType(
+              if Feature.enabled(modularity)
+              then ptype.separateRefinements(cls, parentRefinements)
+              else ptype,
+              parent.srcPos,
+              traitReq = parent ne parents.head,
+              stablePrefixReq = true)
           if (pt.derivesFrom(cls)) {
             val addendum = parent match {
               case Select(qual: Super, _) if Feature.migrateTo3 =>
@@ -1577,6 +1585,22 @@ class Namer { typer: Typer =>
           }
         }
       }
+
+      /** Enter all parent refinements as public class members, unless a definition
+       *  with the same name already exists in the class.
+       */
+      def enterParentRefinementSyms(refinements: List[(Name, Type)]) =
+        val refinedSyms = mutable.ListBuffer[Symbol]()
+        for (name, tp) <- refinements do
+          if decls.lookupEntry(name) == null then
+            val flags = tp match
+              case tp: MethodOrPoly => Method | Synthetic | Deferred | Tracked
+              case _ if name.isTermName => Synthetic | Deferred | Tracked
+              case _ => Synthetic | Deferred
+            refinedSyms += newSymbol(cls, name, flags, tp, coord = original.rhs.span.startPos).entered
+        if refinedSyms.nonEmpty then
+          typr.println(i"parent refinement symbols: ${refinedSyms.toList}")
+          original.pushAttachment(ParentRefinements, refinedSyms.toList)
 
       /** If `parents` contains references to traits that have supertraits with implicit parameters
        *  add those supertraits in linearization order unless they are already covered by other
@@ -1646,6 +1670,7 @@ class Namer { typer: Typer =>
       cls.invalidateMemberCaches() // we might have checked for a member when parents were not known yet.
       cls.setNoInitsFlags(parentsKind(parents), untpd.bodyKind(rest))
       cls.setStableConstructor()
+      enterParentRefinementSyms(parentRefinements.toList)
       processExports(using localCtx)
       defn.patchStdLibClass(cls)
       addConstructorProxies(cls)

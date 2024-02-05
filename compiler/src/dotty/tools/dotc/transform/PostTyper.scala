@@ -335,11 +335,15 @@ class PostTyper extends MacroTransform with InfoTransformer { thisPhase =>
             case Select(nu: New, nme.CONSTRUCTOR) if isCheckable(nu) =>
               // need to check instantiability here, because the type of the New itself
               // might be a type constructor.
-              ctx.typer.checkClassType(tree.tpe, tree.srcPos, traitReq = false, stablePrefixReq = true)
+              def checkClassType(tpe: Type, stablePrefixReq: Boolean) =
+                ctx.typer.checkClassType(tpe, tree.srcPos,
+                    traitReq = false, stablePrefixReq = stablePrefixReq,
+                    refinementOK = Feature.enabled(Feature.modularity))
+              checkClassType(tree.tpe, true)
               if !nu.tpe.isLambdaSub then
                 // Check the constructor type as well; it could be an illegal singleton type
                 // which would not be reflected as `tree.tpe`
-                ctx.typer.checkClassType(nu.tpe, tree.srcPos, traitReq = false, stablePrefixReq = false)
+                checkClassType(nu.tpe, false)
               Checking.checkInstantiable(tree.tpe, nu.tpe, nu.srcPos)
               withNoCheckNews(nu :: Nil)(app1)
             case _ =>
@@ -415,8 +419,12 @@ class PostTyper extends MacroTransform with InfoTransformer { thisPhase =>
                   // Constructor parameters are in scope when typing a parent.
                   // While they can safely appear in a parent tree, to preserve
                   // soundness we need to ensure they don't appear in a parent
-                  // type (#16270).
-                  val illegalRefs = parent.tpe.namedPartsWith(p => p.symbol.is(ParamAccessor) && (p.symbol.owner eq sym))
+                  // type (#16270). We can strip any refinement of a parent type since
+                  // these refinements are split off from the parent type constructor
+                  // application `parent` in Namer and don't show up as parent types
+                  // of the class.
+                  val illegalRefs = parent.tpe.stripRefinement.namedPartsWith:
+                      p => p.symbol.is(ParamAccessor) && (p.symbol.owner eq sym)
                   if illegalRefs.nonEmpty then
                     report.error(
                       em"The type of a class parent cannot refer to constructor parameters, but ${parent.tpe} refers to ${illegalRefs.map(_.name.show).mkString(",")}", parent.srcPos)

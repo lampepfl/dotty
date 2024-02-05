@@ -1,0 +1,7 @@
+-- [E164] Declaration Error: tests/neg/parent-refinement-access.scala:6:6 ----------------------------------------------
+6 |trait Year2(private[Year2] val value: Int) extends (Gen { val x: Int }) // error
+  |      ^
+  |      error overriding value x in trait Year2 of type Int;
+  |        value x in trait Gen of type Any has weaker access privileges; it should be public
+  |      (Note that value x in trait Year2 of type Int is abstract,
+  |      and is therefore overridden by concrete value x in trait Gen of type Any)

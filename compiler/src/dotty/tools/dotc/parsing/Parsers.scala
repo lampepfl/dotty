@@ -62,7 +62,7 @@ object Parsers {
     case ExtensionFollow // extension clause, following extension parameter
 
     def isClass = // owner is a class
-      this == Class || this == CaseClass
+      this == Class || this == CaseClass || this == Given
     def takesOnlyUsingClauses = // only using clauses allowed for this owner
       this == Given || this == ExtensionFollow
     def acceptsVariance =
@@ -3107,6 +3107,7 @@ object Parsers {
           case nme.open => Mod.Open()
           case nme.transparent => Mod.Transparent()
           case nme.infix => Mod.Infix()
+          case nme.tracked => Mod.Tracked()
         }
     }
 
@@ -3173,7 +3174,8 @@ object Parsers {
      *                  |  AccessModifier
      *                  |  override
      *                  |  opaque
-     *  LocalModifier  ::= abstract | final | sealed | open | implicit | lazy | erased | inline | transparent
+     *  LocalModifier  ::= abstract | final | sealed | open | implicit | lazy | erased |
+     *                     inline | transparent
      */
     def modifiers(allowed: BitSet = modifierTokens, start: Modifiers = Modifiers()): Modifiers = {
       @tailrec
@@ -3290,7 +3292,7 @@ object Parsers {
         val isAbstractOwner = paramOwner == ParamOwner.Type || paramOwner == ParamOwner.TypeParam
         val start = in.offset
         var mods = annotsAsMods() | Param
-        if paramOwner == ParamOwner.Class || paramOwner == ParamOwner.CaseClass then
+        if paramOwner.isClass then
           mods |= PrivateLocal
         if isIdent(nme.raw.PLUS) && checkVarianceOK() then
           mods |= Covariant
@@ -3327,7 +3329,7 @@ object Parsers {
      *  UsingClsTermParamClause::= ‘(’ ‘using’ [‘erased’] (ClsParams | ContextTypes) ‘)’
      *  ClsParams         ::=  ClsParam {‘,’ ClsParam}
      *  ClsParam          ::=  {Annotation}
-     *
+     *                         [{Modifier | ‘tracked’} (‘val’ | ‘var’) | ‘inline’] Param
      *  TypelessClause    ::= DefTermParamClause
      *                      | UsingParamClause
      *
@@ -3363,6 +3365,8 @@ object Parsers {
         if isErasedKw then
           mods = addModifier(mods)
         if paramOwner.isClass then
+          if isIdent(nme.tracked) && in.featureEnabled(Feature.modularity) && !in.lookahead.isColon then
+            mods = addModifier(mods)
           mods = addFlag(modifiers(start = mods), ParamAccessor)
           mods =
             if in.token == VAL then
@@ -3434,7 +3438,8 @@ object Parsers {
                   val isParams =
                     !impliedMods.is(Given)
                     || startParamTokens.contains(in.token)
-                    || isIdent && (in.name == nme.inline || in.lookahead.isColon)
+                    || isIdent
+                        && (in.name == nme.inline || in.name == nme.tracked || in.lookahead.isColon)
                   (mods, isParams)
               (if isParams then commaSeparated(() => param())
               else contextTypes(paramOwner, numLeadParams, impliedMods)) match {
@@ -4010,6 +4015,14 @@ object Parsers {
       val nameStart = in.offset
       val name = if isIdent && followingIsGivenSig() then ident() else EmptyTermName
 
+      // TODO Change syntax description
+      def adjustDefParams(paramss: List[ParamClause]): List[ParamClause] =
+        paramss.nestedMap: param =>
+          if !param.mods.isAllOf(PrivateLocal) then
+            syntaxError(em"method parameter ${param.name} may not be a `val`", param.span)
+          param.withMods(param.mods &~ (AccessFlags | ParamAccessor | Tracked | Mutable) | Param)
+        .asInstanceOf[List[ParamClause]]
+
       val gdef =
         val tparams = typeParamClauseOpt(ParamOwner.Given)
         newLineOpt()
@@ -4031,16 +4044,17 @@ object Parsers {
             mods1 |= Lazy
             ValDef(name, parents.head, subExpr())
           else
-            DefDef(name, joinParams(tparams, vparamss), parents.head, subExpr())
+            DefDef(name, adjustDefParams(joinParams(tparams, vparamss)), parents.head, subExpr())
         else if (isStatSep || isStatSeqEnd) && parentsIsType then
           if name.isEmpty then
             syntaxError(em"anonymous given cannot be abstract")
-          DefDef(name, joinParams(tparams, vparamss), parents.head, EmptyTree)
+          DefDef(name, adjustDefParams(joinParams(tparams, vparamss)), parents.head, EmptyTree)
         else
-          val tparams1 = tparams.map(tparam => tparam.withMods(tparam.mods | PrivateLocal))
-          val vparamss1 = vparamss.map(_.map(vparam =>
-            vparam.withMods(vparam.mods &~ Param | ParamAccessor | Protected)))
-          val constr = makeConstructor(tparams1, vparamss1)
+          val vparamss1 = vparamss.nestedMap: vparam =>
+            if vparam.mods.is(Private)
+            then vparam.withMods(vparam.mods &~ PrivateLocal | Protected)
+            else vparam
+          val constr = makeConstructor(tparams, vparamss1)
           val templ =
             if isStatSep || isStatSeqEnd then Template(constr, parents, Nil, EmptyValDef, Nil)
             else withTemplate(constr, parents)

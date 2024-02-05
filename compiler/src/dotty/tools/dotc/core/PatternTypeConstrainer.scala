@@ -88,11 +88,6 @@ trait PatternTypeConstrainer { self: TypeComparer =>
       }
     }
 
-    def stripRefinement(tp: Type): Type = tp match {
-      case tp: RefinedOrRecType => stripRefinement(tp.parent)
-      case tp => tp
-    }
-
     def tryConstrainSimplePatternType(pat: Type, scrut: Type) = {
       val patCls = pat.classSymbol
       val scrCls = scrut.classSymbol
@@ -181,14 +176,14 @@ trait PatternTypeConstrainer { self: TypeComparer =>
       case AndType(scrut1, scrut2) =>
         constrainPatternType(pat, scrut1) && constrainPatternType(pat, scrut2)
       case scrut: RefinedOrRecType =>
-        constrainPatternType(pat, stripRefinement(scrut))
+        constrainPatternType(pat, scrut.stripRefinement)
       case scrut => dealiasDropNonmoduleRefs(pat) match {
         case OrType(pat1, pat2) =>
           either(constrainPatternType(pat1, scrut), constrainPatternType(pat2, scrut))
         case AndType(pat1, pat2) =>
           constrainPatternType(pat1, scrut) && constrainPatternType(pat2, scrut)
         case pat: RefinedOrRecType =>
-          constrainPatternType(stripRefinement(pat), scrut)
+          constrainPatternType(pat.stripRefinement, scrut)
         case pat =>
           tryConstrainSimplePatternType(pat, scrut)
           || classesMayBeCompatible && constrainUpcasted(scrut)

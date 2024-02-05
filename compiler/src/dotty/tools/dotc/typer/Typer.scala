@@ -40,8 +40,7 @@ import annotation.tailrec
 import Implicits.*
 import util.Stats.record
 import config.Printers.{gadts, typr}
-import config.Feature
-import config.Feature.{sourceVersion, migrateTo3}
+import config.Feature, Feature.{sourceVersion, migrateTo3, modularity}
 import config.SourceVersion.*
 import rewrites.Rewrites, Rewrites.patch
 import staging.StagingLevel
@@ -909,10 +908,11 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
         	tp.exists
         	&& !tp.typeSymbol.is(Final)
         	&& (!tp.isTopType || tp.isAnyRef) // Object is the only toplevel class that can be instantiated
-        if (templ1.parents.isEmpty &&
-            isFullyDefined(pt, ForceDegree.flipBottom) &&
-            isSkolemFree(pt) &&
-            isEligible(pt.underlyingClassRef(refinementOK = false)))
+        if templ1.parents.isEmpty
+            && isFullyDefined(pt, ForceDegree.flipBottom)
+            && isSkolemFree(pt)
+            && isEligible(pt.underlyingClassRef(refinementOK = Feature.enabled(modularity)))
+        then
           templ1 = cpy.Template(templ)(parents = untpd.TypeTree(pt) :: Nil)
         for case parent: RefTree <- templ1.parents do
           typedAhead(parent, tree => inferTypeParams(typedType(tree), pt))
@@ -2767,6 +2767,19 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
       }
     }
 
+    /** Add all parent refinement symbols as declarations to this class */
+    def addParentRefinements(body: List[Tree])(using Context): List[Tree] =
+      cdef.getAttachment(ParentRefinements) match
+        case Some(refinedSyms) =>
+          val refinements = refinedSyms.map: sym =>
+            ( if sym.isType then TypeDef(sym.asType)
+              else if sym.is(Method) then DefDef(sym.asTerm)
+              else ValDef(sym.asTerm)
+            ).withSpan(impl.span.startPos)
+          body ++ refinements
+        case None =>
+          body
+
     ensureCorrectSuperClass()
     completeAnnotations(cdef, cls)
     val constr1 = typed(constr).asInstanceOf[DefDef]
@@ -2787,7 +2800,10 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
       cdef.withType(UnspecifiedErrorType)
     else {
       val dummy = localDummy(cls, impl)
-      val body1 = addAccessorDefs(cls, typedStats(impl.body, dummy)(using ctx.inClassContext(self1.symbol))._1)
+      val body1 =
+        addParentRefinements(
+          addAccessorDefs(cls,
+            typedStats(impl.body, dummy)(using ctx.inClassContext(self1.symbol))._1))
 
       checkNoDoubleDeclaration(cls)
       val impl1 = cpy.Template(impl)(constr1, parents1, Nil, self1, body1)
@@ -4314,7 +4330,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
           cpy.Ident(qual)(qual.symbol.name.sourceModuleName.toTypeName)
         case _ =>
           errorTree(tree, em"cannot convert from $tree to an instance creation expression")
-      val tycon = ctorResultType.underlyingClassRef(refinementOK = false)
+      val tycon = ctorResultType.underlyingClassRef(refinementOK = true)
       typed(
         untpd.Select(
           untpd.New(untpd.TypedSplice(tpt.withType(tycon))),

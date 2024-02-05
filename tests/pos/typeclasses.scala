@@ -1,7 +1,6 @@
-class Common:
+//> using options -source future -language:experimental.modularity
 
-  // this should go in Predef
-  infix type at [A <: { type This}, B] = A { type This = B }
+class Common:
 
   trait Ord:
     type This
@@ -26,41 +25,23 @@ class Common:
     extension [A](x: This[A])
       def flatMap[B](f: A => This[B]): This[B]
       def map[B](f: A => B) = x.flatMap(f `andThen` pure)
+
+  infix type is[A <: AnyKind, B <: {type This <: AnyKind}] = B { type This = A }
+
 end Common
 
 
 object Instances extends Common:
 
-/*
-  instance Int: Ord as intOrd with
-    extension (x: Int)
-      def compareTo(y: Int) =
-        if x < y then -1
-        else if x > y then +1
-        else 0
-*/
-  given intOrd: Ord with
+  given intOrd: (Int is Ord) with
     type This = Int
     extension (x: Int)
       def compareTo(y: Int) =
         if x < y then -1
         else if x > y then +1
         else 0
-/*
-  instance List[T: Ord]: Ord as listOrd with
-    extension (xs: List[T]) def compareTo(ys: List[T]): Int = (xs, ys) match
-      case (Nil, Nil) => 0
-      case (Nil, _) => -1
-      case (_, Nil) => +1
-      case (x :: xs1, y :: ys1) =>
-        val fst = x.compareTo(y)
-        if (fst != 0) fst else xs1.compareTo(ys1)
-*/
 
-  // Proposed short syntax:
-  // given listOrd[T: Ord as ord]: Ord at T with
-  given listOrd[T](using ord: Ord { type This = T}): Ord with
-    type This = List[T]
+  given listOrd[T](using ord: T is Ord): (List[T] is Ord) with
     extension (xs: List[T]) def compareTo(ys: List[T]): Int = (xs, ys) match
       case (Nil, Nil) => 0
       case (Nil, _) => -1
@@ -70,32 +51,18 @@ object Instances extends Common:
         if (fst != 0) fst else xs1.compareTo(ys1)
   end listOrd
 
-/*
-  instance List: Monad as listMonad with
-    extension [A](xs: List[A]) def flatMap[B](f: A => List[B]): List[B] =
-      xs.flatMap(f)
-    def pure[A](x: A): List[A] =
-      List(x)
-*/
-
-  given listMonad: Monad with
-    type This[A] = List[A]
+  given listMonad: (List is Monad) with
     extension [A](xs: List[A]) def flatMap[B](f: A => List[B]): List[B] =
       xs.flatMap(f)
     def pure[A](x: A): List[A] =
       List(x)
 
-/*
-  type Reader[Ctx] = X =>> Ctx => X
-  instance Reader[Ctx: _]: Monad as readerMonad with
-    extension [A](r: Ctx => A) def flatMap[B](f: A => Ctx => B): Ctx => B =
-      ctx => f(r(ctx))(ctx)
-    def pure[A](x: A): Ctx => A =
-      ctx => x
-*/
 
-  given readerMonad[Ctx]: Monad with
-    type This[X] = Ctx => X
+  type Reader[Ctx] = [X] =>> Ctx => X
+
+  //given [Ctx] => Reader[Ctx] is Monad as readerMonad:
+
+  given readerMonad[Ctx]: (Reader[Ctx] is Monad) with
     extension [A](r: Ctx => A) def flatMap[B](f: A => Ctx => B): Ctx => B =
       ctx => f(r(ctx))(ctx)
     def pure[A](x: A): Ctx => A =
@@ -110,29 +77,17 @@ object Instances extends Common:
     def second = xs.tail.head
     def third = xs.tail.tail.head
 
-  //Proposed short syntax:
-  //extension [M: Monad as m, A](xss: M[M[A]])
-  //  def flatten: M[A] =
-  //    xs.flatMap(identity)
-
   extension [M, A](using m: Monad)(xss: m.This[m.This[A]])
     def flatten: m.This[A] =
       xss.flatMap(identity)
 
-  // Proposed short syntax:
-  //def maximum[T: Ord](xs: List[T]: T =
-  def maximum[T](xs: List[T])(using Ord at T): T =
+  def maximum[T](xs: List[T])(using T is Ord): T =
     xs.reduceLeft((x, y) => if (x < y) y else x)
 
-  // Proposed short syntax:
-  // def descending[T: Ord as asc]: Ord at T = new Ord:
-  def descending[T](using asc: Ord at T): Ord at T = new Ord:
-    type This = T
+  def descending[T](using asc: T is Ord): T is Ord = new:
     extension (x: T) def compareTo(y: T) = asc.compareTo(y)(x)
 
-  // Proposed short syntax:
-  // def minimum[T: Ord](xs: List[T]) =
-  def minimum[T](xs: List[T])(using Ord at T) =
+  def minimum[T](xs: List[T])(using T is Ord) =
     maximum(xs)(using descending)
 
   def test(): Unit =
@@ -177,10 +132,10 @@ instance Sheep: Animal with
     override def talk(): Unit =
       println(s"$name pauses briefly... $noise")
 */
+import Instances.is
 
 // Implement the `Animal` trait for `Sheep`.
-given Animal with
-  type This = Sheep
+given (Sheep is Animal) with
   def apply(name: String) = Sheep(name)
   extension (self: This)
     def name: String = self.name

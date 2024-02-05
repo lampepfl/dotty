@@ -1,4 +1,25 @@
--- Error: tests/neg/parent-refinement.scala:5:2 ------------------------------------------------------------------------
-5 |  with Ordered[Year] { // error
-  |  ^^^^
-  |  end of toplevel definition expected but 'with' found
+-- Error: tests/neg/parent-refinement.scala:11:6 -----------------------------------------------------------------------
+11 |class Bar extends IdOf[Int], (X { type Value = String }) // error
+   |      ^^^
+   |class Bar cannot be instantiated since it has a member Value with possibly conflicting bounds Int | String <: ... <: Int & String
+-- [E007] Type Mismatch Error: tests/neg/parent-refinement.scala:15:17 -------------------------------------------------
+15 |  val x: Value = 0 // error
+   |                 ^
+   |                 Found:    (0 : Int)
+   |                 Required: Baz.this.Value
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E007] Type Mismatch Error: tests/neg/parent-refinement.scala:21:6 --------------------------------------------------
+21 |  foo(2) // error
+   |      ^
+   |      Found:    (2 : Int)
+   |      Required: Boolean
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E007] Type Mismatch Error: tests/neg/parent-refinement.scala:17:22 -------------------------------------------------
+17 |val x: IdOf[Int] = Baz() // error
+   |                   ^^^^^
+   |                   Found:    Baz
+   |                   Required: IdOf[Int]
+   |
+   | longer explanation available when compiling with `-explain`

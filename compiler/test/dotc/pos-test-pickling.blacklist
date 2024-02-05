@@ -113,3 +113,6 @@ java-inherited-type1
 
 # recursion limit exceeded
 i7445b.scala
+
+# alias types at different levels of dereferencing
+parsercombinators-givens.scala
