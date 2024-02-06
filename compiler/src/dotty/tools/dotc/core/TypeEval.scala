@@ -109,8 +109,9 @@ object TypeEval:
           Some:
             defn.NamedTupleTypeRef.appliedTo:
               nestedPairs(fieldLabels) :: nestedPairs(fieldTypes) :: Nil
-        else
-          None
+        else arg.widenDealias match
+          case arg @ defn.NamedTuple(_, _) => Some(arg)
+          case _ => None
 
       def constantFold1[T](extractor: Type => Option[T], op: T => Any): Option[Type] =
         expectArgsNum(1)
