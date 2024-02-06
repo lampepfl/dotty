@@ -790,7 +790,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
     if canDefineFurther(qual.tpe.widen) then
       return typedSelect(tree, pt, qual)
 
-    def dynamicSelect =
+    def dynamicSelect(pt: Type) =
       val tree2 = cpy.Select(tree0)(untpd.TypedSplice(qual), selName)
       if pt.isInstanceOf[FunOrPolyProto] || pt == LhsProto then
         assignType(tree2, TryDynamicCallType)
@@ -800,7 +800,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
     // Otherwise, if the qualifier derives from class Dynamic, expand to a
     // dynamic dispatch using selectDynamic or applyDynamic
     if qual.tpe.derivesFrom(defn.DynamicClass) && selName.isTermName && !isDynamicExpansion(tree) then
-      return dynamicSelect
+      return dynamicSelect(pt)
 
     // Otherwise, if the qualifier derives from class Selectable,
     // and the selector name matches one of the element of the `Fields` type member,
@@ -814,7 +814,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
       typr.println(i"try dyn select $qual, $selName, $fields")
       fields.find(_._1 == selName) match
         case Some((_, fieldType)) =>
-          return dynamicSelect.cast(fieldType)
+          return dynamicSelect(fieldType).ensureConforms(fieldType)
         case _ =>
 
     // Otherwise, report an error
