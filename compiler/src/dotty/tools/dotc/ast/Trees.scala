@@ -554,6 +554,8 @@ object Trees {
   case class NamedArg[+T <: Untyped] private[ast] (name: Name, arg: Tree[T])(implicit @constructorOnly src: SourceFile)
     extends Tree[T] {
     type ThisTree[+T <: Untyped] = NamedArg[T]
+    override def isTerm = arg.isTerm
+    override def isType = arg.isType
   }
 
   /** name = arg, outside a parameter list */
