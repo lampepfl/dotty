@@ -8,6 +8,14 @@ object MiMaFilters {
     val ForwardsBreakingChanges: Map[String, Seq[ProblemFilter]] = Map(
       // Additions that require a new minor version of the library
       Build.previousDottyVersion -> Seq(
+        ProblemFilters.exclude[DirectMissingMethodProblem]("scala.Tuple.fromArray"),
+        ProblemFilters.exclude[DirectMissingMethodProblem]("scala.Tuple.fromIArray"),
+        ProblemFilters.exclude[MissingFieldProblem]("scala.Tuple.helpers"),
+        ProblemFilters.exclude[MissingClassProblem]("scala.Tuple$helpers$"),
+        ProblemFilters.exclude[DirectMissingMethodProblem]("scala.runtime.Tuples.fromArray"),
+        ProblemFilters.exclude[DirectMissingMethodProblem]("scala.runtime.Tuples.fromIArray"),
+        ProblemFilters.exclude[MissingFieldProblem]("scala.runtime.stdLibPatches.language#experimental.namedTuples"),
+        ProblemFilters.exclude[MissingClassProblem]("scala.runtime.stdLibPatches.language$experimental$namedTuples$"),
       ),
 
       // Additions since last LTS
