@@ -107,7 +107,7 @@ object untpd extends Trees.Instance[Untyped] with UntypedTreeInfo {
     def forwardTo: Tree = t
   }
   case class Tuple(trees: List[Tree])(implicit @constructorOnly src: SourceFile) extends Tree {
-    override def isTerm: Boolean = trees.isEmpty || trees.head.isTerm
+    override def isTerm: Boolean = trees.isEmpty || stripNamedArg(trees.head).isTerm
     override def isType: Boolean = !isTerm
   }
   case class Throw(expr: Tree)(implicit @constructorOnly src: SourceFile) extends TermTree

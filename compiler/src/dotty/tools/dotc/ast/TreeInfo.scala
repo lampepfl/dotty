@@ -108,6 +108,10 @@ trait TreeInfo[T <: Untyped] { self: Trees.Instance[T] =>
     case _ =>
       tree
 
+  def stripNamedArg(tree: Tree) = tree match
+    case NamedArg(_, arg) => arg
+    case _ => tree
+
   /** The number of arguments in an application */
   def numArgs(tree: Tree): Int = unsplice(tree) match {
     case Apply(fn, args) => numArgs(fn) + args.length
