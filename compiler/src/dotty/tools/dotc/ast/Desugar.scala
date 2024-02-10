@@ -1507,7 +1507,7 @@ object desugar {
     if names.isEmpty || ctx.mode.is(Mode.Pattern) then
       tup
     else
-      def namesTuple = inMode(ctx.mode &~ Mode.Pattern | Mode.Type):
+      def namesTuple = withModeBits(ctx.mode &~ Mode.Pattern | Mode.Type):
         tuple(Tuple(
           names.map: name =>
             SingletonTypeTree(Literal(Constant(name.toString))).withSpan(tree.span)),
