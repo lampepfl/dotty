@@ -3,11 +3,11 @@ import scala.quoted._
 
 @experimental
 class gen1 extends MacroAnnotation:
-  def transform(using Quotes)(tree: quotes.reflect.Definition): List[quotes.reflect.Definition] =
+  def transform(using Quotes)(definition: quotes.reflect.Definition, companion: Option[quotes.reflect.Definition]): List[quotes.reflect.Definition] =
     import quotes.reflect._
-    tree match
+    definition match
       case ClassDef(name, ctr, parents, self, body) =>
-        val cls = tree.symbol
+        val cls = definition.symbol
         // val meth = cls.methodMember("foo").head
         // val fooTpe = cls.typeRef.memberType(meth)
 
@@ -17,8 +17,8 @@ class gen1 extends MacroAnnotation:
 
         val fooDef = DefDef(fooOverrideSym, _ => Some(Literal(StringConstant("hi"))))
 
-        val newClassDef = ClassDef.copy(tree)(name, ctr, parents, self, fooDef :: body)
+        val newClassDef = ClassDef.copy(definition)(name, ctr, parents, self, fooDef :: body)
         List(newClassDef)
       case _ =>
         report.error("Annotation only supports `class`")
-        List(tree)
+        List(definition)
