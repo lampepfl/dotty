@@ -1201,10 +1201,10 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
       targets: List[untpd.Tree], rhs: Tree
   )(using Context): Tree =
     val s = mutable.ListBuffer[untpd.Tree]()
-    val u = formPairwiseAssignments(
+    formPairwiseAssignments(
       s, targets, untpd.TypedSplice(rhs), rhs.tpe,
       EmptyTermName)
-    typed(u)
+    typed(untpd.Block(s.toList, untpd.TypedSplice(unitLiteral)))
 
   /** Appends to `statements` the assignments of `targets` to corresponding values in `rhs`.
    *
