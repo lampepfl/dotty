@@ -112,7 +112,7 @@ abstract class MarkupConversion[T](val repr: Repr)(using dctx: DocContext) {
               case None => sym.dri
             DocLink.ToDRI(dri, targetText)
           case None =>
-            val txt = s"No DRI found for query"
+            val txt = s"No DRI found for query, the link seems to be wrong or the file may not exist."
             val msg = s"$txt: $queryStr"
 
             if (!summon[DocContext].args.noLinkWarnings) then

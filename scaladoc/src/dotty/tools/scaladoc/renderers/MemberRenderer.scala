@@ -9,6 +9,9 @@ import scala.jdk.CollectionConverters.*
 import dotty.tools.scaladoc.translators.FilterAttributes
 import org.jsoup.Jsoup
 import translators.*
+import java.net.URL
+import scala.util.Try
+import java.nio.file.{Files, Paths}
 
 class MemberRenderer(signatureRenderer: SignatureRenderer)(using DocContext) extends DocRender(signatureRenderer):
   import signatureRenderer._
@@ -100,6 +103,28 @@ class MemberRenderer(signatureRenderer: SignatureRenderer)(using DocContext) ext
   def typeParams(m: Member): Seq[AppliedTag] = m.docs.fold(Nil)(d => flattenedDocPart(d.typeParams))
   def valueParams(m: Member): Seq[AppliedTag] = m.docs.fold(Nil)(d => flattenedDocPart(d.valueParams))
 
+  def processLocalLinkWithGuard(str: String): String =
+  if str.startsWith("#") || str.isEmpty then
+    str
+  else
+    validationLink(str)
+
+  def validationLink(str: String): String =
+    def asValidURL = Try(URL(str)).toOption.map(_ => str)
+
+    def asAsset: Option[String] = Option.when(
+      Files.exists(Paths.get("docs/_assets").resolve(str))
+      )(
+        s"docs/_assets/$str"
+        )
+
+    asValidURL
+      .orElse(asAsset)
+      .getOrElse{
+        report.warning(s"Unable to resolve link '$str'")
+        str
+      }
+
   def memberInfo(m: Member, withBrief: Boolean = false, full: Boolean = false): Seq[AppliedTag] =
     val comment = m.docs
     val bodyContents = m.docs.fold(Nil)(e => renderDocPart(e.body) :: Nil)
@@ -121,6 +146,13 @@ class MemberRenderer(signatureRenderer: SignatureRenderer)(using DocContext) ext
       case Nil => false
       case _ => true
     }
+
+    val document = Jsoup.parse(bodyContents.mkString)
+    val document2 = Jsoup.parse(attributes.mkString)
+
+    document.select("img").forEach(element =>
+      element.attr("src", validationLink(element.attr("src")))
+    )
 
     Seq(
       Option.when(withBrief && comment.flatMap(_.short).nonEmpty)(div(cls := "documentableBrief doc")(comment.flatMap(_.short).fold("")(renderDocPart))),
