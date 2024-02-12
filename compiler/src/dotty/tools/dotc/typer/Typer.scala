@@ -1221,7 +1221,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
       rhs: untpd.Tree,
       rhsType: Type,
       prefix: TermName
-  )(using Context): untpd.Tree =
+  )(using Context): Unit =
     val source = UniqueName.fresh(prefix)
     val d = untpd.ValDef(source, untpd.TypeTree(rhsType), rhs)
       .withSpan(rhs.span)
@@ -1242,20 +1242,15 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
             .withSpan(rhs.span)
 
         /** Forms the assignments of the targets in the range [`i`, `targets.length`). */
-        @tailrec def loop(i: Int): untpd.Block =
-          if (i == targets.length) then
-            untpd.Block(statements.toList, untpd.TypedSplice(unitLiteral))
-          else targets(i) match {
+        for i <- 0 until targets.length do {
+          targets(i) match {
             case untpd.Tuple(lhs) =>
               formPairwiseAssignments(statements, lhs, rhsElement(i + 1), sourceTypes(i), source)
-              loop(i + 1)
             case lhs =>
               val u = untpd.Assign(lhs, rhsElement(i + 1))
               statements.append(u)
-              loop(i + 1)
           }
-
-        loop(0)
+        }
     }
 
   def typedBlockStats(stats: List[untpd.Tree])(using Context): (List[tpd.Tree], Context) =
