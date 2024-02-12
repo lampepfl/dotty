@@ -1204,7 +1204,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
     val u = formPairwiseAssignments(
       s, targets, untpd.TypedSplice(rhs), rhs.tpe,
       EmptyTermName)
-    u.map((b) => typed(b)).getOrElse(unitLiteral)
+    typed(u)
 
   /** Appends to `statements` the assignments of `targets` to corresponding values in `rhs`.
    *
@@ -1221,7 +1221,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
       rhs: untpd.Tree,
       rhsType: Type,
       prefix: TermName
-  )(using Context): Option[untpd.Block] =
+  )(using Context): untpd.Tree =
     val source = UniqueName.fresh(prefix)
     val d = untpd.ValDef(source, untpd.TypeTree(rhsType), rhs)
       .withSpan(rhs.span)
@@ -1230,12 +1230,10 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
 
     rhsType.tupleElementTypes match {
       case None =>
-        report.error(InvalidMultipleAssignmentSource(rhsType), rhs.srcPos)
-        None
+        errorTree(rhs, InvalidMultipleAssignmentSource(rhsType))
 
       case Some(e) if targets.length != e.length =>
-        report.error(MultipleAssignmentShapeMismatch(e.length, targets.length), rhs.srcPos)
-        None
+        errorTree(rhs, MultipleAssignmentShapeMismatch(e.length, targets.length))
 
       case Some(sourceTypes) =>
         /** The value to assign to the `i`-th source. */
@@ -1244,9 +1242,9 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
             .withSpan(rhs.span)
 
         /** Forms the assignments of the targets in the range [`i`, `targets.length`). */
-        @tailrec def loop(i: Int): Option[untpd.Block] =
+        @tailrec def loop(i: Int): untpd.Block =
           if (i == targets.length) then
-            Some(untpd.Block(statements.toList, untpd.TypedSplice(unitLiteral)))
+            untpd.Block(statements.toList, untpd.TypedSplice(unitLiteral))
           else targets(i) match {
             case untpd.Tuple(lhs) =>
               formPairwiseAssignments(statements, lhs, rhsElement(i + 1), sourceTypes(i), source)
