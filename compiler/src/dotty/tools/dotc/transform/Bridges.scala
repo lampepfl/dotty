@@ -31,8 +31,7 @@ class Bridges(root: ClassSymbol, thisPhase: DenotTransformer)(using Context) {
 
     /** Only use the superclass of `root` as a parent class. This means
      *  overriding pairs that have a common implementation in a trait parent
-     *  are also counted. This is necessary because we generate bridge methods
-     *  only in classes, never in traits.
+     *  are also counted.
      */
     override def parents = Array(root.superClass)
 
@@ -41,6 +40,25 @@ class Bridges(root: ClassSymbol, thisPhase: DenotTransformer)(using Context) {
 
     override def canBeHandledByParent(sym1: Symbol, sym2: Symbol, parent: Symbol): Boolean =
       OverridingPairs.isOverridingPair(sym1, sym2, parent.thisType)
+  }
+
+  /** Usually, we don't want to create bridges for methods defined in traits, but for some cases it is necessary.
+   *  For example with SAM methods combined with covariant result types (see issue #15402).
+   *  In some cases, creating a bridge inside a trait to an erased generic method leads to incorrect
+   *  interface method lookup and infinite loops at run-time. (e.g., in cats' `WriterTApplicative.map`).
+   *  To avoid that issue, we limit bridges to methods with the same set of parameters and a different, covariant result type.
+   *  We also ignore non-public methods (see `DottyBackendTests.invocationReceivers` for a test case).
+   */
+  private class TraitBridgesCursor(using Context) extends BridgesCursor{
+    // Get full list of parents to deduplicate already defined bridges in the parents
+    override lazy val parents: Array[Symbol] =
+      root.info.parents.map(_.classSymbol).toArray
+
+    override protected def matches(sym1: Symbol, sym2: Symbol): Boolean =
+      sym1.signature.consistentParams(sym2.signature) && super.matches(sym1, sym2)
+
+    override def exclude(sym: Symbol) =
+      !sym.isPublic || super.exclude(sym)
   }
 
   val site = root.thisType
@@ -172,7 +190,10 @@ class Bridges(root: ClassSymbol, thisPhase: DenotTransformer)(using Context) {
    *  time deferred methods in `stats` that are replaced by a bridge with the same signature.
    */
   def add(stats: List[untpd.Tree]): List[untpd.Tree] =
-    val opc = inContext(preErasureCtx) { new BridgesCursor }
+    val opc = inContext(preErasureCtx) {
+       if (root.is(Trait)) new TraitBridgesCursor
+       else new BridgesCursor
+    }
     while opc.hasNext do
       if !opc.overriding.is(Deferred) then
         addBridgeIfNeeded(opc.overriding, opc.overridden)
