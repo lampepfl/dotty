@@ -1621,7 +1621,6 @@ object Parsers {
           NamedArg(name, convertToElem(tpt)).withSpan(t.span)
         case _ => t
 
-      var isValParamList = false
       if in.token == LPAREN then
         in.nextToken()
         if in.token == RPAREN then
@@ -1637,7 +1636,6 @@ object Parsers {
             in.currentRegion.withCommasExpected:
               funArgType() match
                 case Ident(name) if name != tpnme.WILDCARD && in.isColon =>
-                  isValParamList = true
                   def funParam(start: Offset, mods: Modifiers) =
                     atSpan(start):
                       addErased()
@@ -1651,7 +1649,7 @@ object Parsers {
                     funArgType()
                   commaSeparatedRest(t, funArg)
           accept(RPAREN)
-          if isValParamList || in.isArrow || isPureArrow then
+          if in.isArrow || isPureArrow || erasedArgs.contains(true) then
             functionRest(args)
           else
             val tuple = atSpan(start):
