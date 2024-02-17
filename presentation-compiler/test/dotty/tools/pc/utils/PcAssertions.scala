@@ -127,7 +127,6 @@ trait PcAssertions:
     def getDetailedMessage(diff: String): String =
       val lines = diff.linesIterator.toList
       val sources = completionSources.padTo(lines.size, CompletionSource.Empty)
-      val maxLength = lines.map(_.length).maxOption.getOrElse(0)
       var completionIndex = 0
       lines.map: line =>
         if line.startsWith(Console.BOLD + Console.RED) || line.startsWith("  ") then

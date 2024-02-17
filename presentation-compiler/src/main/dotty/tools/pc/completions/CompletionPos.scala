@@ -6,9 +6,7 @@ import java.net.URI
 import scala.meta.pc.OffsetParams
 
 import dotty.tools.dotc.ast.untpd.*
-import dotty.tools.dotc.ast.untpd.ImportSelector
 import dotty.tools.dotc.core.Contexts.*
-import dotty.tools.dotc.core.StdNames.*
 import dotty.tools.dotc.util.Chars
 import dotty.tools.dotc.util.SourcePosition
 import dotty.tools.dotc.util.Spans
@@ -16,7 +14,6 @@ import dotty.tools.dotc.interactive.Completion
 import dotty.tools.pc.utils.MtagsEnrichments.*
 
 import org.eclipse.lsp4j as l
-import scala.annotation.tailrec
 
 case class CompletionPos(
     start: Int,

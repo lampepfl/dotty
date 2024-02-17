@@ -1327,7 +1327,6 @@ object Build {
             .filter(_.getName.matches("scala-library.*\\.jar"))
             .toList
         dottyLib :: scalaLib
-        // Nil
       },
       Compile / buildInfoPackage := "dotty.tools.pc.buildinfo",
       Compile / buildInfoKeys := Seq(scalaVersion),
@@ -1351,7 +1350,7 @@ object Build {
       ivyConfigurations += SourceDeps.hide,
       transitiveClassifiers := Seq("sources"),
       scalacOptions ++= Seq("-source", "3.3"), // To avoid fatal migration warnings
-      Compile / scalacOptions ++= Seq("-Yexplicit-nulls", "-Ysafe-init"),
+      Compile / scalacOptions ++= Seq("-Yexplicit-nulls", "-Ysafe-init", "-Wunused:all"),
       Compile / sourceGenerators += Def.task {
         val s = streams.value
         val cacheDir = s.cacheDirectory
