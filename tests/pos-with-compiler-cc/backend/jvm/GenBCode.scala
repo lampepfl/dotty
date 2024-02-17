@@ -214,7 +214,7 @@ class GenBCodePipeline(val int: DottyBackendInterface, val primitives: DottyPrim
           val same = classSymbol.effectiveName.toString == dupClassSym.effectiveName.toString
           atPhase(typerPhase) {
             if (same)
-              report.warning( // FIXME: This should really be an error, but then FromTasty tests fail
+              report.error(
                 em"$cl1 and ${cl2.showLocated} produce classes that overwrite one another", cl1.sourcePos)
             else
               report.warning(

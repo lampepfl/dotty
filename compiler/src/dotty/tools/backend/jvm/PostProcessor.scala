@@ -73,7 +73,7 @@ class PostProcessor(val frontendAccess: PostProcessorFrontendAccess, val bTypes:
           else s" (defined in ${pos2.source.file.name})"
         def nicify(name: String): String = name.replace('/', '.').nn
         if name1 == name2 then
-          backendReporting.warning(
+          backendReporting.error(
             em"${nicify(name1)} and ${nicify(name2)} produce classes that overwrite one another", pos1)
         else
           backendReporting.warning(
