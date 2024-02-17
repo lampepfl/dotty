@@ -4285,7 +4285,9 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
         case _: SelectionProto =>
           tree // adaptations for selections are handled in typedSelect
         case _ if ctx.mode.is(Mode.ImplicitsEnabled) && tree.tpe.isValueType =>
-          if pt.isRef(defn.AnyValClass, skipRefined = false)
+          if tree.tpe.widen.isNamedTupleType && pt.derivesFrom(defn.TupleClass) then
+            readapt(typed(untpd.Select(untpd.TypedSplice(tree), nme.toTuple)))
+          else if pt.isRef(defn.AnyValClass, skipRefined = false)
               || pt.isRef(defn.ObjectClass, skipRefined = false)
           then
             recover(TooUnspecific(pt))

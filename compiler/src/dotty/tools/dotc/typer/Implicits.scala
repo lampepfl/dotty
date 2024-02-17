@@ -863,6 +863,8 @@ trait Implicits:
        || inferView(dummyTreeOfType(from), to)
             (using ctx.fresh.addMode(Mode.ImplicitExploration).setExploreTyperState()).isSuccess
           // TODO: investigate why we can't TyperState#test here
+       || from.widen.isNamedTupleType && to.derivesFrom(defn.TupleClass)
+           && from.widen.stripNamedTuple <:< to
        )
 
   /** Find an implicit conversion to apply to given tree `from` so that the

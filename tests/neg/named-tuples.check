@@ -14,20 +14,6 @@
 12 |  type Illformed2 = (name: String, age: Int, name: Boolean) // error
    |                                             ^^^^^^^^^^^^^
    |                                             Duplicate tuple element name
--- [E007] Type Mismatch Error: tests/neg/named-tuples.scala:18:25 ------------------------------------------------------
-18 |  val y: (String, Int) = person // error
-   |                         ^^^^^^
-   |                         Found:    (Test.person : (name : String, age : Int))
-   |                         Required: (String, Int)
-   |
-   | longer explanation available when compiling with `-explain`
--- [E007] Type Mismatch Error: tests/neg/named-tuples.scala:19:25 ------------------------------------------------------
-19 |  val _: (String, Int) = (name = "", age = 0) // error
-   |                         ^^^^^^^^^^^^^^^^^^^^
-   |                         Found:    (name : String, age : Int)
-   |                         Required: (String, Int)
-   |
-   | longer explanation available when compiling with `-explain`
 -- [E007] Type Mismatch Error: tests/neg/named-tuples.scala:20:20 ------------------------------------------------------
 20 |  val _: NameOnly = person // error
    |                    ^^^^^^
@@ -42,66 +28,70 @@
    |                  Required: Test.Person
    |
    | longer explanation available when compiling with `-explain`
--- [E007] Type Mismatch Error: tests/neg/named-tuples.scala:23:36 ------------------------------------------------------
-23 |  val _: (age: Int, name: String) = person // error
+-- [E008] Not Found Error: tests/neg/named-tuples.scala:22:9 -----------------------------------------------------------
+22 |  person._1 // error
+   |  ^^^^^^^^^
+   |  value _1 is not a member of (name : String, age : Int)
+-- [E007] Type Mismatch Error: tests/neg/named-tuples.scala:24:36 ------------------------------------------------------
+24 |  val _: (age: Int, name: String) = person // error
    |                                    ^^^^^^
    |                                    Found:    (Test.person : (name : String, age : Int))
    |                                    Required: (age : Int, name : String)
    |
    | longer explanation available when compiling with `-explain`
--- Error: tests/neg/named-tuples.scala:25:17 ---------------------------------------------------------------------------
-25 |  val (name = x, agee = y) = person // error
+-- Error: tests/neg/named-tuples.scala:26:17 ---------------------------------------------------------------------------
+26 |  val (name = x, agee = y) = person // error
    |                 ^^^^^^^^
    |                 No element named `agee` is defined in selector type (name : String, age : Int)
--- Error: tests/neg/named-tuples.scala:28:10 ---------------------------------------------------------------------------
-28 |    case (name = n, age = a) => () // error // error
+-- Error: tests/neg/named-tuples.scala:29:10 ---------------------------------------------------------------------------
+29 |    case (name = n, age = a) => () // error // error
    |          ^^^^^^^^
    |          No element named `name` is defined in selector type (String, Int)
--- Error: tests/neg/named-tuples.scala:28:20 ---------------------------------------------------------------------------
-28 |    case (name = n, age = a) => () // error // error
+-- Error: tests/neg/named-tuples.scala:29:20 ---------------------------------------------------------------------------
+29 |    case (name = n, age = a) => () // error // error
    |                    ^^^^^^^
    |                    No element named `age` is defined in selector type (String, Int)
--- [E172] Type Error: tests/neg/named-tuples.scala:30:27 ---------------------------------------------------------------
-30 |  val pp = person ++ (1, 2)  // error
+-- [E172] Type Error: tests/neg/named-tuples.scala:31:27 ---------------------------------------------------------------
+31 |  val pp = person ++ (1, 2)  // error
    |                           ^
    |            Cannot prove that Tuple.Disjoint[(("name" : String), ("age" : String)), Tuple] =:= (true : Boolean).
--- [E172] Type Error: tests/neg/named-tuples.scala:33:18 ---------------------------------------------------------------
-33 |  person ++ (1, 2) match // error
+-- [E172] Type Error: tests/neg/named-tuples.scala:34:18 ---------------------------------------------------------------
+34 |  person ++ (1, 2) match // error
    |                  ^
    |            Cannot prove that Tuple.Disjoint[(("name" : String), ("age" : String)), Tuple] =:= (true : Boolean).
--- Error: tests/neg/named-tuples.scala:36:17 ---------------------------------------------------------------------------
-36 |  val bad = ("", age = 10) // error
+-- Error: tests/neg/named-tuples.scala:37:17 ---------------------------------------------------------------------------
+37 |  val bad = ("", age = 10) // error
    |                 ^^^^^^^^
    |                 Illegal combination of named and unnamed tuple elements
--- Error: tests/neg/named-tuples.scala:39:20 ---------------------------------------------------------------------------
-39 |    case (name = n, age) => () // error
+-- Error: tests/neg/named-tuples.scala:40:20 ---------------------------------------------------------------------------
+40 |    case (name = n, age) => () // error
    |                    ^^^
    |                    Illegal combination of named and unnamed tuple elements
--- Error: tests/neg/named-tuples.scala:40:16 ---------------------------------------------------------------------------
-40 |    case (name, age = a) => () // error
+-- Error: tests/neg/named-tuples.scala:41:16 ---------------------------------------------------------------------------
+41 |    case (name, age = a) => () // error
    |                ^^^^^^^
    |                Illegal combination of named and unnamed tuple elements
--- Error: tests/neg/named-tuples.scala:43:10 ---------------------------------------------------------------------------
-43 |    case (age = x) => // error
+-- Error: tests/neg/named-tuples.scala:44:10 ---------------------------------------------------------------------------
+44 |    case (age = x) => // error
    |          ^^^^^^^
    |          No element named `age` is defined in selector type Tuple
--- [E172] Type Error: tests/neg/named-tuples.scala:45:27 ---------------------------------------------------------------
-45 |  val p2 = person ++ person // error
+-- [E172] Type Error: tests/neg/named-tuples.scala:46:27 ---------------------------------------------------------------
+46 |  val p2 = person ++ person // error
    |                           ^
    |Cannot prove that Tuple.Disjoint[(("name" : String), ("age" : String)), (("name" : String), ("age" : String))] =:= (true : Boolean).
--- [E172] Type Error: tests/neg/named-tuples.scala:46:43 ---------------------------------------------------------------
-46 |  val p3 = person ++ (first = 11, age = 33) // error
+-- [E172] Type Error: tests/neg/named-tuples.scala:47:43 ---------------------------------------------------------------
+47 |  val p3 = person ++ (first = 11, age = 33) // error
    |                                           ^
    |Cannot prove that Tuple.Disjoint[(("name" : String), ("age" : String)), (("first" : String), ("age" : String))] =:= (true : Boolean).
--- [E007] Type Mismatch Error: tests/neg/named-tuples.scala:48:22 ------------------------------------------------------
-48 |  val p5 = person.zip(first = 11, age = 33) // error
-   |                      ^^^^^^^^^^^^^^^^^^^^
+-- [E007] Type Mismatch Error: tests/neg/named-tuples.scala:49:22 ------------------------------------------------------
+49 |  val p5 = person.zip((first = 11, age = 33)) // error
+   |                      ^^^^^^^^^^^^^^^^^^^^^^
    |                      Found:    (first : Int, age : Int)
    |                      Required: NamedTuple.NamedTuple[(("name" : String), ("age" : String)), Tuple]
    |
    | longer explanation available when compiling with `-explain`
--- Warning: tests/neg/named-tuples.scala:25:29 -------------------------------------------------------------------------
-25 |  val (name = x, agee = y) = person // error
+-- Warning: tests/neg/named-tuples.scala:26:29 -------------------------------------------------------------------------
+26 |  val (name = x, agee = y) = person // error
    |                             ^^^^^^
    |pattern's type (String, Int) is more specialized than the right hand side expression's type (name : String, age : Int)
    |

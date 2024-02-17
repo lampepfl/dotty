@@ -623,6 +623,7 @@ object StdNames {
     val throws: N               = "throws"
     val toArray: N              = "toArray"
     val toList: N               = "toList"
+    val toTuple: N              = "toTuple"
     val toObjectArray : N       = "toObjectArray"
     val toSeq: N                = "toSeq"
     val toString_ : N           = "toString"

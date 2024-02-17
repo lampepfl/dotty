@@ -100,6 +100,13 @@ val _: CombinedInfo = bob ++ addr
   val addr4 = addr3.zip("Preverenges", 1028)
   println(addr4)
 
+  // testing conversions
+object Conv:
+
+  val p: (String, Int) = bob
+  def f22(x: (String, Int)) = x._1
+  def f22(x: String) = x
+  f22(bob)
 
 
 
