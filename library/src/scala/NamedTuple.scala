@@ -5,8 +5,15 @@ import compiletime.ops.boolean.*
 @experimental
 object NamedTuple:
 
-  opaque type AnyNamedTuple = Any
+  /** The type to which named tuples get mapped to. For instance,
+   *      (name: String, age: Int)
+   *  gets mapped to
+   *      NamedTuple[("name", "age"), (String, Int)]
+   */
   opaque type NamedTuple[N <: Tuple, +V <: Tuple] >: V <: AnyNamedTuple = V
+
+  /** A type which is a supertype of all named tuples */
+  opaque type AnyNamedTuple = Any
 
   def apply[N <: Tuple, V <: Tuple](x: V): NamedTuple[N, V] = x
 
@@ -25,8 +32,8 @@ object NamedTuple:
     /** The number of elements in this tuple */
     inline def size: Tuple.Size[V] = toTuple.size
 
-    // This intentionally works for empty named tuples as well. I think NnEmptyTuple is a dead end
-    // and should be reverted, justy like NonEmptyList is also appealing at first, but a bad idea
+    // This intentionally works for empty named tuples as well. I think NonEmptyTuple is a dead end
+    // and should be reverted, just like NonEmptyList is also appealing at first, but a bad idea
     // in the end.
 
     /** The value (without the name) at index `n` of this tuple */
@@ -175,6 +182,10 @@ object NamedTuple:
       case true =>
         NamedTuple[Names[X], Tuple.Zip[DropNames[X], DropNames[Y]]]
 
+  /** A type specially treated by the compiler to represent all fields of a
+   *  class argument `T` as a named tuple. Or, if `T` is already a named tyuple,
+   *  `From[T]` is the same as `T`.
+   */
   type From[T] <: AnyNamedTuple
 
 end NamedTuple

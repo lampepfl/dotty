@@ -114,6 +114,10 @@ object Tuple:
         case S[n1] => Elem[xs, n1]
 
   /** The type of the first element of a tuple */
+  // Only bounded by `<: Tuple` not `<: NonEmptyTuple`
+  // even though it only matches non-empty tuples.
+  // Avoids bounds check failures from an irreducible type
+  // like `Tuple.Head[Tuple.Tail[X]]`
   type Head[X <: Tuple] = X match
     case x *: _ => x
 

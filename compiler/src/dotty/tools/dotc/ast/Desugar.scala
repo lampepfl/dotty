@@ -1480,7 +1480,7 @@ object desugar {
     case _ => elems
   end checkWellFormedTupleElems
 
-  /** Translate tuple expressions of arity <= 22
+  /** Translate tuple expressions
    *
    *     ()             ==>   ()
    *     (t)            ==>   t
@@ -1523,8 +1523,6 @@ object desugar {
    *  expected type `pt` to each other. This means:
    *   - If `elems` are named pattern elements, rearrange them to match `pt`.
    *     This requires all names in `elems` to be also present in `pt`.
-   *   - If `elems` are unnamed elements, and `pt` is a named tuple, drop all
-   *     tuple element names from `pt`.
    */
   def adaptPatternArgs(elems: List[Tree], pt: Type)(using Context): List[Tree] =
 

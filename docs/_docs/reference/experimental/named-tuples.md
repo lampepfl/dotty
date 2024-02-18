@@ -127,7 +127,8 @@ The `NamedTuple` object contains a type definition
 ```
 `From` is treated specially by the compiler. When `NamedTuple.From` is applied to
 an argument type that is an instance of a case class, the type expands to the named
-tuple consisting of all the fields of that case class. Here, fields means: elements of the first parameter section. For instance, assuming
+tuple consisting of all the fields of that case class.
+Here, _fields_ means: elements of the first parameter section. For instance, assuming
 ```scala
 case class City(zip: Int, name: String, population: Int)
 ```
@@ -135,7 +136,11 @@ then `NamedTuple.From[City]` is the named tuple
 ```scala
 (zip: Int, name: String, population: Int)
 ```
-The same works for enum cases expanding to case classes.
+The same works for enum cases expanding to case classes, abstract types with case classes as upper bound, alias types expanding to case classes
+and singleton types with case classes as underlying type.
+
+`From` is also defined on named tuples. If `NT` is a named tuple type, then `From[NT] = NT`.
+
 
 ### Restrictions
 
