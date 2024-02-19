@@ -115,7 +115,7 @@ class PickleQuotes extends MacroTransform {
             holeContents += content
             val holeType = getPicklableHoleType(tree.tpe, stagedClasses)
             val hole = untpd.cpy.Hole(tree)(content = EmptyTree).withType(holeType)
-            cpy.Inlined(tree)(EmptyTree, Nil, hole)
+            Inlined(EmptyTree, Nil, hole).withSpan(tree.span)
           case tree: DefTree =>
             if tree.symbol.isClass then
               stagedClasses += tree.symbol

@@ -117,7 +117,7 @@ object Inlines:
       case Block(stats, expr) =>
         bindings ++= stats.map(liftPos)
         liftBindings(expr, liftPos)
-      case Inlined(call, stats, expr) =>
+      case tree @ Inlined(call, stats, expr) =>
         bindings ++= stats.map(liftPos)
         val lifter = liftFromInlined(call)
         cpy.Inlined(tree)(call, Nil, liftBindings(expr, liftFromInlined(call).transform(_)))

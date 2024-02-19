@@ -745,7 +745,7 @@ object tpd extends Trees.Instance[Type] with TypedTreeInfo {
       }
     }
 
-    override def Inlined(tree: Tree)(call: Tree, bindings: List[MemberDef], expansion: Tree)(using Context): Inlined = {
+    override def Inlined(tree: Inlined)(call: Tree, bindings: List[MemberDef], expansion: Tree)(using Context): Inlined = {
       val tree1 = untpdCpy.Inlined(tree)(call, bindings, expansion)
       tree match {
         case tree: Inlined if sameTypes(bindings, tree.bindings) && (expansion.tpe eq tree.expansion.tpe) =>

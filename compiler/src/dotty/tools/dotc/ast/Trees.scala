@@ -1333,10 +1333,17 @@ object Trees {
         case tree: SeqLiteral if (elems eq tree.elems) && (elemtpt eq tree.elemtpt) => tree
         case _ => finalize(tree, untpd.SeqLiteral(elems, elemtpt)(sourceFile(tree)))
       }
-      def Inlined(tree: Tree)(call: tpd.Tree, bindings: List[MemberDef], expansion: Tree)(using Context): Inlined = tree match {
-        case tree: Inlined if (call eq tree.call) && (bindings eq tree.bindings) && (expansion eq tree.expansion) => tree
-        case _ => finalize(tree, untpd.Inlined(call, bindings, expansion)(sourceFile(tree)))
-      }
+      // Positions of trees are automatically pushed down except when we reach an Inlined tree. Therefore, we
+      // make sure the new expansion has a position by copying the one of the original Inlined tree.
+      def Inlined(tree: Inlined)(call: tpd.Tree, bindings: List[MemberDef], expansion: Tree)(using Context): Inlined =
+        if (call eq tree.call) && (bindings eq tree.bindings) && (expansion eq tree.expansion) then tree
+        else
+          // Copy the span from the original Inlined tree if the new expansion doesn't have a span.
+          val expansionWithSpan =
+            if expansion.span.exists then expansion
+            else expansion.withSpan(tree.expansion.span)
+          finalize(tree, untpd.Inlined(call, bindings, expansionWithSpan)(sourceFile(tree)))
+
       def Quote(tree: Tree)(body: Tree, tags: List[Tree])(using Context): Quote = tree match {
         case tree: Quote if (body eq tree.body) && (tags eq tree.tags) => tree
         case _ => finalize(tree, untpd.Quote(body, tags)(sourceFile(tree)))
