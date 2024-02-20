@@ -1,0 +1,4 @@
+-- Error: tests/neg/i19402.scala:9:12 ----------------------------------------------------------------------------------
+9 |  given bar(foo: Foo): Bar = Bar(foo) // error
+  |            ^^^
+  |            `using` expected

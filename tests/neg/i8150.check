@@ -1,0 +1,16 @@
+-- Error: tests/neg/i8150.scala:3:16 -----------------------------------------------------------------------------------
+3 |type T = {given A with A} // error
+  |          ^^^^^^^^^^^^^^
+  |          refinement cannot be `given`
+-- [E040] Syntax Error: tests/neg/i8150.scala:4:23 ---------------------------------------------------------------------
+4 |type T = {given(using a: A) as B} // error // error
+  |                       ^
+  |                       an identifier expected, but ':' found
+-- [E040] Syntax Error: tests/neg/i8150.scala:4:28 ---------------------------------------------------------------------
+4 |type T = {given(using a: A) as B} // error // error
+  |                            ^^
+  |                            'with' expected, but identifier found
+-- [E040] Syntax Error: tests/neg/i8150.scala:5:8 ----------------------------------------------------------------------
+5 |// error
+  |        ^
+  |        '}' expected, but eof found
