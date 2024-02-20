@@ -27,7 +27,7 @@ object DottyUnpickler {
     compilationUnitInfo: CompilationUnitInfo,
     posUnpickler: Option[PositionUnpickler],
     commentUnpickler: Option[CommentUnpickler],
-    isBestEffortTasty: Boolean = false
+    isBestEffortTasty: Boolean
   ) extends SectionUnpickler[TreeUnpickler](ASTsSection) {
     def unpickle(reader: TastyReader, nameAtRef: NameTable): TreeUnpickler =
       new TreeUnpickler(reader, nameAtRef, compilationUnitInfo, posUnpickler, commentUnpickler, isBestEffortTasty)
@@ -52,14 +52,14 @@ object DottyUnpickler {
 /** A class for unpickling Tasty trees and symbols.
  *  @param tastyFile         tasty file from which we unpickle (used for CompilationUnitInfo)
  *  @param bytes             the bytearray containing the Tasty file from which we unpickle
+ *  @param isBestEffortTasty specifies whether file should be unpickled as a Best Effort TASTy
  *  @param mode              the tasty file contains package (TopLevel), an expression (Term) or a type (TypeTree)
- *  @param isBestEffortTasty specifies wheather file should be unpickled as a Best Effort TASTy
  */
 class DottyUnpickler(
   tastyFile: AbstractFile,
   bytes: Array[Byte],
-  mode: UnpickleMode = UnpickleMode.TopLevel,
-  isBestEffortTasty: Boolean = false
+  isBestEffortTasty: Boolean,
+  mode: UnpickleMode = UnpickleMode.TopLevel
 ) extends ClassfileParser.Embedded with tpd.TreeProvider {
   import tpd.*
   import DottyUnpickler.*

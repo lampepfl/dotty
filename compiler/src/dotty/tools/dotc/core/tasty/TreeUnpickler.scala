@@ -42,6 +42,7 @@ import scala.collection.mutable
 import config.Printers.pickling
 
 import dotty.tools.tasty.TastyFormat.*
+import dotty.tools.tasty.besteffort.BestEffortTastyFormat.ERRORtype
 
 import scala.annotation.constructorOnly
 import scala.annotation.internal.sharable
@@ -451,7 +452,7 @@ class TreeUnpickler(reader: TastyReader,
         result
       }
 
-      def readSimpleType(): Type = (tag: @switch) match {
+      def readSimpleType(): Type = tag match {
         case TYPEREFdirect | TERMREFdirect =>
           NamedType(NoPrefix, readSymRef())
         case TYPEREFsymbol | TERMREFsymbol =>
@@ -493,18 +494,13 @@ class TreeUnpickler(reader: TastyReader,
           typeAtAddr.getOrElseUpdate(ref, forkAt(ref).readType())
         case BYNAMEtype =>
           ExprType(readType())
+        case ERRORtype if isBestEffortTasty =>
+          new PreviousErrorType
         case _ =>
           ConstantType(readConstant(tag))
       }
 
-      def readSimpleTypeBestEffort(): Type = tag match {
-        case ERRORtype => new PreviousErrorType
-        case _ => readSimpleType()
-      }
-
-      if (tag < firstLengthTreeTag){
-        if (isBestEffortTasty) readSimpleTypeBestEffort() else readSimpleType()
-      } else readLengthType()
+      if (tag < firstLengthTreeTag) readSimpleType() else readLengthType()
     }
 
     private def readSymNameRef()(using Context): Type = {

@@ -65,7 +65,7 @@ object TastyUnpickler {
 
 import TastyUnpickler.*
 
-class TastyUnpickler(protected val reader: TastyReader, isBestEffortTasty: Boolean = false) {
+class TastyUnpickler(protected val reader: TastyReader, isBestEffortTasty: Boolean) {
   import reader.*
 
   def this(bytes: Array[Byte]) = this(new TastyReader(bytes), false)

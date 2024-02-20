@@ -4,7 +4,7 @@ title: Best Effort Compilation
 ---
 
 Best-effort compilation is a compilation mode introduced with the aim of improving IDE integration. It allows to generate
-tast6y-like artifacts and semanticdb files in erroring programs.
+tasty-like artifacts and semanticdb files in erroring programs.
 
 It is composed of two experimental compiler options:
 * `-Ybest-effort` produces Best Effort TASTy (`.betasty`) files to the `META-INF/best-effort` directory

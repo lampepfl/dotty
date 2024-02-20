@@ -439,16 +439,17 @@ class TastyLoader(val tastyFile: AbstractFile) extends SymbolLoader {
         val tastyBytes = tastyFile.toByteArray
         val unpickler = new tasty.DottyUnpickler(tastyFile, tastyBytes, isBestEffortTasty = isBestEffortTasty)
         unpickler.enter(roots = Set(classRoot, moduleRoot, moduleRoot.sourceModule))(using ctx.withSource(util.NoSource))
-        if mayLoadTreesFromTasty || (isBestEffortTasty && ctx.withBestEffortTasty) then
+        if mayLoadTreesFromTasty || isBestEffortTasty then
           classRoot.classSymbol.rootTreeOrProvider = unpickler
           moduleRoot.classSymbol.rootTreeOrProvider = unpickler
         if isBestEffortTasty then
           checkBeTastyUUID(tastyFile, tastyBytes)
-          ctx.setUsesBestEffortTasty()
+          ctx.setUsedBestEffortTasty()
         else
           checkTastyUUID()
       else
         report.error(em"Best Effort TASTy $tastyFile file could not be read.")
+
   private def handleUnpicklingExceptions[T](thunk: =>T): T =
     try thunk
     catch case e: RuntimeException =>

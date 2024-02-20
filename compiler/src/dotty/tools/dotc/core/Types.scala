@@ -3132,7 +3132,7 @@ object Types extends TypeUtils {
       else cls.info match {
         case cinfo: ClassInfo => cinfo.selfType
         case _: ErrorType | NoType
-          if ctx.mode.is(Mode.Interactive) || ctx.isBestEffort || ctx.usesBestEffortTasty => cls.info
+          if ctx.mode.is(Mode.Interactive) || ctx.tolerateErrorsForBestEffort => cls.info
           // can happen in IDE if `cls` is stale
       }
 
@@ -3657,8 +3657,9 @@ object Types extends TypeUtils {
 
     def apply(tp1: Type, tp2: Type, soft: Boolean)(using Context): OrType = {
       def where = i"in union $tp1 | $tp2"
-      if (!ctx.usesBestEffortTasty) expectValueTypeOrWildcard(tp1, where)
-      if (!ctx.usesBestEffortTasty) expectValueTypeOrWildcard(tp2, where)
+      if !ctx.usedBestEffortTasty then
+        expectValueTypeOrWildcard(tp1, where)
+        expectValueTypeOrWildcard(tp2, where)
       assertUnerased()
       unique(new CachedOrType(tp1, tp2, soft))
     }

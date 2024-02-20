@@ -17,7 +17,7 @@ class GenBCode extends Phase { self =>
 
   override def description: String = GenBCode.description
 
-  override def isRunnable(using Context) = super.isRunnable && !ctx.usesBestEffortTasty
+  override def isRunnable(using Context) = super.isRunnable && !ctx.usedBestEffortTasty
 
   private val superCallsMap = new MutableSymbolMap[Set[ClassSymbol]]
   def registerSuperCall(sym: Symbol, calls: ClassSymbol): Unit = {

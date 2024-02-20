@@ -48,7 +48,7 @@ class PathPicklingTest {
       val jar = JarArchive.open(Path(s"$out/out.jar"), create = false)
       try
         for file <- jar.iterator() if file.name.endsWith(".tasty") do
-          sb.append(TastyPrinter.showContents(file.toByteArray, noColor = true))
+          sb.append(TastyPrinter.showContents(file.toByteArray, noColor = true, isBestEffortTasty = false))
       finally jar.close()
       sb.toString()
 

@@ -747,7 +747,9 @@ class TypeErasure(sourceLanguage: SourceLanguage, semiEraseVCs: Boolean, isConst
     assert(!etp.isInstanceOf[WildcardType] || inSigName, i"Unexpected WildcardType erasure for $tp")
     etp
 
-  /** Like translucentSuperType, but issue a fatal error if it does not exist. */
+  /** Like translucentSuperType, but issue a fatal error if it does not exist.
+   *  If using the best-effort option, the fatal error will not be issued.
+  */
   private def checkedSuperType(tp: TypeProxy)(using Context): Type =
     val tp1 = tp.translucentSuperType
     if !tp1.exists then

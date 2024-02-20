@@ -720,7 +720,7 @@ object SymDenotations {
      *  TODO: Find a more robust way to characterize self symbols, maybe by
      *       spending a Flag on them?
      */
-    final def isSelfSym(using Context): Boolean = 
+    final def isSelfSym(using Context): Boolean =
       if !ctx.isBestEffort || exists then
         owner.infoOrCompleter match {
           case ClassInfo(_, _, _, _, selfInfo) =>
@@ -2007,7 +2007,7 @@ object SymDenotations {
         case p :: parents1 =>
           p.classSymbol match {
             case pcls: ClassSymbol => builder.addAll(pcls.baseClasses)
-            case _ => assert(isRefinementClass || p.isError || ctx.mode.is(Mode.Interactive) || ctx.isBestEffort || ctx.usesBestEffortTasty, s"$this has non-class parent: $p")
+            case _ => assert(isRefinementClass || p.isError || ctx.mode.is(Mode.Interactive) || ctx.tolerateErrorsForBestEffort, s"$this has non-class parent: $p")
           }
           traverse(parents1)
         case nil =>

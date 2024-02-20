@@ -20,7 +20,7 @@ The following are the added productions to the grammar:
 ```
 **************************************************************************************/
 object BestEffortTastyFormat {
-  export TastyFormat._
+  export TastyFormat.{astTagToString => _, *}
 
   /** First four bytes of a best effort TASTy file, used instead of the regular header.
    *  Signifies that the TASTy can only be consumed by the compiler in the best effort mode.
@@ -34,4 +34,12 @@ object BestEffortTastyFormat {
    *  to be changed.
    */
   final val PatchVersion: Int = 0
+
+  // added AST tag - Best Effort TASTy only
+  final val ERRORtype = 50
+
+  def astTagToString(tag: Int) = tag match {
+    case ERRORtype => "ERRORtype"
+    case _ => TastyFormat.astTagToString(tag)
+  }
 }

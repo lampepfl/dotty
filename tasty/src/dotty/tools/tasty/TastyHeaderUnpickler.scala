@@ -129,11 +129,11 @@ class TastyHeaderUnpickler(config: UnpicklerConfig, reader: TastyReader) {
 
 object TastyHeaderUnpickler {
 
-  def check(cond: Boolean, msg: => String): Unit = {
+  private def check(cond: Boolean, msg: => String): Unit = {
     if (!cond) throw new UnpickleException(msg)
   }
 
-  def checkValidVersion(fileMajor: Int, fileMinor: Int, fileExperimental: Int, toolingVersion: String, config: UnpicklerConfig) = {
+  private[tasty] def checkValidVersion(fileMajor: Int, fileMinor: Int, fileExperimental: Int, toolingVersion: String, config: UnpicklerConfig) = {
     val toolMajor: Int = config.majorVersion
     val toolMinor: Int = config.minorVersion
     val toolExperimental: Int = config.experimentalVersion

@@ -217,7 +217,7 @@ object PickledQuotes {
   /** Pickle tree into it's TASTY bytes s*/
   private def pickle(tree: Tree)(using Context): Array[Byte] = {
     quotePickling.println(i"**** pickling quote of\n$tree")
-    val pickler = new TastyPickler(defn.RootClass)
+    val pickler = new TastyPickler(defn.RootClass, isBestEffortTasty = false)
     val treePkl = new TreePickler(pickler, Attributes.empty)
     treePkl.pickle(tree :: Nil)
     treePkl.compactify()
@@ -229,7 +229,7 @@ object PickledQuotes {
       positionWarnings.foreach(report.warning(_))
 
     val pickled = pickler.assembleParts()
-    quotePickling.println(s"**** pickled quote\n${TastyPrinter.showContents(pickled, ctx.settings.color.value == "never")}")
+    quotePickling.println(s"**** pickled quote\n${TastyPrinter.showContents(pickled, ctx.settings.color.value == "never", isBestEffortTasty = false)}")
     pickled
   }
 
@@ -266,10 +266,10 @@ object PickledQuotes {
 
         inContext(unpicklingContext) {
 
-          quotePickling.println(s"**** unpickling quote from TASTY\n${TastyPrinter.showContents(bytes, ctx.settings.color.value == "never")}")
+          quotePickling.println(s"**** unpickling quote from TASTY\n${TastyPrinter.showContents(bytes, ctx.settings.color.value == "never", isBestEffortTasty = false)}")
 
           val mode = if (isType) UnpickleMode.TypeTree else UnpickleMode.Term
-          val unpickler = new DottyUnpickler(NoAbstractFile, bytes, mode)
+          val unpickler = new DottyUnpickler(NoAbstractFile, bytes, isBestEffortTasty = false, mode)
           unpickler.enter(Set.empty)
 
           val tree = unpickler.tree

@@ -38,7 +38,7 @@ object TastyPrinter:
     val noColor = args.contains("-color:never")
     val allowBetasty = args.contains(betastyOpt)
     var printLastLine = false
-    def printTasty(fileName: String, bytes: Array[Byte], isBestEffortTasty: Boolean = false): Unit =
+    def printTasty(fileName: String, bytes: Array[Byte], isBestEffortTasty: Boolean): Unit =
       println(line)
       println(fileName)
       println(line)
@@ -60,7 +60,7 @@ object TastyPrinter:
         val jar = JarArchive.open(Path(arg), create = false)
         try
           for file <- jar.iterator() if file.name.endsWith(".tasty") do
-            printTasty(s"$arg ${file.path}", file.toByteArray)
+            printTasty(s"$arg ${file.path}", file.toByteArray, false)
         finally jar.close()
       else
         println(s"Not a '.tasty' or '.jar' file: $arg")

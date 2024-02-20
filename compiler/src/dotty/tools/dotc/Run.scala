@@ -297,10 +297,6 @@ class Run(comp: Compiler, ictx: Context) extends ImplicitRunInfo with Constraint
       ctx.settings.Yskip.value, ctx.settings.YstopBefore.value, stopAfter, ctx.settings.Ycheck.value)
     ctx.base.usePhases(phases)
 
-    var forceReachPhaseMaybe =
-      if (ctx.isBestEffort && phases.exists(_.phaseName == "typer")) Some("typer")
-      else None
-
     if ctx.settings.YnoDoubleBindings.value then
       ctx.base.checkNoDoubleBindings = true
 
@@ -308,6 +304,10 @@ class Run(comp: Compiler, ictx: Context) extends ImplicitRunInfo with Constraint
       var lastPrintedTree: PrintedTree = NoPrintedTree
       val profiler = ctx.profiler
       var phasesWereAdjusted = false
+
+      var forceReachPhaseMaybe =
+        if (ctx.isBestEffort && phases.exists(_.phaseName == "typer")) Some("typer")
+        else None
 
       for phase <- allPhases do
         doEnterPhase(phase)
@@ -325,11 +325,8 @@ class Run(comp: Compiler, ictx: Context) extends ImplicitRunInfo with Constraint
                   ctx.fresh.setPhase(phase.next).setCompilationUnit(unit))
                 lastPrintedTree = printTree(lastPrintedTree)(using printCtx(unit))
 
-            forceReachPhaseMaybe match {
-              case Some(forceReachPhase) if phase.phaseName == forceReachPhase =>
-                forceReachPhaseMaybe = None
-              case _ =>
-            }
+            if forceReachPhaseMaybe.contains(phase.phaseName) then
+              forceReachPhaseMaybe = None
 
             report.informTime(s"$phase ", start)
             Stats.record(s"total trees at end of $phase", ast.Trees.ntrees)

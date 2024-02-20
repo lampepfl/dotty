@@ -472,17 +472,20 @@ object Contexts {
     /** Is the explicit nulls option set? */
     def explicitNulls: Boolean = base.settings.YexplicitNulls.value
 
-    /** Is best-effort-dir option set? */
+    /** Is the best-effort option set? */
     def isBestEffort: Boolean = base.settings.YbestEffort.value
 
-    /** Is the from-best-effort-tasty option set to true? */
+    /** Is the with-best-effort-tasty option set? */
     def withBestEffortTasty: Boolean = base.settings.YwithBestEffortTasty.value
 
     /** Were any best effort tasty dependencies used during compilation? */
-    def usesBestEffortTasty: Boolean = base.usedBestEffortTasty
+    def usedBestEffortTasty: Boolean = base.usedBestEffortTasty
 
     /** Confirm that a best effort tasty dependency was used during compilation. */
-    def setUsesBestEffortTasty(): Unit = base.usedBestEffortTasty = true
+    def setUsedBestEffortTasty(): Unit = base.usedBestEffortTasty = true
+
+    /** Is either the best-effort option set or .betasty files were used during compilation? */
+    def tolerateErrorsForBestEffort = isBestEffort || usedBestEffortTasty
 
     /** A fresh clone of this context embedded in this context. */
     def fresh: FreshContext = freshOver(this)

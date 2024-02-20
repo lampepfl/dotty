@@ -16,7 +16,7 @@ class BestEffortCompilationTests {
   import BestEffortCompilationTests._
   import CompilationTest.aggregateTests
 
-  // Since TASTy nad beTASTy files are read in a lazy manner (only when referenced by the source .scala file)
+  // Since TASTy and beTASTy files are read in a lazy manner (only when referenced by the source .scala file)
   // we test by using the "-from-tasty" option. This guarantees that the tasty files will be read
   // (and that the Best Effort TASTy reader will be tested), but we unfortunately skip the useful
   // interactions a tree derived from beTASTy could have with other frontend phases.
