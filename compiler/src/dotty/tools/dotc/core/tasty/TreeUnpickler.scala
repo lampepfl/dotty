@@ -447,6 +447,9 @@ class TreeUnpickler(reader: TastyReader,
               readTypeRef() match {
                 case binder: LambdaType => binder.paramRefs(readNat())
               }
+            case _ if isBestEffortTasty =>
+              goto(end)
+              new PreviousErrorType
           }
         assert(currentAddr == end, s"$start $currentAddr $end ${astTagToString(tag)}")
         result

@@ -418,18 +418,16 @@ class ClassfileLoader(val classfile: AbstractFile) extends SymbolLoader {
 }
 
 class TastyLoader(val tastyFile: AbstractFile) extends SymbolLoader {
-
+  val isBestEffortTasty = tastyFile.extension == "betasty"
   private val unpickler: tasty.DottyUnpickler =
     handleUnpicklingExceptions:
       val tastyBytes = tastyFile.toByteArray
-      new tasty.DottyUnpickler(tastyFile, tastyBytes) // reads header and name table
+      new tasty.DottyUnpickler(tastyFile, tastyBytes, isBestEffortTasty) // reads header and name table
 
   val compilationUnitInfo: CompilationUnitInfo | Null = unpickler.compilationUnitInfo
 
-  val isBestEffortTasty = tastyFile.name.endsWith(".betasty")
-
   def description(using Context): String =
-    if tastyFile.extension == ".betasty" then "Best Effort TASTy file " + tastyFile.toString
+    if isBestEffortTasty then "Best Effort TASTy file " + tastyFile.toString
     else "TASTy file " + tastyFile.toString
 
   override def doComplete(root: SymDenotation)(using Context): Unit =

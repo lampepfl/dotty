@@ -2,10 +2,11 @@ package dotty.tools.dotc
 package core
 package tasty
 
+import java.util.UUID
 import scala.language.unsafeNulls
 
 import dotty.tools.tasty.{TastyFormat, TastyVersion, TastyBuffer, TastyReader, TastyHeaderUnpickler, UnpicklerConfig}
-import dotty.tools.tasty.besteffort.BestEffortTastyHeaderUnpickler
+import dotty.tools.tasty.besteffort.{BestEffortTastyHeader, BestEffortTastyHeaderUnpickler}
 
 import TastyFormat.NameTags.*, TastyFormat.nameTagToString
 import TastyBuffer.NameRef
@@ -15,6 +16,18 @@ import Names.{TermName, termName, EmptyTermName}
 import NameKinds.*
 import dotty.tools.tasty.TastyHeader
 import dotty.tools.tasty.TastyBuffer.Addr
+
+case class CommonTastyHeader(
+  uuid: UUID,
+  majorVersion: Int,
+  minorVersion: Int,
+  experimentalVersion: Int,
+  toolingVersion: String
+):
+  def this(h: TastyHeader) =
+    this(h.uuid, h.majorVersion, h.minorVersion, h.experimentalVersion, h.toolingVersion)
+  def this(h: BestEffortTastyHeader) =
+    this(h.uuid, h.majorVersion, h.minorVersion, h.experimentalVersion, h.toolingVersion)
 
 object TastyUnpickler {
 
@@ -126,9 +139,11 @@ class TastyUnpickler(protected val reader: TastyReader, isBestEffortTasty: Boole
     result
   }
 
-  val header =
-    if isBestEffortTasty then new BestEffortTastyHeaderUnpickler(scala3CompilerConfig, reader).readFullHeader()
-    else new TastyHeaderUnpickler(reader).readFullHeader()
+  val header: CommonTastyHeader =
+    if isBestEffortTasty then
+      new CommonTastyHeader(new BestEffortTastyHeaderUnpickler(scala3CompilerConfig, reader).readFullHeader())
+    else
+      new CommonTastyHeader(new TastyHeaderUnpickler(reader).readFullHeader())
 
   def readNames(): Unit =
     until(readEnd()) { nameAtRef.add(readNameContents()) }

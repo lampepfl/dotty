@@ -10,6 +10,9 @@ i6796.scala
 i14013.scala
 toplevel-cyclic
 curried-dependent-ift.scala
+i17121.scala
+illegal-match-types.scala
+i13780-1.scala
 
 # semantic db generation fails in the first compilation
 i1642.scala
