@@ -71,20 +71,28 @@ class PageSearchEngine(pages: List[PageEntry]):
     pages.map(prematchPage(_, search)).filter(_.indices.nonEmpty)
 
   private def prematchPage(page: PageEntry, search: String): MatchResult =
+    val pagePackage = page.description
     val pageName = page.shortName
+    val fullQualified = if page.description != "" then
+      page.description + "." + pageName
+      else pageName
+
     @tailrec
-    def prematchPageAcc(nameIndex: Int, searchIndex: Int, acc: Set[Int], scoreAcc: Int, consecutiveMatches: Int): MatchResult =
+    def prematchPageAcc(nameIndex: Int, searchIndex: Int, fullIndex: Int, acc: Set[Int], scoreAcc: Int, consecutiveMatches: Int): MatchResult =
       if searchIndex >= search.length then
         MatchResult(scoreAcc, page, acc)
-      else if nameIndex >= pageName.length then
-        MatchResult(0, page, Set.empty)
+      else if nameIndex >= pageName.length || fullIndex >= fullQualified.length then
+          MatchResult(0, page, Set.empty)
+      else if search.contains(".") && fullQualified(fullIndex).toLower == search(searchIndex).toLower then
+        val score = (if consecutiveMatches > 0 then 1 else 0) + positionScores(nameIndex)
+        prematchPageAcc(nameIndex, searchIndex + 1, fullIndex + 1, acc + nameIndex, scoreAcc + score, consecutiveMatches + 1)
       else if pageName(nameIndex).toLower == search(searchIndex).toLower then
         val score = (if consecutiveMatches > 0 then 1 else 0) + positionScores(nameIndex)
-        prematchPageAcc(nameIndex + 1, searchIndex + 1, acc + nameIndex, scoreAcc + score, consecutiveMatches + 1)
+        prematchPageAcc(nameIndex + 1, searchIndex + 1, fullIndex, acc + nameIndex, scoreAcc + score, consecutiveMatches + 1)
       else
-        prematchPageAcc(nameIndex + 1, searchIndex, acc, scoreAcc, 0)
+        prematchPageAcc(nameIndex + 1, searchIndex, fullIndex + 1, acc, scoreAcc, 0)
 
-    val result = prematchPageAcc(0, 0, Set.empty, 0, 0)
+    val result = prematchPageAcc(0, 0, 0, Set.empty, 0, 0)
     result.copy(score = result.score + kindScoreBonus(page.kind))
 
   private def matchPage(prematched: MatchResult, nameSearch: String): MatchResult =
