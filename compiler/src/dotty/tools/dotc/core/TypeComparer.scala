@@ -1596,7 +1596,7 @@ class TypeComparer(@constructorOnly initctx: Context) extends ConstraintHandling
         val tycon1 = liftToThis(tp.tycon)
         if (tycon1 ne tp.tycon) tp.derivedAppliedType(tycon1, tp.args) else tp
       case tp: TypeVar if tp.isInstantiated =>
-        liftToThis(tp.inst)
+        liftToThis(tp.instanceOpt)
       case tp: AnnotatedType =>
         val parent1 = liftToThis(tp.parent)
         if (parent1 ne tp.parent) tp.derivedAnnotatedType(parent1, tp.annot) else tp
