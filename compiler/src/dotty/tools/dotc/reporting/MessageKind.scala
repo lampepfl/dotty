@@ -21,6 +21,7 @@ enum MessageKind:
   case MatchCaseUnreachable
   case Compatibility
   case PotentialIssue
+  case UnusedSymbol
 
   /** Human readable message that will end up being shown to the user.
    *  NOTE: This is only used in the situation where you have multiple words
@@ -37,5 +38,6 @@ enum MessageKind:
       case PatternMatchExhaustivity => "Pattern Match Exhaustivity"
       case MatchCaseUnreachable => "Match case Unreachable"
       case PotentialIssue => "Potential Issue"
+      case UnusedSymbol => "Unused symbol"
       case kind => kind.toString
 end MessageKind

@@ -3159,3 +3159,42 @@ class VolatileOnVal()(using Context)
 extends SyntaxMsg(VolatileOnValID):
   protected def msg(using Context): String = "values cannot be volatile"
   protected def explain(using Context): String = ""
+
+class UnusedSymbol(pos: SourcePosition,_msg: String, _actions: List[CodeAction])(using Context)
+extends Message(UnusedSymbolID) {
+  def kind = MessageKind.UnusedSymbol
+
+  override def actions(using Context) = _actions
+  override def msg(using Context) = _msg
+  override def explain(using Context) = i""
+}
+
+object UnusedSymbol {
+    private def createRemoveLocalDefAction(tree: tpd.DefTree)(using Context): List[CodeAction] = {
+      import scala.language.unsafeNulls
+
+      val source = tree.sourcePos.source
+      val endLine = source.offsetToLine(tree.sourcePos.end - 1)
+      val nextLineOffset = source.lineToOffset(endLine + 1)
+      val startOffset = source.lineToOffset(tree.sourcePos.startLine)
+
+      val pathes = List(
+        ActionPatch(
+          srcPos = tree.sourcePos.withSpan(tree.sourcePos.span.withStart(startOffset).withEnd(nextLineOffset)),
+          replacement = ""
+        ),
+      )
+      List(
+        CodeAction(title = s"Remove unused code",
+          description = None,
+          patches = pathes
+        )
+      )
+    }
+    def imports(pos: SourcePosition)(using Context): UnusedSymbol= new UnusedSymbol(pos, i"unused import", List.empty)
+    def localDefs(tree: tpd.NamedDefTree)(using Context): UnusedSymbol = new UnusedSymbol(tree.namePos, i"unused local definition", createRemoveLocalDefAction(tree))
+    def explicitParams(tree: tpd.NamedDefTree)(using Context): UnusedSymbol = new UnusedSymbol(tree.namePos, i"unused explicit parameter", List.empty)
+    def implicitParams(tree: tpd.NamedDefTree)(using Context): UnusedSymbol = new UnusedSymbol(tree.namePos, i"unused implicit parameter", List.empty)
+    def privateMembers(tree: tpd.NamedDefTree)(using Context): UnusedSymbol = new UnusedSymbol(tree.namePos, i"unused private member", List.empty)
+    def patVars(tree: tpd.NamedDefTree)(using Context): UnusedSymbol = new UnusedSymbol(tree.namePos, i"unused pattern variable", List.empty)
+}
