@@ -1,0 +1,11 @@
+-- [E193] Type Error: tests/neg/multiple-assignment.scala:9:16 -----------------
+9 |  ((x, y), z) = 1
+  |                ^
+  |              invalid source of multiple assignment.
+  |              The right hand side must be a tuple but (1 : Int) was found.
+-- [E194] Type Error: tests/neg/multiple-assignment.scala:10:11 ----------------
+10 |  (x, y) = (1, 1, 1)
+   |           ^^^^^^^^^
+   |          Source and target of multiple assignment have different sizes.
+   |          Source: 3
+   |          Target: 2

@@ -3159,3 +3159,20 @@ class VolatileOnVal()(using Context)
 extends SyntaxMsg(VolatileOnValID):
   protected def msg(using Context): String = "values cannot be volatile"
   protected def explain(using Context): String = ""
+
+class InvalidMultipleAssignmentSource(found: Type)(using Context)
+  extends TypeMsg(InvalidMultipleAssignmentSourceID) {
+  def msg(using Context) =
+    i"""invalid source of multiple assignment.
+        |The right hand side must be a tuple but $found was found."""
+  def explain(using Context) = ""
+}
+
+class MultipleAssignmentShapeMismatch(found: Int, required: Int)(using Context)
+  extends TypeMsg(MultipleAssignmentShapeMismatchID) {
+  def msg(using Context) =
+    i"""Source and target of multiple assignment have different sizes.
+        |Source: $found
+        |Target: $required"""
+  def explain(using Context) = ""
+}
