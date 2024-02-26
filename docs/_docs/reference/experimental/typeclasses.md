@@ -179,7 +179,7 @@ The old syntax with multiple `:` should be phased out over time.
 
 So far, a context bound for a type `M` gets a synthesized fresh name. It would be much more useful if it got the name of the constrained type instead, translated to be a term name. This means our `reduce` method over monoids would not even need an `as` binding. We could simply formulate it as follows:
 ```
- def reduce[M: Monoid](xs: List[M] =
+ def reduce[M: Monoid](xs: List[M]) =
     xs.foldLeft(M.unit)(_ `combine` _)
 ```
 
