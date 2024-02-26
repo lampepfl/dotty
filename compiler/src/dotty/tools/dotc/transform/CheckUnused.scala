@@ -102,6 +102,7 @@ class CheckUnused private (phaseMode: CheckUnused.PhaseMode, suffix: String, _ke
     pushInBlockTemplatePackageDef(tree)
 
   override def prepareForTemplate(tree: tpd.Template)(using Context): Context =
+    traverser.traverse(tree.constr)
     pushInBlockTemplatePackageDef(tree)
 
   override def prepareForPackageDef(tree: tpd.PackageDef)(using Context): Context =
