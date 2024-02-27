@@ -10,7 +10,7 @@ import Names.TermName
 import NameKinds.{InlineAccessorName, InlineBinderName, InlineScrutineeName}
 import config.Printers.inlining
 import util.SimpleIdentityMap
-
+import dotty.tools.dotc.reporting.Message
 import collection.mutable
 
 /** A utility class offering methods for rewriting inlined code */
@@ -146,17 +146,16 @@ class InlineReducer(inliner: Inliner)(using Context):
     }
     binding1.withSpan(call.span)
   }
-
   /** The result type of reducing a match. It consists optionally of a list of bindings
    *  for the pattern-bound variables and the RHS of the selected case.
-   *  Returns `None` if no case was selected.
+   *  Returns `Left` with an optional message for implicitNotFound if no case was selected.
    */
-  type MatchRedux = Option[(List[MemberDef], Tree)]
+  type MatchRedux = Either[Option[Message],(List[MemberDef], Tree)]
 
   /** Same as MatchRedux, but also includes a boolean
    *  that is true if the guard can be checked at compile time.
    */
-  type MatchReduxWithGuard = Option[(List[MemberDef], Tree, Boolean)]
+  type MatchReduxWithGuard = Either[Option[Message],(List[MemberDef], Tree, Boolean)]
 
   /** Reduce an inline match
     *   @param     mtch          the match tree
@@ -173,13 +172,14 @@ class InlineReducer(inliner: Inliner)(using Context):
     val isImplicit = scrutinee.isEmpty
 
     /** Try to match pattern `pat` against scrutinee reference `scrut`. If successful add
-     *  bindings for variables bound in this pattern to `caseBindingMap`.
+     *  bindings for variables bound in this pattern to `caseBindingMap` and return None.
+     *  Otherwise, it returns optional error message.
      */
     def reducePattern(
       caseBindingMap: mutable.ListBuffer[(Symbol, MemberDef)],
       scrut: TermRef,
       pat: Tree
-    )(using Context): Boolean = {
+    )(using Context): Option[Option[Message]] = {
 
       /** Create a binding of a pattern bound variable with matching part of
        *  scrutinee as RHS and type that corresponds to RHS.
@@ -193,8 +193,13 @@ class InlineReducer(inliner: Inliner)(using Context):
         val copied = sym.copy(info = TypeAlias(alias), coord = sym.coord).asType
         caseBindingMap += ((sym, TypeDef(copied)))
       }
-
-      def searchImplicit(sym: TermSymbol, tpt: Tree) = {
+      
+      /**
+       * @return 
+       *    None if implicit search finds an instance or fails with a hard error. 
+       *    Otherwise, return the error message for missing implicit instance.
+      */
+      def searchImplicit(sym: TermSymbol, tpt: Tree): Option[Message] = {
         val evTyper = new Typer(ctx.nestingLevel + 1)
         val evCtx = ctx.fresh.setTyper(evTyper)
         inContext(evCtx) {
@@ -202,13 +207,14 @@ class InlineReducer(inliner: Inliner)(using Context):
           evidence.tpe match {
             case fail: Implicits.AmbiguousImplicits =>
               report.error(evTyper.missingArgMsg(evidence, tpt.tpe, ""), tpt.srcPos)
-              true // hard error: return true to stop implicit search here
+              None // hard error: return None to stop implicit search here
             case fail: Implicits.SearchFailureType =>
-              false
+              val noImplicitMsg = evTyper.missingArgMsg(evidence, tpt.tpe, "")
+              Some(noImplicitMsg)
             case _ =>
               //inlining.println(i"inferred implicit $sym: ${sym.info} with $evidence: ${evidence.tpe.widen}, ${evCtx.gadt.constraint}, ${evCtx.typerState.constraint}")
               newTermBinding(sym, evidence)
-              true
+              None
           }
         }
       }
@@ -280,48 +286,62 @@ class InlineReducer(inliner: Inliner)(using Context):
         case Typed(pat1, tpt) =>
           val typeBinds = getTypeBindsMap(pat1, tpt)
           registerAsGadtSyms(typeBinds)
-          scrut <:< tpt.tpe && {
+          if (scrut <:< tpt.tpe) then
             addTypeBindings(typeBinds)
             reducePattern(caseBindingMap, scrut, pat1)
-          }
+          else
+            Some(None)
         case pat @ Bind(name: TermName, Typed(_, tpt)) if isImplicit =>
           val typeBinds = getTypeBindsMap(tpt, tpt)
           registerAsGadtSyms(typeBinds)
-          searchImplicit(pat.symbol.asTerm, tpt) && {
-            addTypeBindings(typeBinds)
-            true
-          }
+          searchImplicit(pat.symbol.asTerm, tpt) match
+            // found or hard error
+            case None =>
+              addTypeBindings(typeBinds)
+              None
+            case Some(msg) =>
+              Some(Some(msg))
+
         case pat @ Bind(name: TermName, body) =>
-          reducePattern(caseBindingMap, scrut, body) && {
-            if (name != nme.WILDCARD) newTermBinding(pat.symbol.asTerm, ref(scrut))
-            true
-          }
+          reducePattern(caseBindingMap,scrut,body) match
+            case None if name != nme.WILDCARD =>
+              newTermBinding(pat.symbol.asTerm, ref(scrut))
+              None
+            case None =>
+              None
+            case Some(msg) =>
+              Some(msg)
+
         case Ident(nme.WILDCARD) =>
-          true
+          None
         case pat: Literal =>
-          scrut.widenTermRefExpr =:= pat.tpe
+          if scrut.widenTermRefExpr =:= pat.tpe then
+            None
+          else Some(None)
         case pat: RefTree =>
-          scrut =:= pat.tpe ||
-          scrut.classSymbol.is(Module) && scrut.widen =:= pat.tpe.widen && {
-            scrut.prefix match {
-              case _: SingletonType | NoPrefix => true
-              case _ => false
-            }
-          }
+          if(scrut =:= pat.tpe) then
+            None
+          else if (scrut.classSymbol.is(Module) && scrut.widen =:= pat.tpe.widen) then
+            scrut.prefix match
+              case _: SingletonType | NoPrefix => None
+              case _ => Some(None)
+          else Some(None)
         case UnApply(unapp, _, pats) =>
           unapp.tpe.widen match {
             case mt: MethodType if mt.paramInfos.length == 1 =>
 
-              def reduceSubPatterns(pats: List[Tree], selectors: List[Tree]): Boolean = (pats, selectors) match {
-                case (Nil, Nil) => true
+              def reduceSubPatterns(pats: List[Tree], selectors: List[Tree]): Option[Option[Message]] = (pats, selectors) match {
+                case (Nil, Nil) => None
                 case (pat :: pats1, selector :: selectors1) =>
                   val elem = newSym(InlineBinderName.fresh(), Synthetic, selector.tpe.widenInlineScrutinee).asTerm
                   val rhs = constToLiteral(selector)
                   elem.defTree = rhs
                   caseBindingMap += ((NoSymbol, ValDef(elem, rhs).withSpan(elem.span)))
-                  reducePattern(caseBindingMap, elem.termRef, pat) &&
-                  reduceSubPatterns(pats1, selectors1)
-                case _ => false
+                  reducePattern(caseBindingMap, elem.termRef, pat) match
+                    case None => reduceSubPatterns(pats1, selectors1)
+                    case Some(msg) => Some(msg)
+                  
+                case _ => Some(None)
               }
 
               val paramType = mt.paramInfos.head
@@ -333,17 +353,42 @@ class InlineReducer(inliner: Inliner)(using Context):
                 val selectors =
                   for (accessor <- caseAccessors)
                   yield constToLiteral(reduceProjection(ref(scrut).select(accessor).ensureApplied))
-                caseAccessors.length == pats.length && reduceSubPatterns(pats, selectors)
+                if caseAccessors.length == pats.length then  reduceSubPatterns(pats, selectors)
+                else Some(None)
               }
-              else false
+              else Some(None)
             case _ =>
-              false
+              Some(None)
           }
         case Alternative(pats) =>
-          pats.exists(reducePattern(caseBindingMap, scrut, _))
+          /**
+           * Apply `reducePattern` on `caseBindingMap` until it finds a match.
+           * 
+           * @param ps a list of patterns to match
+           * @param theLastMsg the last message for missing implicit instance
+           * 
+           * @return `None` if it finds a match. Otherwise, it returns optional error message.
+          */
+          def applyReduceUntilFind(
+            ps: List[Tree],
+            theLastMsg: Option[Message] = None
+          ): Option[Option[Message]] =
+            ps match
+              case  Nil => Some(theLastMsg)
+              case p :: ps =>
+                reducePattern(caseBindingMap, scrut, p) match
+                  // it finds a match or fails with hard error
+                  case None => None
+                  // implicit search fails with message
+                  case Some(msg @ Some(_)) =>
+                    applyReduceUntilFind(ps, msg)
+                  case Some(None) =>
+                    applyReduceUntilFind(ps, theLastMsg)
+          end applyReduceUntilFind
+          applyReduceUntilFind(pats)
         case tree: Inlined if tree.inlinedFromOuterScope =>
           reducePattern(caseBindingMap, scrut, tree.expansion)
-        case _ => false
+        case _ => Some(None)
       }
     }
 
@@ -368,29 +413,30 @@ class InlineReducer(inliner: Inliner)(using Context):
 
       if (!isImplicit) caseBindingMap += ((NoSymbol, scrutineeBinding))
       val gadtCtx = ctx.fresh.setFreshGADTBounds.addMode(Mode.GadtConstraintInference)
-      if (reducePattern(caseBindingMap, scrutineeSym.termRef, cdef.pat)(using gadtCtx)) {
-        val (caseBindings, from, to) = substBindings(caseBindingMap.toList, mutable.ListBuffer(), Nil, Nil)
-        val (guardOK, canReduceGuard) =
-          if cdef.guard.isEmpty then (true, true)
-          else typer.typed(cdef.guard.subst(from, to), defn.BooleanType) match {
-            case ConstantValue(v: Boolean) => (v, true)
-            case _ => (false, false)
-          }
-        if guardOK then Some((caseBindings.map(_.subst(from, to)), cdef.body.subst(from, to), canReduceGuard))
-        else if canReduceGuard then None
-        else Some((caseBindings.map(_.subst(from, to)), cdef.body.subst(from, to), canReduceGuard))
-      }
-      else None
+      reducePattern(caseBindingMap,scrutineeSym.termRef,cdef.pat)(using gadtCtx) match
+        case Some(msg) => Left(msg)
+        case None => {
+          val (caseBindings, from, to) = substBindings(caseBindingMap.toList, mutable.ListBuffer(), Nil, Nil)
+          val (guardOK, canReduceGuard) =
+            if cdef.guard.isEmpty then (true, true)
+            else typer.typed(cdef.guard.subst(from, to), defn.BooleanType) match {
+              case ConstantValue(v: Boolean) => (v, true)
+              case _ => (false, false)
+            }
+          if guardOK then Right((caseBindings.map(_.subst(from, to)), cdef.body.subst(from, to), canReduceGuard))
+          else if canReduceGuard then Left(None)
+          else Right((caseBindings.map(_.subst(from, to)), cdef.body.subst(from, to), canReduceGuard))
+        }
     }
 
-    def recur(cases: List[CaseDef]): MatchRedux = cases match {
-      case Nil => None
+    def recur(cases: List[CaseDef], theLastMsg: Option[Message] = None): MatchRedux = cases match
+      case Nil => Left(theLastMsg)
       case cdef :: cases1 =>
         reduceCase(cdef) match
-          case None => recur(cases1)
-          case r @ Some((caseBindings, rhs, canReduceGuard)) if canReduceGuard => Some((caseBindings, rhs))
-          case _ => None
-    }
+          case Left(None) => recur(cases1, theLastMsg)
+          case Left(msg @Some(_)) => recur(cases1, msg)
+          case r @ Right((caseBindings, rhs, canReduceGuard)) if canReduceGuard => Right((caseBindings, rhs))
+          case _ => Left(theLastMsg)
 
     recur(cases)
   }

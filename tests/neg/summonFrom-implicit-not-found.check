@@ -1,0 +1,24 @@
+-- Error: tests/neg/summonFrom-implicit-not-found.scala:8:8 ------------------------------------------------------------
+8 |val x = summonMissing // error
+  |        ^^^^^^^^^^^^^
+  |        there is no Missing!
+  |---------------------------------------------------------------------------------------------------------------------
+  |Inline stack trace
+  |- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  |This location contains code that was inlined from summonFrom-implicit-not-found.scala:4
+4 |inline def summonMissing = compiletime.summonFrom {
+  |                           ^
+5 |  case m: Missing => m
+6 |}
+   ---------------------------------------------------------------------------------------------------------------------
+-- [E172] Type Error: tests/neg/summonFrom-implicit-not-found.scala:9:8 ------------------------------------------------
+9 |val y = summonMissing2 // error
+  |        ^^^^^^^^^^^^^^
+  |        there is no Missing!
+  |---------------------------------------------------------------------------------------------------------------------
+  |Inline stack trace
+  |- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  |This location contains code that was inlined from summonFrom-implicit-not-found.scala:7
+7 |inline def summonMissing2 = compiletime.summonInline[Missing]
+  |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   ---------------------------------------------------------------------------------------------------------------------
