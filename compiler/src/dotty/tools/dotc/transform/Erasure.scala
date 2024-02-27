@@ -566,7 +566,13 @@ object Erasure {
           case Some(annot) =>
             val message = annot.argumentConstant(0) match
               case Some(c) =>
-                c.stringValue.toMessage
+                val addendum = tree match
+                  case tree: RefTree
+                  if tree.symbol == defn.Compiletime_deferred && tree.name != nme.deferred =>
+                    i".\nNote that `deferred` can only be used under its own name when implementing a given in a trait; `${tree.name}` is not accepted."
+                  case _ =>
+                    ""
+                (c.stringValue ++ addendum).toMessage
               case _ =>
                 em"""Reference to ${tree.symbol.showLocated} should not have survived,
                     |it should have been processed and eliminated during expansion of an enclosing macro or term erasure."""

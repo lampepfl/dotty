@@ -1,4 +1,6 @@
 //> using options -language:experimental.modularity -source future
+import compiletime.deferred
+
 class Ctx
 class Ctx2
 

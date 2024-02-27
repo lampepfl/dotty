@@ -2838,20 +2838,32 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
           val dcl = mbr.symbol
           val target = dcl.info.asSeenFrom(cls.thisType, dcl.owner)
           val constr = cls.primaryConstructor
-          val paramScope = newScopeWith(cls.paramAccessors.filter(_.is(Given))*)
+          val usingParamAccessors = cls.paramAccessors.filter(_.is(Given))
+          val paramScope = newScopeWith(usingParamAccessors*)
           val searchCtx = ctx.outer.fresh.setScope(paramScope)
           val rhs = implicitArgTree(target, cdef.span,
               where = i"inferring the implementation of the deferred ${dcl.showLocated}"
             )(using searchCtx)
+
           val impl = dcl.copy(cls,
-            flags = dcl.flags &~ (HasDefault | Deferred) | Final,
+            flags = dcl.flags &~ (HasDefault | Deferred) | Final | Override,
             info = target,
             coord = rhs.span).entered.asTerm
-          ValDef(impl, rhs)
+
+          def anchorParams = new TreeMap:
+            override def transform(tree: Tree)(using Context): Tree = tree match
+              case id: Ident if usingParamAccessors.contains(id.symbol) =>
+                cpy.Select(id)(This(cls), id.name)
+              case _ =>
+                super.transform(tree)
+          ValDef(impl, anchorParams.transform(rhs))
+        end givenImpl
 
         val givenImpls =
           cls.thisType.implicitMembers
+            //.showing(i"impl def givens for $cls/$result")
             .filter(_.symbol.isAllOf(DeferredGivenFlags, butNot = Param))
+            //.showing(i"impl def filtered givens for $cls/$result")
             .filter(isGivenValue)
             .map(givenImpl)
         body ++ givenImpls

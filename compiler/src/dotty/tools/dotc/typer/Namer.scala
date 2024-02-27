@@ -1823,12 +1823,12 @@ class Namer { typer: Typer =>
     // translate `given T = deferred` to an abstract given with HasDefault flag
     if sym.is(Given) then
       mdef.rhs match
-        case Ident(nme.deferred) if Feature.enabled(modularity) =>
-          if !sym.maybeOwner.is(Trait) then
-            report.error(em"`deferred` can only be used for givens in traits", mdef.rhs.srcPos)
-          else
-            sym.resetFlag(Final)
-            sym.setFlag(Deferred | HasDefault)
+        case rhs: RefTree
+        if rhs.name == nme.deferred
+            && typedAheadExpr(rhs).symbol == defn.Compiletime_deferred
+            && sym.maybeOwner.is(Trait) =>
+          sym.resetFlag(Final)
+          sym.setFlag(Deferred | HasDefault)
         case _ =>
 
     val mbrTpe = paramFn(checkSimpleKinded(typedAheadType(mdef.tpt, tptProto)).tpe)

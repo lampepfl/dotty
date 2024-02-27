@@ -1,4 +1,6 @@
 //> using options -language:experimental.modularity -source future
+import compiletime.deferred
+
 trait Ord:
   type Self
   def less(x: Self, y: Self): Boolean

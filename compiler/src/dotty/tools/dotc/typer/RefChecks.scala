@@ -552,7 +552,7 @@ object RefChecks {
         overrideError("is an extension method, cannot override a normal method")
       else if (other.is(ExtensionMethod) && !member.is(ExtensionMethod)) // (1.3)
         overrideError("is a normal method, cannot override an extension method")
-      else if !other.is(Deferred)
+      else if (!other.is(Deferred) || other.isAllOf(Given | HasDefault))
             && !member.is(Deferred)
             && !other.name.is(DefaultGetterName)
             && !member.isAnyOverride

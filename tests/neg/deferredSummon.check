@@ -1,0 +1,17 @@
+-- Error: tests/neg/deferredSummon.scala:4:26 --------------------------------------------------------------------------
+4 |  given Int = compiletime.deferred // error
+  |              ^^^^^^^^^^^^^^^^^^^^
+  |              `deferred` can only be used as the right hand side of a given definition in a trait
+-- Error: tests/neg/deferredSummon.scala:7:26 --------------------------------------------------------------------------
+7 |  given Int = compiletime.deferred // error
+  |              ^^^^^^^^^^^^^^^^^^^^
+  |              `deferred` can only be used as the right hand side of a given definition in a trait
+-- Error: tests/neg/deferredSummon.scala:12:16 -------------------------------------------------------------------------
+12 |    given Int = deferred // error
+   |                ^^^^^^^^
+   |                `deferred` can only be used as the right hand side of a given definition in a trait
+-- Error: tests/neg/deferredSummon.scala:16:14 -------------------------------------------------------------------------
+16 |  given Int = defered // error
+   |              ^^^^^^^
+   |`deferred` can only be used as the right hand side of a given definition in a trait.
+   |Note that `deferred` can only be used under its own name when implementing a given in a trait; `defered` is not accepted.
