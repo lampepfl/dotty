@@ -270,15 +270,15 @@ object SpaceEngine {
    *  @param  unapp   The unapply function reference
    */
   def isIrrefutable(unapp: TermRef, argLen: Int)(using Context): Boolean = {
-    val unappResult = unapp.widen.finalResultType
-    unappResult.isRef(defn.SomeClass)
-    || unappResult <:< ConstantType(Constant(true)) // only for unapply
-    || (unapp.symbol.is(Synthetic) && unapp.symbol.owner.linkedClass.is(Case))  // scala2 compatibility
-    || unapplySeqTypeElemTp(unappResult).exists // only for unapplySeq
-    || isProductMatch(unappResult, argLen)
-    || extractorMemberType(unappResult, nme.isEmpty, NoSourcePosition) <:< ConstantType(Constant(false))
-    || unappResult.derivesFrom(defn.NonEmptyTupleClass)
-    || unapp.symbol == defn.TupleXXL_unapplySeq // Fixes TupleXXL.unapplySeq which returns Some but declares Option
+    val ext = Extractor(unapp.widen.finalResultType, unapp.symbol.name, argLen)
+    ext match
+    case ext: BooleanMatch                                                     => ext.resType <:< ConstantType(Constant(true))
+    case ext if !ext.isGetMatch                                                => true // returns Product/Seq/ProdSeq
+    case ext if ext.getMatchInfo.isEmptyType <:< ConstantType(Constant(false)) => true
+    case ext if ext.unapplyResult.isRef(defn.SomeClass)                        => true
+    case ext if isSyntheticScala2Case(unapp.symbol)                            => true
+    case ext if unapp.symbol == defn.TupleXXL_unapplySeq                       => true // Fixes TupleXXL.unapplySeq which returns Some but declares Option
+    case _                                                                     => false
   }
 
   /** Is the unapply or unapplySeq irrefutable?
@@ -346,25 +346,26 @@ object SpaceEngine {
       projectSeq(pats)
 
     case UnApply(fun, _, pats) =>
-      val fun1 = funPart(fun)
-      val funRef = fun1.tpe.asInstanceOf[TermRef]
-      if (fun.symbol.name == nme.unapplySeq)
-        val (arity, elemTp, resultTp) = unapplySeqInfo(fun.tpe.widen.finalResultType, fun.srcPos)
-        if (fun.symbol.owner == defn.SeqFactoryClass && defn.ListType.appliedTo(elemTp) <:< pat.tpe)
-          // The exhaustivity and reachability logic already handles decomposing sum types (into its subclasses)
-          // and product types (into its components).  To get better counter-examples for patterns that are of type
-          // List (or a super-type of list, like LinearSeq) we project them into spaces that use `::` and Nil.
-          // Doing so with a pattern of `case Seq() =>` with a scrutinee of type `Vector()` doesn't work because the
-          // space is then discarded leading to a false positive reachability warning, see #13931.
-          projectSeq(pats)
-        else {
-          if (elemTp.exists)
-            Prod(erase(pat.tpe.stripAnnots, isValue = false), funRef, projectSeq(pats) :: Nil)
+      val funResult = fun.tpe.widen.finalResultType        // Foo[(1, 2)], not Foo[A]
+      val funParam = pat.tpe.stripAnnots                   // Bar[A$1], not Bar[A]
+      val funRef = funPart(fun).tpe.asInstanceOf[TermRef]  // Baz.unapply : [A](In[A]): Out[A]
+      val ext = Extractor(funResult, funRef.name, pats.size)
+      ext match
+        case _: FixedArityExtractor => Prod(erase(funParam), funRef, pats.map(project))
+        case ext: SeqMatch          =>
+          if fun.symbol.owner == defn.SeqFactoryClass && defn.ListType.appliedTo(ext.elemTp) <:< pat.tpe then
+            // The exhaustivity and reachability logic already handles decomposing sum types (into its subclasses)
+            // and product types (into its components).  To get better counter-examples for patterns that are of type
+            // List (or a super-type of list, like LinearSeq) we project them into spaces that use `::` and Nil.
+            // Doing so with a pattern of `case Seq() =>` with a scrutinee of type `Vector()` doesn't work because the
+            // space is then discarded leading to a false positive reachability warning, see #13931.
+            projectSeq(pats)
           else
-            Prod(erase(pat.tpe.stripAnnots, isValue = false), funRef, pats.take(arity - 1).map(project) :+ projectSeq(pats.drop(arity - 1)))
-        }
-      else
-        Prod(erase(pat.tpe.stripAnnots, isValue = false), funRef, pats.map(project))
+            Prod(erase(funParam), funRef, projectSeq(pats) :: Nil)
+        case ext: ProdSeqMatch      =>
+          val (prodPats, seqPats) = pats.splitAt(ext.productSelectors.size - 1)
+          Prod(erase(funParam), funRef, prodPats.map(project) ::: projectSeq(seqPats) :: Nil)
+        case x @ NoExtractor        => unreachable(x)
 
     case Typed(pat @ UnApply(_, _, _), _) =>
       project(pat)
@@ -389,18 +390,6 @@ object SpaceEngine {
   private def project(tp: Type)(using Context): Space = tp match {
     case OrType(tp1, tp2) => Or(project(tp1) :: project(tp2) :: Nil)
     case tp => Typ(tp, decomposed = true)
-  }
-
-  private def unapplySeqInfo(resTp: Type, pos: SrcPos)(using Context): (Int, Type, Type) = {
-    var resultTp = resTp
-    var elemTp = unapplySeqTypeElemTp(resultTp)
-    var arity = productArity(resultTp, pos)
-    if (!elemTp.exists && arity <= 0) {
-      resultTp = resTp.select(nme.get).finalResultType
-      elemTp = unapplySeqTypeElemTp(resultTp.widen)
-      arity = productSelectorTypes(resultTp, pos).size
-    }
-    (arity, elemTp, resultTp)
   }
 
   /** Erase pattern bound types with WildcardType
@@ -533,51 +522,20 @@ object SpaceEngine {
           mt
     }
 
-    // Case unapply:
-    // 1. return types of constructor fields if the extractor is synthesized for Scala2 case classes & length match
-    // 2. return Nil if unapply returns Boolean  (boolean pattern)
-    // 3. return product selector types if unapply returns a product type (product pattern)
-    // 4. return product selectors of `T` where `def get: T` is a member of the return type of unapply & length match (named-based pattern)
-    // 5. otherwise, return `T` where `def get: T` is a member of the return type of unapply
-    //
-    // Case unapplySeq:
-    // 1. return the type `List[T]` where `T` is the element type of the unapplySeq return type `Seq[T]`
-
     val resTp = ctx.typeAssigner.safeSubstMethodParams(mt, scrutineeTp :: Nil).finalResultType
 
-    val sig =
-      if (resTp.isRef(defn.BooleanClass))
-        List()
-      else {
-        val isUnapplySeq = unappSym.name == nme.unapplySeq
+    val ext = Extractor(resTp, unappSym.name, argLen)
+    val sig = ext match
+      case ext: BooleanMatch   => Nil
+      case ext: ProductMatch   => ext.productSelectorTypes
+      case ext: TupleMatch     => ext.tupleComponentTypes
+      case ext: SingleMatch    => ext.resType :: Nil
+      case ext: NameBasedMatch => ext.productSelectorTypes
+      case ext: SeqMatch       => defn.ListType.appliedTo(ext.elemTp) :: Nil
+      case ext: ProdSeqMatch   => ext.productSelectorTypes.init ::: defn.ListType.appliedTo(ext.elemTp) :: Nil
+      case x @ NoExtractor     => unreachable(x)
 
-        if (isUnapplySeq) {
-          val (arity, elemTp, resultTp) = unapplySeqInfo(resTp, unappSym.srcPos)
-          if (elemTp.exists) defn.ListType.appliedTo(elemTp) :: Nil
-          else {
-            val sels = productSeqSelectors(resultTp, arity, unappSym.srcPos)
-            sels.init :+ defn.ListType.appliedTo(sels.last)
-          }
-        }
-        else {
-          val arity = productArity(resTp, unappSym.srcPos)
-          if (arity > 0)
-            productSelectorTypes(resTp, unappSym.srcPos)
-          else {
-            val getTp = resTp.select(nme.get).finalResultType match
-              case tp: TermRef if !tp.isOverloaded =>
-                // Like widenTermRefExpr, except not recursively.
-                // For example, in i17184 widen Option[foo.type]#get
-                // to Option[foo.type] instead of Option[Int].
-                tp.underlying.widenExpr
-              case tp => tp
-            if (argLen == 1) getTp :: Nil
-            else productSelectorTypes(getTp, unappSym.srcPos)
-          }
-        }
-      }
-
-    sig.map(_.annotatedToRepeated)
+    sig
   }
 
   /** Whether the extractor covers the given type */
@@ -789,7 +747,7 @@ object SpaceEngine {
       tpw.isRef(defn.BooleanClass) ||
       classSym.isAllOf(JavaEnum) ||
       classSym.is(Case) && {
-        if seen.add(tpw) then productSelectorTypes(tpw, sel.srcPos).exists(isCheckable(_))
+        if seen.add(tpw) then productSelectorTypes(tpw).exists(isCheckable(_))
         else true // recursive case class: return true and other members can still fail the check
       }
 

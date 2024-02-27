@@ -1,5 +1,5 @@
 object Foo:
-  def unapplySeq(x: String): Int *: Seq[String] *: EmptyTuple = (x.length, x.toList.map(_.toString))
+  def unapply(x: String): Int *: Seq[String] *: EmptyTuple = (x.length, x.toList.map(_.toString))
 
 @main def Test =
   "foo" match

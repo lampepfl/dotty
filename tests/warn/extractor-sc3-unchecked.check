@@ -1,0 +1,6 @@
+-- [E092] Pattern Match Unchecked Warning: tests/warn/extractor-sc3-unchecked.scala:16:17 ------------------------------
+16 |    val Pair(c1, fs1: Fs) = (i match // warn: the type test for Fs cannot be checked at runtime because its type arguments can't be determined from List[F1 | F2]
+   |                 ^
+   |the type test for Fs cannot be checked at runtime because its type arguments can't be determined from List[F1 | F2]
+   |
+   | longer explanation available when compiling with `-explain`

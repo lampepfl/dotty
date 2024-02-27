@@ -2772,7 +2772,7 @@ class TypeComparer(@constructorOnly initctx: Context) extends ConstraintHandling
   /** Does `tycon` have a field with type `tparam`? Special cased for `scala.*:`
    *  as that type is artificially added to tuples. */
   private def typeparamCorrespondsToField(tycon: Type, tparam: TypeParamInfo): Boolean =
-    productSelectorTypes(tycon, NoSourcePosition).exists {
+    productSelectorTypes(tycon).exists {
       case tp: TypeRef =>
         tp.designator.eq(tparam) // Bingo!
       case _ =>

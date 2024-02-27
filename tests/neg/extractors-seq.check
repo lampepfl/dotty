@@ -1,0 +1,190 @@
+-- [E007] Type Mismatch Error: tests/neg/extractors-seq.scala:18:40 ----------------------------------------------------
+18 |    x match { case Abc(xs*)       => is(xs) } // error: Seq[Seq[Int]]
+   |                                        ^^
+   |                                        Found:    (xs : Seq[Seq[Int]])
+   |                                        Required: Seq[Int]
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E107] Syntax Error: tests/neg/extractors-seq.scala:19:22 -----------------------------------------------------------
+19 |    x match { case Abc(x, xs)     => i(x); is(xs) } // error: wrong number // error // error
+   |                   ^^^^^^^^^^
+   |                   Wrong number of argument patterns for Abc; expected: (Seq[Int])
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E007] Type Mismatch Error: tests/neg/extractors-seq.scala:19:39 ----------------------------------------------------
+19 |    x match { case Abc(x, xs)     => i(x); is(xs) } // error: wrong number // error // error
+   |                                       ^
+   |                                       Found:    (x : Seq[Int])
+   |                                       Required: Int
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E006] Not Found Error: tests/neg/extractors-seq.scala:19:46 --------------------------------------------------------
+19 |    x match { case Abc(x, xs)     => i(x); is(xs) } // error: wrong number // error // error
+   |                                              ^^
+   |                                              Not found: xs - did you mean is?
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E107] Syntax Error: tests/neg/extractors-seq.scala:20:22 -----------------------------------------------------------
+20 |    x match { case Abc(x, xs*)    => i(x); is(xs) } // error: wrong number // error // error
+   |                   ^^^^^^^^^^^
+   |                   Wrong number of argument patterns for Abc; expected: (Seq[Int])
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E007] Type Mismatch Error: tests/neg/extractors-seq.scala:20:39 ----------------------------------------------------
+20 |    x match { case Abc(x, xs*)    => i(x); is(xs) } // error: wrong number // error // error
+   |                                       ^
+   |                                       Found:    (x : Seq[Int])
+   |                                       Required: Int
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E006] Not Found Error: tests/neg/extractors-seq.scala:20:46 --------------------------------------------------------
+20 |    x match { case Abc(x, xs*)    => i(x); is(xs) } // error: wrong number // error // error
+   |                                              ^^
+   |                                              Not found: xs - did you mean is?
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E107] Syntax Error: tests/neg/extractors-seq.scala:21:22 -----------------------------------------------------------
+21 |    x match { case Abc(x, y, zs)  => i(x); i(y); is(zs) } // error // error // error // error: wrong number
+   |                   ^^^^^^^^^^^^^
+   |                   Wrong number of argument patterns for Abc; expected: (Seq[Int])
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E007] Type Mismatch Error: tests/neg/extractors-seq.scala:21:39 ----------------------------------------------------
+21 |    x match { case Abc(x, y, zs)  => i(x); i(y); is(zs) } // error // error // error // error: wrong number
+   |                                       ^
+   |                                       Found:    (x : Seq[Int])
+   |                                       Required: Int
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E006] Not Found Error: tests/neg/extractors-seq.scala:21:45 --------------------------------------------------------
+21 |    x match { case Abc(x, y, zs)  => i(x); i(y); is(zs) } // error // error // error // error: wrong number
+   |                                             ^
+   |                                             Not found: y
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E006] Not Found Error: tests/neg/extractors-seq.scala:21:52 --------------------------------------------------------
+21 |    x match { case Abc(x, y, zs)  => i(x); i(y); is(zs) } // error // error // error // error: wrong number
+   |                                                    ^^
+   |                                                    Not found: zs - did you mean is?
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E107] Syntax Error: tests/neg/extractors-seq.scala:22:22 -----------------------------------------------------------
+22 |    x match { case Abc(x, y, zs*) => i(x); i(y); is(zs) } // error // error // error // error: wrong number
+   |                   ^^^^^^^^^^^^^^
+   |                   Wrong number of argument patterns for Abc; expected: (Seq[Int])
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E007] Type Mismatch Error: tests/neg/extractors-seq.scala:22:39 ----------------------------------------------------
+22 |    x match { case Abc(x, y, zs*) => i(x); i(y); is(zs) } // error // error // error // error: wrong number
+   |                                       ^
+   |                                       Found:    (x : Seq[Int])
+   |                                       Required: Int
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E006] Not Found Error: tests/neg/extractors-seq.scala:22:45 --------------------------------------------------------
+22 |    x match { case Abc(x, y, zs*) => i(x); i(y); is(zs) } // error // error // error // error: wrong number
+   |                                             ^
+   |                                             Not found: y
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E006] Not Found Error: tests/neg/extractors-seq.scala:22:52 --------------------------------------------------------
+22 |    x match { case Abc(x, y, zs*) => i(x); i(y); is(zs) } // error // error // error // error: wrong number
+   |                                                    ^^
+   |                                                    Not found: zs - did you mean is?
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E007] Type Mismatch Error: tests/neg/extractors-seq.scala:36:40 ----------------------------------------------------
+36 |    x match { case Bar(xs*)       => is(xs) } // error: Seq[::[Int]]
+   |                                        ^^
+   |                                        Found:    (xs : Seq[::[Int]])
+   |                                        Required: Seq[Int]
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E107] Syntax Error: tests/neg/extractors-seq.scala:37:22 -----------------------------------------------------------
+37 |    x match { case Bar(x, xs)     => i(x); is(xs) } // error: xs? // error: ::[Int] !<: Int // error wrong number
+   |                   ^^^^^^^^^^
+   |                   Wrong number of argument patterns for Bar; expected: (::[Int])
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E007] Type Mismatch Error: tests/neg/extractors-seq.scala:37:39 ----------------------------------------------------
+37 |    x match { case Bar(x, xs)     => i(x); is(xs) } // error: xs? // error: ::[Int] !<: Int // error wrong number
+   |                                       ^
+   |                                       Found:    (x : ::[Int])
+   |                                       Required: Int
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E006] Not Found Error: tests/neg/extractors-seq.scala:37:46 --------------------------------------------------------
+37 |    x match { case Bar(x, xs)     => i(x); is(xs) } // error: xs? // error: ::[Int] !<: Int // error wrong number
+   |                                              ^^
+   |                                              Not found: xs - did you mean is?
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E107] Syntax Error: tests/neg/extractors-seq.scala:38:22 -----------------------------------------------------------
+38 |    x match { case Bar(x, xs*)    => i(x); is(xs) } // error: xs? // error: ::[Int] !<: Int // error wrong number
+   |                   ^^^^^^^^^^^
+   |                   Wrong number of argument patterns for Bar; expected: (::[Int])
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E007] Type Mismatch Error: tests/neg/extractors-seq.scala:38:39 ----------------------------------------------------
+38 |    x match { case Bar(x, xs*)    => i(x); is(xs) } // error: xs? // error: ::[Int] !<: Int // error wrong number
+   |                                       ^
+   |                                       Found:    (x : ::[Int])
+   |                                       Required: Int
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E006] Not Found Error: tests/neg/extractors-seq.scala:38:46 --------------------------------------------------------
+38 |    x match { case Bar(x, xs*)    => i(x); is(xs) } // error: xs? // error: ::[Int] !<: Int // error wrong number
+   |                                              ^^
+   |                                              Not found: xs - did you mean is?
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E107] Syntax Error: tests/neg/extractors-seq.scala:39:22 -----------------------------------------------------------
+39 |    x match { case Bar(x, y, zs)  => i(x); i(y); is(zs) } // error: zs? // error: y? // error: ::[Int] !<: Int // error: wrong number
+   |                   ^^^^^^^^^^^^^
+   |                   Wrong number of argument patterns for Bar; expected: (::[Int])
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E007] Type Mismatch Error: tests/neg/extractors-seq.scala:39:39 ----------------------------------------------------
+39 |    x match { case Bar(x, y, zs)  => i(x); i(y); is(zs) } // error: zs? // error: y? // error: ::[Int] !<: Int // error: wrong number
+   |                                       ^
+   |                                       Found:    (x : ::[Int])
+   |                                       Required: Int
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E006] Not Found Error: tests/neg/extractors-seq.scala:39:45 --------------------------------------------------------
+39 |    x match { case Bar(x, y, zs)  => i(x); i(y); is(zs) } // error: zs? // error: y? // error: ::[Int] !<: Int // error: wrong number
+   |                                             ^
+   |                                             Not found: y
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E006] Not Found Error: tests/neg/extractors-seq.scala:39:52 --------------------------------------------------------
+39 |    x match { case Bar(x, y, zs)  => i(x); i(y); is(zs) } // error: zs? // error: y? // error: ::[Int] !<: Int // error: wrong number
+   |                                                    ^^
+   |                                                    Not found: zs - did you mean is?
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E107] Syntax Error: tests/neg/extractors-seq.scala:40:22 -----------------------------------------------------------
+40 |    x match { case Bar(x, y, zs*) => i(x); i(y); is(zs) } // error: zs? // error: y? // error: ::[Int] !<: Int // error: wrong number
+   |                   ^^^^^^^^^^^^^^
+   |                   Wrong number of argument patterns for Bar; expected: (::[Int])
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E007] Type Mismatch Error: tests/neg/extractors-seq.scala:40:39 ----------------------------------------------------
+40 |    x match { case Bar(x, y, zs*) => i(x); i(y); is(zs) } // error: zs? // error: y? // error: ::[Int] !<: Int // error: wrong number
+   |                                       ^
+   |                                       Found:    (x : ::[Int])
+   |                                       Required: Int
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E006] Not Found Error: tests/neg/extractors-seq.scala:40:45 --------------------------------------------------------
+40 |    x match { case Bar(x, y, zs*) => i(x); i(y); is(zs) } // error: zs? // error: y? // error: ::[Int] !<: Int // error: wrong number
+   |                                             ^
+   |                                             Not found: y
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E006] Not Found Error: tests/neg/extractors-seq.scala:40:52 --------------------------------------------------------
+40 |    x match { case Bar(x, y, zs*) => i(x); i(y); is(zs) } // error: zs? // error: y? // error: ::[Int] !<: Int // error: wrong number
+   |                                                    ^^
+   |                                                    Not found: zs - did you mean is?
+   |
+   | longer explanation available when compiling with `-explain`
