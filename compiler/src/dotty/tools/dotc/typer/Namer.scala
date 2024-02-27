@@ -1827,7 +1827,7 @@ class Namer { typer: Typer =>
           if !sym.maybeOwner.is(Trait) then
             report.error(em"`deferred` can only be used for givens in traits", mdef.rhs.srcPos)
           else
-            sym.resetFlag(Final | Lazy)
+            sym.resetFlag(Final)
             sym.setFlag(Deferred | HasDefault)
         case _ =>
 
