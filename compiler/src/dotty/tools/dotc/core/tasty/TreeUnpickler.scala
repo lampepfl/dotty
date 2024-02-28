@@ -412,9 +412,7 @@ class TreeUnpickler(reader: TastyReader,
               readType().appliedTo(until(end)(readType()))
             case TYPEBOUNDS =>
               val lo = readType()
-              if nothingButMods(end) then
-                if lo.isMatch then MatchAlias(readVariances(lo))
-                else TypeAlias(readVariances(lo))
+              if nothingButMods(end) then AliasingBounds(readVariances(lo))
               else
                 val hi = readVariances(readType())
                 createNullableTypeBounds(lo, hi)

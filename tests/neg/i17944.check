@@ -29,14 +29,6 @@
    |  Therefore, reduction cannot advance to the remaining case
    |
    |    case _ *: t => test.FindField0[t, ("i" : String), scala.compiletime.ops.int.S[(0 : Int)]]
-   |  trying to reduce  test.FindField[(("s" : String) ->> String, ("i" : String) ->> Int), ("i" : String)]
-   |  trying to reduce  test.FindField0[(("s" : String) ->> String, ("i" : String) ->> Int), ("i" : String), (0 : Int)]
-   |  failed since selector (("s" : String) ->> String, ("i" : String) ->> Int)
-   |  does not match  case (("i" : String) ->> f) *: _ => (f, (0 : Int))
-   |  and cannot be shown to be disjoint from it either.
-   |  Therefore, reduction cannot advance to the remaining case
-   |
-   |    case _ *: t => test.FindField0[t, ("i" : String), scala.compiletime.ops.int.S[(0 : Int)]]
    |  trying to reduce  test.FindField0[(("s" : String) ->> String, ("i" : String) ->> Int), ("i" : String), (0 : Int)]
    |  failed since selector (("s" : String) ->> String, ("i" : String) ->> Int)
    |  does not match  case (("i" : String) ->> f) *: _ => (f, (0 : Int))
