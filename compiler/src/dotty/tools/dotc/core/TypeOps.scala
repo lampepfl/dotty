@@ -143,7 +143,7 @@ object TypeOps:
         defn.MatchCase(simplify(pat, theMap), body)
       case tp: AppliedType =>
         tp.tycon match
-          case tycon: TypeRef if tycon.info.isInstanceOf[MatchAlias] =>
+          case tycon: TypeRef if tp.isMatchAlias =>
             isFullyDefined(tp, ForceDegree.all)
           case _ =>
         val normed = tp.tryNormalize

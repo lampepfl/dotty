@@ -445,13 +445,15 @@ object Inlines:
                 evidence
           }
 
-        def unrollTupleTypes(tpe: Type): Option[List[Type]] = tpe.dealias.normalized match
+        def unrollTupleTypes(tpe: Type): Option[List[Type]] = tpe.dealias match
           case AppliedType(tycon, args) if defn.isTupleClass(tycon.typeSymbol) =>
             Some(args)
           case AppliedType(tycon, head :: tail :: Nil) if tycon.isRef(defn.PairClass) =>
             unrollTupleTypes(tail).map(head :: _)
           case tpe: TermRef if tpe.symbol == defn.EmptyTupleModule =>
             Some(Nil)
+          case tpe: AppliedType if tpe.isMatchAlias =>
+            unrollTupleTypes(tpe.tryNormalize)
           case _ =>
             None
 
