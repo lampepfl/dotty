@@ -232,13 +232,14 @@ object desugar {
       flags: FlagSet,
       freshName: => TermName)(using Context): Tree = rhs match
     case ContextBounds(tbounds, cxbounds) =>
-      var useParamName = Feature.enabled(Feature.modularity)
       for bound <- cxbounds do
         val evidenceName = bound match
-          case ContextBoundTypeTree(_, _, ownName) if !ownName.isEmpty => ownName
-          case _ if useParamName  => tname.toTermName
-          case _ => freshName
-        useParamName = false
+          case ContextBoundTypeTree(_, _, ownName) if !ownName.isEmpty =>
+            ownName
+          case _ if Feature.enabled(Feature.modularity) && cxbounds.tail.isEmpty  =>
+            tname.toTermName
+          case _ =>
+            freshName
         val evidenceParam = ValDef(evidenceName, bound, EmptyTree).withFlags(flags)
         evidenceParam.pushAttachment(ContextBoundParam, ())
         evidenceBuf += evidenceParam
@@ -484,7 +485,7 @@ object desugar {
     val evidenceBuf = new ListBuffer[ValDef]
     val result = cpy.TypeDef(tdef)(rhs =
       desugarContextBounds(tdef.name, tdef.rhs, evidenceBuf,
-        (tdef.mods.flags.toTermFlags & AccessFlags) | DeferredGivenFlags, EmptyTermName))
+        (tdef.mods.flags.toTermFlags & AccessFlags) | Lazy | DeferredGivenFlags, EmptyTermName))
     if evidenceBuf.isEmpty then result else Thicket(result :: evidenceBuf.toList)
 
   /** The expansion of a class definition. See inline comments for what is involved */

@@ -90,13 +90,15 @@ So far, an unnamed context bound for a type parameter gets a synthesized fresh n
     xs.foldLeft(A.unit)(_ `combine` _)
 ```
 
+
+
 The use of a name like `A` above in two variants, both as a type name and as a term name is of course familiar to Scala programmers. We use the same convention for classes and companion objects. In retrospect, the idea of generalizing this to also cover type parameters is obvious. It is surprising that it was not brought up before.
 
 **Proposed Rules**
 
  1. The generated evidence parameter for a context bound `A : C as a` has name `a`
  2. The generated evidence for a context bound `A : C` without an `as` binding has name `A` (seen as a term name). So, `A : C` is equivalent to `A : C as A`.
- 3. If there are more than one context bounds for a type parameter, the generated evidence parameter for every context bound except the first one has a fresh synthesized name, unless the context bound carries an `as` clause, in which case rule (1) applies.
+ 3. If there are multiple context bounds for a type parameter, as in `A : {C_1, ..., C_n}`, the generated evidence parameter for every context bound `C_i` has a fresh synthesized name, unless the context bound carries an `as` clause, in which case rule (1) applies.
 
 The default naming convention reduces the need for named context bounds. But named context bounds are still essential, for at least two reasons:
 
@@ -183,14 +185,21 @@ The compiler expands this to the following implementation:
 ```scala
 trait Sorted:
   type Element
-  given Ord[Element] = compiletime.deferred
+  given Ord[Element] as Element = compiletime.deferred
 
 class SortedSet[A](using A: Ord[A]) extends Sorted:
   type Element = A
-  override given Ord[Element] = A // i.e. the A defined by the using clause
+  override given Ord[Element] as Element = A // i.e. the A defined by the using clause
 ```
 
 The using clause in class `SortedSet` provides an implementation for the deferred given in trait `Sorted`.
+
+If there is a single context bound, as in
+```scala
+  type T : C
+```
+the synthesized deferred given will get the (term-)name of the constrained type `T`. If there are multiple bounds,
+the standard convention for naming anonymous givens applies.
 
 **Benefits:**
 
