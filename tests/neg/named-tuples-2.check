@@ -1,0 +1,8 @@
+-- Error: tests/neg/named-tuples-2.scala:5:9 ---------------------------------------------------------------------------
+5 |    case (name, age) => () // error
+  |         ^
+  |         this case is unreachable since type (String, Int, Boolean) is not a subclass of class Tuple2
+-- Error: tests/neg/named-tuples-2.scala:6:9 ---------------------------------------------------------------------------
+6 |    case (n, a, m, x) => () // error
+  |         ^
+  |         this case is unreachable since type (String, Int, Boolean) is not a subclass of class Tuple4

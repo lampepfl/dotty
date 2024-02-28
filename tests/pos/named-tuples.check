@@ -1,0 +1,10 @@
+(Bob,33)
+33
+Bob
+(Bob,33,Lausanne,1003)
+33
+no match
+Bob is younger than Bill
+Bob is younger than Lucy
+Bill is younger than Lucy
+matched elements (name, Bob), (age, 33)

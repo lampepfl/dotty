@@ -1,0 +1,7 @@
+-- [E007] Type Mismatch Error: tests/neg/named-tuples-3.scala:7:16 -----------------------------------------------------
+7 |val p: Person = f  // error
+  |                ^
+  |                Found:    NamedTuple.NamedTuple[(Int, Any), (Int, String)]
+  |                Required: Person
+  |
+  | longer explanation available when compiling with `-explain`

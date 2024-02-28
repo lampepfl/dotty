@@ -957,6 +957,9 @@ class Definitions {
     def TupleXXL_fromIterator(using Context): Symbol = TupleXXLModule.requiredMethod("fromIterator")
     def TupleXXL_unapplySeq(using Context): Symbol = TupleXXLModule.requiredMethod(nme.unapplySeq)
 
+  @tu lazy val NamedTupleModule = requiredModule("scala.NamedTuple")
+  @tu lazy val NamedTupleTypeRef: TypeRef = NamedTupleModule.termRef.select(tpnme.NamedTuple).asInstanceOf
+
   @tu lazy val RuntimeTupleMirrorTypeRef: TypeRef = requiredClassRef("scala.runtime.TupleMirror")
 
   @tu lazy val RuntimeTuplesModule: Symbol = requiredModule("scala.runtime.Tuples")
@@ -1310,8 +1313,19 @@ class Definitions {
     case ByNameFunction(_) => true
     case _ => false
 
+  object NamedTuple:
+    def apply(nmes: Type, vals: Type)(using Context): Type =
+      AppliedType(NamedTupleTypeRef, nmes :: vals :: Nil)
+    def unapply(t: Type)(using Context): Option[(Type, Type)] = t match
+      case AppliedType(tycon, nmes :: vals :: Nil) if tycon.typeSymbol == NamedTupleTypeRef.symbol =>
+        Some((nmes, vals))
+      case _ => None
+
   final def isCompiletime_S(sym: Symbol)(using Context): Boolean =
     sym.name == tpnme.S && sym.owner == CompiletimeOpsIntModuleClass
+
+  final def isNamedTuple_From(sym: Symbol)(using Context): Boolean =
+    sym.name == tpnme.From && sym.owner == NamedTupleModule.moduleClass
 
   private val compiletimePackageAnyTypes: Set[Name] = Set(
     tpnme.Equals, tpnme.NotEquals, tpnme.IsConst, tpnme.ToString
@@ -1341,7 +1355,7 @@ class Definitions {
     tpnme.Plus, tpnme.Length, tpnme.Substring, tpnme.Matches, tpnme.CharAt
   )
   private val compiletimePackageOpTypes: Set[Name] =
-    Set(tpnme.S)
+    Set(tpnme.S, tpnme.From)
     ++ compiletimePackageAnyTypes
     ++ compiletimePackageIntTypes
     ++ compiletimePackageLongTypes
@@ -1354,6 +1368,7 @@ class Definitions {
     compiletimePackageOpTypes.contains(sym.name)
     && (
          isCompiletime_S(sym)
+      || isNamedTuple_From(sym)
       || sym.owner == CompiletimeOpsAnyModuleClass && compiletimePackageAnyTypes.contains(sym.name)
       || sym.owner == CompiletimeOpsIntModuleClass && compiletimePackageIntTypes.contains(sym.name)
       || sym.owner == CompiletimeOpsLongModuleClass && compiletimePackageLongTypes.contains(sym.name)

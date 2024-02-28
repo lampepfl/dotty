@@ -2356,7 +2356,7 @@ class TypeComparer(@constructorOnly initctx: Context) extends ConstraintHandling
    *  @param canConstrain  If true, new constraints might be added to simplify the lub.
    *  @param isSoft        If the lub is a union, this determines whether it's a soft union.
    */
-  def lub(tp1: Type, tp2: Type, canConstrain: Boolean = false, isSoft: Boolean = true): Type = /*>|>*/ trace(s"lub(${tp1.show}, ${tp2.show}, canConstrain=$canConstrain, isSoft=$isSoft)", subtyping, show = true) /*<|<*/ {
+  def lub(tp1: Type, tp2: Type, canConstrain: Boolean = false, isSoft: Boolean = true): Type = trace(s"lub(${tp1.show}, ${tp2.show}, canConstrain=$canConstrain, isSoft=$isSoft)", subtyping, show = true) {
     if (tp1 eq tp2) tp1
     else if !tp1.exists || (tp2 eq WildcardType) then tp1
     else if !tp2.exists || (tp1 eq WildcardType) then tp2

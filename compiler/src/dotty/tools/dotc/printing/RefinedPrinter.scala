@@ -205,6 +205,11 @@ class RefinedPrinter(_ctx: Context) extends PlainPrinter(_ctx) {
     def toTextTuple(args: List[Type]): Text =
       "(" ~ argsText(args) ~ ")"
 
+    def toTextNamedTuple(elems: List[(TermName, Type)]): Text =
+      val elemsText = atPrec(GlobalPrec):
+        Text(elems.map((name, tp) => toText(name) ~ " : " ~ toText(tp)), ", ")
+      "(" ~ elemsText ~ ")"
+
     def isInfixType(tp: Type): Boolean = tp match
       case AppliedType(tycon, args) =>
         args.length == 2
@@ -239,8 +244,16 @@ class RefinedPrinter(_ctx: Context) extends PlainPrinter(_ctx) {
 
     def appliedText(tp: Type): Text = tp match
       case tp @ AppliedType(tycon, args) =>
-        tp.tupleElementTypesUpTo(200, normalize = false) match
-          case Some(types) if types.size >= 2 && !printDebug => toTextTuple(types)
+        val namedElems =
+          try tp.namedTupleElementTypesUpTo(200, normalize = false)
+          catch case ex: TypeError => Nil
+        if namedElems.nonEmpty then
+          toTextNamedTuple(namedElems)
+        else tp.tupleElementTypesUpTo(200, normalize = false) match
+          //case Some(types @ (defn.NamedTupleElem(_, _) :: _)) if !printDebug =>
+          //  toTextTuple(types)
+          case Some(types) if types.size >= 2 && !printDebug =>
+            toTextTuple(types)
           case _ =>
             val tsym = tycon.typeSymbol
             if tycon.isRepeatedParam then toTextLocal(args.head) ~ "*"
@@ -491,7 +504,7 @@ class RefinedPrinter(_ctx: Context) extends PlainPrinter(_ctx) {
             exprText ~ colon ~ toText(tpt)
         }
       case NamedArg(name, arg) =>
-        toText(name) ~ " = " ~ toText(arg)
+        toText(name) ~ (if name.isTermName && arg.isType then " : " else " = ") ~ toText(arg)
       case Assign(lhs, rhs) =>
         changePrec(GlobalPrec) { toTextLocal(lhs) ~ " = " ~ toText(rhs) }
       case block: Block =>
@@ -560,7 +573,12 @@ class RefinedPrinter(_ctx: Context) extends PlainPrinter(_ctx) {
           changePrec(AndTypePrec) { toText(args(0)) ~ " & " ~ atPrec(AndTypePrec + 1) { toText(args(1)) } }
         else if defn.isFunctionSymbol(tpt.symbol)
             && tpt.isInstanceOf[TypeTree] && tree.hasType && !printDebug
-        then changePrec(GlobalPrec) { toText(tree.typeOpt) }
+        then
+          changePrec(GlobalPrec) { toText(tree.typeOpt) }
+        else if tpt.symbol == defn.NamedTupleTypeRef.symbol
+            && !printDebug && tree.typeOpt.exists
+        then
+          toText(tree.typeOpt)
         else args match
           case arg :: _ if arg.isTerm =>
             toTextLocal(tpt) ~ "(" ~ Text(args.map(argText), ", ") ~ ")"

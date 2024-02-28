@@ -108,6 +108,10 @@ trait TreeInfo[T <: Untyped] { self: Trees.Instance[T] =>
     case _ =>
       tree
 
+  def stripNamedArg(tree: Tree) = tree match
+    case NamedArg(_, arg) => arg
+    case _ => tree
+
   /** The number of arguments in an application */
   def numArgs(tree: Tree): Int = unsplice(tree) match {
     case Apply(fn, args) => numArgs(fn) + args.length
@@ -243,6 +247,10 @@ trait TreeInfo[T <: Untyped] { self: Trees.Instance[T] =>
   /** Does this list contain a named argument tree? */
   def hasNamedArg(args: List[Any]): Boolean = args exists isNamedArg
   val isNamedArg: Any => Boolean = (arg: Any) => arg.isInstanceOf[Trees.NamedArg[?]]
+
+  def dropNamedArg(arg: Tree) = arg match
+    case NamedArg(_, arg1) => arg1
+    case arg => arg
 
   /** Is this pattern node a catch-all (wildcard or variable) pattern? */
   def isDefaultCase(cdef: CaseDef): Boolean = cdef match {

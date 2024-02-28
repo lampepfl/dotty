@@ -1,0 +1,17 @@
+[31m[31m-- [E007] Type Mismatch Error: ../neg/fieldsOf.scala:10:15 ---------------------[0m[0m
+[31m10 |[0m  x = foo[[35mAnon[0m]() [34m// error[0m
+[31m[31m   |[0m      ^^^^^^^^^^^[0m
+[31m   |[0m      Found:    NamedTuple.FieldsOf[Anon]
+[31m   |[0m      Required: (name : String, age : Int)
+[31m   |[0m
+[31m   |[0m longer explanation available when compiling with `-explain`
+[31m[31m-- [E007] Type Mismatch Error: ../neg/fieldsOf.scala:11:9 ----------------------[0m[0m
+[31m11 |[0m  x = foo() [34m// error[0m
+[31m[31m   |[0m      ^^^^^[0m
+[31m   |[0m      Found:    NamedTuple.FieldsOf[T]
+[31m   |[0m      Required: (name : String, age : Int)
+[31m   |[0m
+[31m   |[0m      where:    T is a type variable
+[31m   |[0m
+[31m   |[0m longer explanation available when compiling with `-explain`
+2 errors found

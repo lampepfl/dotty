@@ -390,7 +390,12 @@ object TypeOps:
         (tp.tp1.dealias, tp.tp2.dealias) match
           case (tp1 @ AppliedType(tycon1, args1), tp2 @ AppliedType(tycon2, args2))
           if tycon1.typeSymbol == tycon2.typeSymbol && (tycon1 =:= tycon2) =>
-            mergeRefinedOrApplied(tp1, tp2)
+            mergeRefinedOrApplied(tp1, tp2) match
+              case tp: AppliedType if tp.isUnreducibleWild =>
+                // fall back to or-dominators rather tahn inferring a type that would
+                // caue an unreducible type error later.
+                approximateOr(tp1, tp2)
+              case tp => tp
           case (tp1, tp2) =>
             approximateOr(tp1, tp2)
       case _ =>

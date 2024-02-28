@@ -95,14 +95,14 @@ object Contexts {
   inline def atPhaseNoEarlier[T](limit: Phase)(inline op: Context ?=> T)(using Context): T =
     op(using if !limit.exists || limit <= ctx.phase then ctx else ctx.withPhase(limit))
 
-  inline private def inMode[T](mode: Mode)(inline op: Context ?=> T)(using ctx: Context): T =
+  inline def withModeBits[T](mode: Mode)(inline op: Context ?=> T)(using ctx: Context): T =
     op(using if mode != ctx.mode then ctx.fresh.setMode(mode) else ctx)
 
   inline def withMode[T](mode: Mode)(inline op: Context ?=> T)(using ctx: Context): T =
-    inMode(ctx.mode | mode)(op)
+    withModeBits(ctx.mode | mode)(op)
 
   inline def withoutMode[T](mode: Mode)(inline op: Context ?=> T)(using ctx: Context): T =
-    inMode(ctx.mode &~ mode)(op)
+    withModeBits(ctx.mode &~ mode)(op)
 
   /** A context is passed basically everywhere in dotc.
    *  This is convenient but carries the risk of captured contexts in

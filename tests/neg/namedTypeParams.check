@@ -24,16 +24,16 @@
 19 |  f[X = Int, String](1, "") // error // error
    |                   ^
    |                   '=' expected, but ']' found
--- Error: tests/neg/namedTypeParams.scala:6:8 --------------------------------------------------------------------------
+-- Error: tests/neg/namedTypeParams.scala:6:4 --------------------------------------------------------------------------
 6 |  f[X = Int, Y = Int](1, 2) // error: experimental // error: experimental
-  |        ^^^
-  |        Named type arguments are experimental,
-  |        they must be enabled with a `experimental.namedTypeArguments` language import or setting
--- Error: tests/neg/namedTypeParams.scala:6:17 -------------------------------------------------------------------------
+  |    ^^^^^^^
+  |    Named type arguments are experimental,
+  |    they must be enabled with a `experimental.namedTypeArguments` language import or setting
+-- Error: tests/neg/namedTypeParams.scala:6:13 -------------------------------------------------------------------------
 6 |  f[X = Int, Y = Int](1, 2) // error: experimental // error: experimental
-  |                 ^^^
-  |                 Named type arguments are experimental,
-  |                 they must be enabled with a `experimental.namedTypeArguments` language import or setting
+  |             ^^^^^^^
+  |             Named type arguments are experimental,
+  |             they must be enabled with a `experimental.namedTypeArguments` language import or setting
 -- [E006] Not Found Error: tests/neg/namedTypeParams.scala:11:11 -------------------------------------------------------
 11 |  val x: C[T = Int] = // error:  ']' expected, but `=` found // error
    |           ^
