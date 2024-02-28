@@ -3,8 +3,8 @@
   |               ^^^
   |               Experimental definition may only be used under experimental mode:
   |                 1. in a definition marked as @experimental, or
-  |                 2. compiling with the -experimental compiler flag, or
-  |                 3. with a nightly or snapshot version of the compiler.
+  |                 2. an experimental feature is imported in at the package level, or
+  |                 3. compiling with the -experimental compiler flag, or
+  |                 4. with a nightly or snapshot version of the compiler.
   |
   |               method foo is marked @experimental
-  |                         

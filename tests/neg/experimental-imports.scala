@@ -14,7 +14,7 @@ object Object2:
   import language.experimental.fewerBraces // error
   import language.experimental.namedTypeArguments // error
   import language.experimental.genericNumberLiterals // error
-  import language.experimental.erasedDefinitions
+  import language.experimental.erasedDefinitions // error
   erased def f = 1
 
 @experimental
@@ -29,7 +29,7 @@ object Class2:
   import language.experimental.fewerBraces // error
   import language.experimental.namedTypeArguments // error
   import language.experimental.genericNumberLiterals // error
-  import language.experimental.erasedDefinitions
+  import language.experimental.erasedDefinitions // error
   erased def f = 1
 
 @experimental
@@ -44,5 +44,5 @@ def fun2 =
   import language.experimental.fewerBraces // error
   import language.experimental.namedTypeArguments // error
   import language.experimental.genericNumberLiterals // error
-  import language.experimental.erasedDefinitions
+  import language.experimental.erasedDefinitions // error
   erased def f = 1

@@ -806,44 +806,45 @@ object Checking {
    *  scope with only @experimental definitions.
    */
   def checkExperimentalImports(trees: List[Tree])(using Context): Unit =
-
-    def nonExperimentalStat(trees: List[Tree]): Tree = trees match
-      case (_: Import | EmptyTree) :: rest =>
-        nonExperimentalStat(rest)
+    def nonExperimentalStats(trees: List[Tree]): List[Tree] = trees match
+      case (_: ImportOrExport | EmptyTree) :: rest =>
+        nonExperimentalStats(rest)
       case (tree @ TypeDef(_, impl: Template)) :: rest if tree.symbol.isPackageObject =>
-        nonExperimentalStat(impl.body).orElse(nonExperimentalStat(rest))
+        nonExperimentalStats(impl.body) ::: nonExperimentalStats(rest)
       case (tree: PackageDef) :: rest =>
-        nonExperimentalStat(tree.stats).orElse(nonExperimentalStat(rest))
+        nonExperimentalStats(tree.stats) ::: nonExperimentalStats(rest)
       case (tree: MemberDef) :: rest =>
         if tree.symbol.isExperimental || tree.symbol.is(Synthetic) then
-          nonExperimentalStat(rest)
+          nonExperimentalStats(rest)
         else
-          tree
+          tree :: nonExperimentalStats(rest)
       case tree :: rest =>
-        tree
+        tree :: nonExperimentalStats(rest)
       case Nil =>
-        EmptyTree
+        Nil
 
     for case imp @ Import(qual, selectors) <- trees do
       def isAllowedImport(sel: untpd.ImportSelector) =
         val name = Feature.experimental(sel.name)
         name == Feature.scala2macros
-        || name == Feature.erasedDefinitions
         || name == Feature.captureChecking
 
       languageImport(qual) match
         case Some(nme.experimental)
         if !ctx.owner.isInExperimentalScope && !selectors.forall(isAllowedImport) =>
-          def check(stable: => String) =
-            Feature.checkExperimentalFeature("features", imp.srcPos,
-              s"\n\nNote: the scope enclosing the import is not considered experimental because it contains the\nnon-experimental $stable")
-          if ctx.owner.is(Package) then
-            // allow top-level experimental imports if all definitions are @experimental
-            nonExperimentalStat(trees) match
-              case EmptyTree =>
-              case tree: MemberDef => check(i"${tree.symbol}")
-              case tree => check(i"expression ${tree}")
-          else Feature.checkExperimentalFeature("features", imp.srcPos)
+          if ctx.owner.is(Package) || ctx.owner.name.startsWith(str.REPL_SESSION_LINE) then
+            // mark all top-level definitions as @experimental
+            for tree <- nonExperimentalStats(trees) do
+              tree match
+                case tree: MemberDef =>
+                  // TODO move this out of checking (into posttyper?)
+                  val sym = tree.symbol
+                  if !sym.isExperimental then
+                    sym.addAnnotation(Annotations.Annotation(defn.ExperimentalAnnot, sym.span))
+                case tree =>
+                  // There is no definition to attach the @experimental annotation
+                  report.error("Implementation restriction: top-level `val _ = ...` is not supported with experimental language imports.", tree.srcPos)
+          else Feature.checkExperimentalFeature("feature local import", imp.srcPos)
         case _ =>
   end checkExperimentalImports
 
