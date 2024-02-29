@@ -116,7 +116,7 @@ object Implicits:
     protected def isAccessible(ref: TermRef)(using Context): Boolean
 
     /** Return those references in `refs` that are compatible with type `pt`. */
-    protected def filterMatching(pt: Type)(using Context): List[Candidate] = {
+    protected def filterMatching(pt: Type, extensionOnly: Boolean, forEach: ((ImplicitRef => Unit) => Unit))(using Context): List[Candidate] = {
       record("filterMatching")
 
       val considerExtension = pt match
@@ -244,24 +244,36 @@ object Implicits:
         ckind
       }
 
+      val candidates = new mutable.ListBuffer[Candidate]
+      def tryCandidate(ref: ImplicitRef) = trace.force(i"trying $ref as candidate (extensionOnly = $extensionOnly)"){
+        var ckind = exploreInFreshCtx { (ctx: FreshContext) ?=>
+          ctx.setMode(ctx.mode &~ Mode.SafeNulls | Mode.TypevarsMissContext)
+          candidateKind(ref.underlyingRef)
+        }
+        if extensionOnly then ckind &= Candidate.Extension
+        if ckind != Candidate.None then
+          // println(i"Getting implicit ref $ref (underlying = ${ref.underlyingRef})")
+          candidates += Candidate(ref, ckind, level)
+          true
+        else false
+      }
+      forEach(tryCandidate)
+      candidates.toList
+    }
+
+    protected def filterMatching(pt: Type)(using Context): List[Candidate] = {
+      val considerExtension = pt match
+        case ViewProto(_, _: SelectionProto) => true
+        case _ => false
 
       if refs.isEmpty && (!considerExtension || companionRefs.isEmpty) then
         Nil
       else
         val candidates = new mutable.ListBuffer[Candidate]
-        def tryCandidate(extensionOnly: Boolean)(ref: ImplicitRef) =
-          var ckind = exploreInFreshCtx { (ctx: FreshContext) ?=>
-            ctx.setMode(ctx.mode &~ Mode.SafeNulls | Mode.TypevarsMissContext)
-            candidateKind(ref.underlyingRef)
-          }
-          if extensionOnly then ckind &= Candidate.Extension
-          if ckind != Candidate.None then
-            candidates += Candidate(ref, ckind, level)
-
         if considerExtension then
-          companionRefs.foreach(tryCandidate(extensionOnly = true))
+          candidates ++= filterMatching(pt, true, companionRefs.foreach)
         if refs.nonEmpty then
-          refs.foreach(tryCandidate(extensionOnly = false))
+          candidates ++= filterMatching(pt, false, refs.foreach)
         candidates.toList
     }
   }
@@ -272,17 +284,19 @@ object Implicits:
    */
   class OfTypeImplicits(tp: Type, override val companionRefs: TermRefSet)(initctx: Context) extends ImplicitRefs(initctx) {
     implicits.println(i"implicit scope of type $tp = ${companionRefs.showAsList}%, %")
-    @threadUnsafe lazy val refs: List[ImplicitRef] = {
+    @threadUnsafe private lazy val termRefs: List[TermRef] = {
       val buf = new mutable.ListBuffer[TermRef]
       for (companion <- companionRefs) buf ++= companion.implicitMembers
       buf.toList
     }
 
+    lazy val refs: List[ImplicitRef] = termRefs
+
     /** The candidates that are eligible for expected type `tp` */
     @threadUnsafe lazy val eligible: List[Candidate] =
       trace(i"eligible($tp), companions = ${companionRefs.showAsList}%, %", implicitsDetailed, show = true) {
         if (refs.nonEmpty && monitored) record(s"check eligible refs in tpe", refs.length)
-        filterMatching(tp)
+        filterMatching(tp, true, companionRefs.foreach) ++ filterMatching(tp, false, termRefs.filter(t => !companionRefs.contains(t)).foreach)
       }
 
     override def isAccessible(ref: TermRef)(using Context): Boolean =
@@ -2036,6 +2050,16 @@ sealed class TermRefSet(using Context):
           if !(prefix =:= pre) then elems.put(sym, pre :: prefix :: Nil)
         case prefixes: List[Type] =>
           if !prefixes.exists(_ =:= pre) then elems.put(sym, pre :: prefixes)
+
+  def contains(ref: TermRef): Boolean =
+    val pre = ref.prefix
+    if ref.symbol.exists then
+      val sym = ref.symbol.asTerm
+      elems.get(sym) match
+        case null => false
+        case prefix: Type => prefix =:= pre
+        case prefixes: List[Type] => prefixes.exists(_ =:= pre)
+    else false
 
   def ++= (that: TermRefSet): Unit =
     if !that.isEmpty then that.foreach(+=)
