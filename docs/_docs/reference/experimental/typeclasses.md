@@ -126,7 +126,7 @@ and not to:
 We introduce a standard type alias `forms` in the Scala package or in `Predef`, defined like this:
 
 ```scala
-  infix type is[A <: AnyKind, B <: {type Self <: AnyKind}] = B { type Self = A }
+  infix type forms[A <: AnyKind, B <: {type Self <: AnyKind}] = B { type Self = A }
 ```
 
 This makes writing instance definitions quite pleasant. Examples:
