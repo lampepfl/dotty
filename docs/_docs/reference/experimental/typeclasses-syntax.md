@@ -185,21 +185,14 @@ The compiler expands this to the following implementation:
 ```scala
 trait Sorted:
   type Element
-  given Ord[Element] as Element = compiletime.deferred
+  given Ord[Element] = compiletime.deferred
 
 class SortedSet[A](using A: Ord[A]) extends Sorted:
   type Element = A
-  override given Ord[Element] as Element = A // i.e. the A defined by the using clause
+  override given Ord[Element] = A // i.e. the A defined by the using clause
 ```
 
 The using clause in class `SortedSet` provides an implementation for the deferred given in trait `Sorted`.
-
-If there is a single context bound, as in
-```scala
-  type T : C
-```
-the synthesized deferred given will get the (term-)name of the constrained type `T`. If there are multiple bounds,
-the standard convention for naming anonymous givens applies.
 
 **Benefits:**
 

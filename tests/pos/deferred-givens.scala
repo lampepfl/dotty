@@ -9,7 +9,7 @@ trait A:
 
 class AC extends A:
   type Elem = Double
-  override given Ord[Elem] as Elem = ???
+  override given Ord[Elem] = ???
 
 class AD extends A:
   type Elem = Double
@@ -34,4 +34,3 @@ class E(using x: Ord[String]) extends B:
 
 class F[X: Ord] extends B:
   type Elem = X
-

@@ -232,14 +232,16 @@ object desugar {
       flags: FlagSet,
       freshName: => TermName)(using Context): Tree = rhs match
     case ContextBounds(tbounds, cxbounds) =>
+      val isMember = flags.isAllOf(DeferredGivenFlags)
       for bound <- cxbounds do
         val evidenceName = bound match
           case ContextBoundTypeTree(_, _, ownName) if !ownName.isEmpty =>
             ownName
-          case _ if Feature.enabled(Feature.modularity) && cxbounds.tail.isEmpty  =>
+          case _ if !isMember && cxbounds.tail.isEmpty && Feature.enabled(Feature.modularity) =>
             tname.toTermName
           case _ =>
-            freshName
+            if isMember then inventGivenOrExtensionName(bound)
+            else freshName
         val evidenceParam = ValDef(evidenceName, bound, EmptyTree).withFlags(flags)
         evidenceParam.pushAttachment(ContextBoundParam, ())
         evidenceBuf += evidenceParam
@@ -1202,6 +1204,8 @@ object desugar {
           case tree: TypeDef => tree.name.toString
           case tree: AppliedTypeTree if followArgs && tree.args.nonEmpty =>
             s"${apply(x, tree.tpt)}_${extractArgs(tree.args)}"
+          case ContextBoundTypeTree(tycon, paramName, _) =>
+            s"${apply(x, tycon)}_$paramName"
           case InfixOp(left, op, right) =>
             if followArgs then s"${op.name}_${extractArgs(List(left, right))}"
             else op.name.toString
