@@ -5,7 +5,7 @@ import scala.meta.internal.pc.Keyword
 
 import dotty.tools.dotc.ast.NavigateAST
 import dotty.tools.dotc.ast.Positioned
-import dotty.tools.dotc.ast.tpd.*
+import dotty.tools.dotc.ast.untpd.*
 import dotty.tools.dotc.ast.untpd
 import dotty.tools.dotc.ast.untpd.UntypedTreeTraverser
 import dotty.tools.dotc.core.Comments

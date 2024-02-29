@@ -110,9 +110,11 @@ class Completions(
     val (all, result) =
       if exclusive then (advanced, SymbolSearch.Result.COMPLETE)
       else
-        val keywords =
-          KeywordsCompletions.contribute(path, completionPos, comments)
+        val keywords = KeywordsCompletions.contribute(adjustedPath, completionPos, comments)
         val allAdvanced = advanced ++ keywords
+        val fuzzyMatcher: Name => Boolean = name =>
+          Fuzzy.matchesSubCharacters(completionPos.query, name.toString)
+
         path match
           // should not show completions for toplevel
           case Nil | (_: PackageDef) :: _ if completionPos.originalCursorPosition.source.file.extension != "sc" =>
@@ -120,14 +122,14 @@ class Completions(
           case Select(qual, _) :: _ if qual.typeOpt.isErroneous =>
             (allAdvanced, SymbolSearch.Result.COMPLETE)
           case Select(qual, _) :: _ =>
-            val compilerCompletions = Completion.rawCompletions(completionPos.originalCursorPosition, completionMode, completionPos.query, path, adjustedPath)
+            val compilerCompletions = Completion.rawCompletions(completionPos.originalCursorPosition, completionMode, completionPos.query, path, adjustedPath, Some(fuzzyMatcher))
             val (compiler, result) = compilerCompletions
               .toList
               .flatMap(toCompletionValues)
               .filterInteresting(qual.typeOpt.widenDealias)
             (allAdvanced ++ compiler, result)
           case _ =>
-            val compilerCompletions = Completion.rawCompletions(completionPos.originalCursorPosition, completionMode, completionPos.query, path, adjustedPath)
+            val compilerCompletions = Completion.rawCompletions(completionPos.originalCursorPosition, completionMode, completionPos.query, path, adjustedPath, Some(fuzzyMatcher))
             val (compiler, result) = compilerCompletions
               .toList
               .flatMap(toCompletionValues)
