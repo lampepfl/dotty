@@ -1,4 +1,4 @@
-[[syntax trees at end of MegaPhase{dropOuterAccessors, checkNoSuperThis, flatten, transformWildcards, moveStatic, expandPrivate, restoreScopes, selectStatic, Collect entry points, collectSuperCalls, repeatableAnnotations}]] // tests/printing/transformed/lazy-vals-new.scala
+[[syntax trees at end of MegaPhase{dropOuterAccessors, checkNoSuperThis, flatten, transformWildcards, moveStatic, expandPrivate, restoreScopes, selectStatic, Collect entry points, collectSuperCalls, repeatableAnnotations, checkJVMspec}]] // tests/printing/transformed/lazy-vals-new.scala
 package <empty> {
   @SourceFile("tests/printing/transformed/lazy-vals-new.scala") final module
     class A extends Object {

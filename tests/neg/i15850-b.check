@@ -1,0 +1,6 @@
+-- Error: tests/neg/i15850-b.scala:9:4 ---------------------------------------------------------------------------------
+9 |def crash(x: Level7): Unit = () // error
+  |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |Method signature length exceed the maximum length allowed by the JVM specification.
+  |Allowed: 65535
+  |Actual : 496979

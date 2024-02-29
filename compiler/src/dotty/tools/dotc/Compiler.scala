@@ -142,7 +142,8 @@ class Compiler {
          new sjs.JUnitBootstrappers, // Generate JUnit-specific bootstrapper classes for Scala.js (not enabled by default)
          new CollectEntryPoints,     // Collect all entry points and save them in the context
          new CollectSuperCalls,      // Find classes that are called with super
-         new RepeatableAnnotations) :: // Aggregate repeatable annotations
+         new RepeatableAnnotations,  // Aggregate repeatable annotations
+         new CheckJVMSpecification) :: // Checks related to the JVM Specification before code generation
     Nil
 
   /** Generate the output of the compilation */
