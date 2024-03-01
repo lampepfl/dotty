@@ -1,0 +1,54 @@
+-- [E051] Reference Error: tests/neg/i18294.scala:18:30 ----------------------------------------------------------------
+18 |  val test01: Int => String = f1 // error
+   |                              ^^
+   |                              Ambiguous overload. The overloaded alternatives of method f1 with types
+   |                               => Int => String
+   |                               (s: Int): String
+   |                              both match expected type Int => String
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E051] Reference Error: tests/neg/i18294.scala:19:30 ----------------------------------------------------------------
+19 |  val test02: Int => String = f2 // error
+   |                              ^^
+   |                              Ambiguous overload. The overloaded alternatives of value f2 with types
+   |                               Int => String
+   |                               (s: Int): String
+   |                              both match expected type Int => String
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E051] Reference Error: tests/neg/i18294.scala:22:36 ----------------------------------------------------------------
+22 |  val test1: Int => String = DefDef.f4 // error
+   |                             ^^^^^^^^^
+   |                        Ambiguous overload. The overloaded alternatives of method f4 in object DefDef with types
+   |                         => Int => String
+   |                         (s: Int): String
+   |                        both match expected type Int => String
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E051] Reference Error: tests/neg/i18294.scala:23:37 ----------------------------------------------------------------
+23 |  def dtest1: Int => String = DefDef.f4 // error
+   |                              ^^^^^^^^^
+   |                        Ambiguous overload. The overloaded alternatives of method f4 in object DefDef with types
+   |                         => Int => String
+   |                         (s: Int): String
+   |                        both match expected type Int => String
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E051] Reference Error: tests/neg/i18294.scala:25:36 ----------------------------------------------------------------
+25 |  val test2: Int => String = DefVal.f5 // error
+   |                             ^^^^^^^^^
+   |                         Ambiguous overload. The overloaded alternatives of value f5 in object DefVal with types
+   |                          Int => String
+   |                          (s: Int): String
+   |                         both match expected type Int => String
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E051] Reference Error: tests/neg/i18294.scala:26:37 ----------------------------------------------------------------
+26 |  def dtest2: Int => String = DefVal.f5 // error
+   |                              ^^^^^^^^^
+   |                         Ambiguous overload. The overloaded alternatives of value f5 in object DefVal with types
+   |                          Int => String
+   |                          (s: Int): String
+   |                         both match expected type Int => String
+   |
+   | longer explanation available when compiling with `-explain`
