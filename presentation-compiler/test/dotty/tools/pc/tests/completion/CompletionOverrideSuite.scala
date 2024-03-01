@@ -925,12 +925,15 @@ class CompletionOverrideSuite extends BaseCompletionSuite:
          |   def@@
          |}
          |""".stripMargin,
+
       """|def hello1: Int
-         |override val hello2: Int
          |override def equals(x$0: Any): Boolean
+         |override def hashCode(): Int
+         |override def toString(): String
+         |override val hello2: Int
          |""".stripMargin,
       includeDetail = false,
-      topLines = Some(3)
+      topLines = Some(5)
     )
 
   @Test def `path-dependent` =

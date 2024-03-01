@@ -1,22 +1,13 @@
 package dotty.tools.pc
 package completions
 
-import java.nio.file.Path
-import java.nio.file.Paths
-
-import scala.collection.mutable
-import scala.meta.internal.metals.Fuzzy
-import scala.meta.internal.metals.ReportContext
-import scala.meta.internal.mtags.CoursierComplete
-import scala.meta.internal.pc.{IdentifierComparator, MemberOrdering}
-import scala.meta.pc.*
-
+import dotty.tools.dotc.ast.NavigateAST
 import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.ast.untpd
-import dotty.tools.dotc.ast.NavigateAST
 import dotty.tools.dotc.core.Comments.Comment
 import dotty.tools.dotc.core.Constants.Constant
 import dotty.tools.dotc.core.Contexts.*
+import dotty.tools.dotc.core.Denotations.SingleDenotation
 import dotty.tools.dotc.core.Flags
 import dotty.tools.dotc.core.Flags.*
 import dotty.tools.dotc.core.NameOps.*
@@ -27,14 +18,23 @@ import dotty.tools.dotc.core.Symbols.*
 import dotty.tools.dotc.core.Types.*
 import dotty.tools.dotc.interactive.Completion
 import dotty.tools.dotc.interactive.Completion.Mode
+import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.util.SourcePosition
 import dotty.tools.dotc.util.SrcPos
 import dotty.tools.pc.AutoImports.AutoImportsGenerator
-import dotty.tools.pc.completions.OverrideCompletions.OverrideExtractor
 import dotty.tools.pc.buildinfo.BuildInfo
+import dotty.tools.pc.completions.OverrideCompletions.OverrideExtractor
 import dotty.tools.pc.utils.MtagsEnrichments.*
-import dotty.tools.dotc.core.Denotations.SingleDenotation
-import dotty.tools.dotc.interactive.Interactive
+
+import java.nio.file.Path
+import java.nio.file.Paths
+import scala.collection.mutable
+import scala.meta.internal.metals.ReportContext
+import scala.meta.internal.mtags.CoursierComplete
+import scala.meta.internal.pc.CompletionFuzzy
+import scala.meta.internal.pc.IdentifierComparator
+import scala.meta.internal.pc.MemberOrdering
+import scala.meta.pc.*
 
 class Completions(
     text: String,
@@ -110,10 +110,11 @@ class Completions(
     val (all, result) =
       if exclusive then (advanced, SymbolSearch.Result.COMPLETE)
       else
-        val keywords = KeywordsCompletions.contribute(adjustedPath, completionPos, comments)
+        val keywords = KeywordsCompletions.contribute(path, completionPos, comments)
         val allAdvanced = advanced ++ keywords
         val fuzzyMatcher: Name => Boolean = name =>
-          Fuzzy.matchesSubCharacters(completionPos.query, name.toString)
+          if completionMode.is(Mode.Member) then CompletionFuzzy.matchesSubCharacters(completionPos.query, name.toString)
+          else CompletionFuzzy.matches(completionPos.query, name.toString)
 
         path match
           // should not show completions for toplevel
@@ -387,7 +388,7 @@ class Completions(
 
       // class Fo@@
       case (td: TypeDef) :: _
-          if Fuzzy.matches(
+          if CompletionFuzzy.matches(
             td.symbol.name.decoded.replace(Cursor.value, "").nn,
             filename
           ) =>
@@ -883,14 +884,13 @@ class Completions(
               val byLocalSymbol = compareLocalSymbols(s1, s2)
               if byLocalSymbol != 0 then byLocalSymbol
               else
-                val byRelevance = compareByRelevance(o1, o2)
-                if byRelevance != 0 then byRelevance
+                val f1 = fuzzyScore(sym1)
+                val f2 = fuzzyScore(sym2)
+                val byFuzzy = Integer.compare(f1, f2)
+                if byFuzzy != 0 then byFuzzy
                 else
-                  val byFuzzy = Integer.compare(
-                    fuzzyScore(sym1),
-                    fuzzyScore(sym2)
-                  )
-                  if byFuzzy != 0 then byFuzzy
+                  val byRelevance = compareByRelevance(o1, o2)
+                  if byRelevance != 0 then byRelevance
                   else
                     val byIdentifier = IdentifierComparator.compare(
                       s1.name.show,

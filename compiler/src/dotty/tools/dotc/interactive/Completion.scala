@@ -131,7 +131,7 @@ object Completion:
   def completionPrefix(path: List[untpd.Tree], pos: SourcePosition)(using Context): String =
     def fallback: Int =
       var i = pos.point - 1
-      while i >= 0 && Chars.isIdentifierPart(pos.source.content()(i)) do i -= 1
+      while i >= 0 && Character.isUnicodeIdentifierPart(pos.source.content()(i)) do i -= 1
       i + 1
 
     path match

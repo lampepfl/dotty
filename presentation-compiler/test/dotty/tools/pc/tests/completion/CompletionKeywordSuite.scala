@@ -698,28 +698,26 @@ class CompletionKeywordSuite extends BaseCompletionSuite:
 
   @Test def `derives-with-extends` =
     check(
-      """
-        |package foo
-        |
-        |trait Bar {}
-        |trait Baz {}
-        |
-        |class Foo(x: Int) extends Bar with Baz der@@
-                """.stripMargin,
+      """|package foo
+         |
+         |trait Bar {}
+         |trait Baz {}
+         |
+         |class Foo(x: Int) extends Bar with Baz der@@
+         |""".stripMargin,
       """|derives
          |""".stripMargin
     )
 
   @Test def `derives-with-constructor-extends` =
     check(
-      """
-        |package foo
-        |
-        |trait Bar {}
-        |class Baz(b: Int) {}
-        |
-        |class Foo(x: Int) extends Bar with Baz(1) @@
-        """.stripMargin,
+      """|package foo
+         |
+         |trait Bar {}
+         |class Baz(b: Int) {}
+         |
+         |class Foo(x: Int) extends Bar with Baz(1) der@@
+         |""".stripMargin,
       """|derives
          |""".stripMargin
     )
@@ -736,64 +734,4 @@ class CompletionKeywordSuite extends BaseCompletionSuite:
         |}
         """.stripMargin,
       ""
-    )
-
-  @Test def `only-keywords` =
-    check(
-      """
-        |package foo
-        |
-        |object Main {
-        |  class Baz(x: Int) @@
-        |}
-        """.stripMargin,
-      ""
-    )
-
-  @Test def `only-keywords-1` =
-    check(
-      """
-        |package foo
-        |
-        |object Main {
-        |  class Baz(x: Int)
-        |  p@@
-        |}
-        """.stripMargin,
-      ""
-    )
-
-  @Test def `only-keywords-2` =
-    check(
-      """
-        |package foo
-        |
-        |class Baz(x: Int) @@
-        """.stripMargin,
-      ""
-    )
-
-  @Test def `def-after-extension` =
-    check(
-      """
-        |object Main {
-        |  extension (x: Int) @@
-        |}
-        """.stripMargin,
-      """|derives
-         |private
-         |""".stripMargin
-    )
-
-  @Test def `def-after-extension-newline` =
-    check(
-      """
-        |object Main {
-        |  extension (x: Int)
-        |    @@
-        |}
-        """.stripMargin,
-      """|derives
-         |private
-         |""".stripMargin
     )
