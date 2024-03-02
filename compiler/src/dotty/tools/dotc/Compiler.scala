@@ -34,8 +34,7 @@ class Compiler {
   protected def frontendPhases: List[List[Phase]] =
     List(new Parser) ::             // Compiler frontend: scanner, parser
     List(new TyperPhase) ::         // Compiler frontend: namer, typer
-    List(new CheckUnused.PostTyper) :: // Check for unused elements
-    List(new CheckShadowing) :: // Check shadowing elements
+    List(new CheckUnused.PostTyper, new CheckShadowing) :: // Linting phases
     List(new YCheckPositions) ::    // YCheck positions
     List(new sbt.ExtractDependencies) :: // Sends information on classes' dependencies to sbt via callbacks
     List(new semanticdb.ExtractSemanticDB.ExtractSemanticInfo) :: // Extract info into .semanticdb files
