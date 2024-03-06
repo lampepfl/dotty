@@ -353,6 +353,34 @@ class ReplCompilerTests extends ReplTest:
   @Test def `i13097 expect template after colon` = contextually:
     assert(ParseResult.isIncomplete("class C:"))
 
+  @Test def i15562: Unit = initially {
+    val s1 = run("List(1, 2).filter(_ % 2 == 0).foreach(println)")
+    assertEquals("2", storedOutput().trim)
+    s1
+  } andThen { s1 ?=>
+    val comp = tabComplete("List(1, 2).filter(_ % 2 == 0).fore")
+    assertEquals(List("foreach"), comp.distinct)
+    s1
+  } andThen {
+    val s2 = run("List(1, 2).filter(_ % 2 == 0).foreach(println)")
+    assertEquals("2", storedOutput().trim)
+    s2
+  }
+
+  @Test def i15562b: Unit = initially {
+    val s1 = run("List(1, 2).filter(_ % 2 == 0).foreach(println)")
+    assertEquals("2", storedOutput().trim)
+    s1
+  } andThen { s1 ?=>
+    val comp = tabComplete("val x = false + true; List(1, 2).filter(_ % 2 == 0).fore")
+    assertEquals(List("foreach"), comp.distinct)
+    s1
+  } andThen {
+    val s2 = run("List(1, 2).filter(_ % 2 == 0).foreach(println)")
+    assertEquals("2", storedOutput().trim)
+    s2
+  }
+
 object ReplCompilerTests:
 
   private val pattern = Pattern.compile("\\r[\\n]?|\\n");

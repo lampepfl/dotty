@@ -8,10 +8,6 @@ import org.junit.Test
 /** These tests test input that has proved problematic */
 class TabcompleteTests extends ReplTest {
 
-  /** Returns the `(<instance completions>, <companion completions>)`*/
-  private def tabComplete(src: String)(implicit state: State): List[String] =
-    completions(src.length, src, state).map(_.value).sorted
-
   @Test def tabCompleteList = initially {
     val comp = tabComplete("List.r")
     assertEquals(List("range"), comp.distinct)

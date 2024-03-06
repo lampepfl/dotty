@@ -154,8 +154,6 @@ abstract class Reporter extends interfaces.ReporterResult {
         case w: Warning if ctx.settings.XfatalWarnings.value => w.toError
         case _                                               => dia
       if !isHidden(d) then // avoid isHidden test for summarized warnings so that message is not forced
-        markReported(d)
-        withMode(Mode.Printing)(doReport(d))
         d match {
           case _: Warning => _warningCount += 1
           case e: Error   =>
@@ -166,6 +164,8 @@ abstract class Reporter extends interfaces.ReporterResult {
           case _: Info    => // nothing to do here
           // match error if d is something else
         }
+        markReported(dia)
+        withMode(Mode.Printing)(doReport(dia))
   end issueUnconfigured
 
   def issueIfNotSuppressed(dia: Diagnostic)(using Context): Unit =

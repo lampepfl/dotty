@@ -108,17 +108,28 @@ object Symbols {
     }
 
     private def computeDenot(lastd: SymDenotation)(using Context): SymDenotation = {
+      // Written that way so that it comes in at 32 bytes and is therefore inlineable for
+      // the JIT (reputedly, cutoff is at 35 bytes)
       util.Stats.record("Symbol.computeDenot")
       val now = ctx.period
       checkedPeriod = now
-      if (lastd.validFor contains now) lastd else recomputeDenot(lastd)
+      if lastd.validFor.contains(now) then lastd else recomputeDenot(lastd)
     }
 
     /** Overridden in NoSymbol */
     protected def recomputeDenot(lastd: SymDenotation)(using Context): SymDenotation = {
       util.Stats.record("Symbol.recomputeDenot")
       val newd = lastd.current.asInstanceOf[SymDenotation]
-      lastDenot = newd
+      if newd.exists || lastd.initial.validFor.firstPhaseId <= ctx.phaseId then
+        lastDenot = newd
+      else
+        // We are trying to bring forward a symbol that is defined only at a later phase
+        // (typically, a nested Java class, invisible before erasure).
+        // In that case, keep lastDenot as it was and set the checked period to lastDenot's
+        // previous validity, which means we will try another bring forward when the symbol
+        // is referenced at a later phase. Otherwise we'd get stuck on NoDenotation here.
+        // See #15562 and test i15562b in ReplCompilerTests
+        checkedPeriod = lastd.validFor
       newd
     }
 
@@ -754,7 +765,7 @@ object Symbols {
       cls: ClassSymbol,
       name: TermName = nme.WILDCARD,
       selfInfo: Type = NoType)(using Context): TermSymbol =
-    newSymbol(cls, name, SelfSymFlags, selfInfo orElse cls.classInfo.selfType, coord = cls.coord)
+    newSymbol(cls, name, SelfSymFlags, selfInfo.orElse(cls.classInfo.selfType), coord = cls.coord)
 
   /** Create new type parameters with given owner, names, and flags.
    *  @param boundsFn  A function that, given type refs to the newly created
@@ -921,7 +932,7 @@ object Symbols {
    */
   def getPackageClassIfDefined(path: PreName)(using Context): Symbol =
     staticRef(path.toTypeName, isPackage = true, generateStubs = false)
-      .disambiguate(_ is PackageClass).symbol
+      .disambiguate(_.is(PackageClass)).symbol
 
   def requiredModule(path: PreName)(using Context): TermSymbol = {
     val name = path.toTermName
