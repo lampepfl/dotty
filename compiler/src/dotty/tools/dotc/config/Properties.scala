@@ -84,12 +84,6 @@ trait PropertiesTrait {
    */
   val versionString: String = "version " + simpleVersionString
 
-  /** Whether the current version of compiler is experimental
-   *
-   *  Snapshot, nightly releases and non-bootstrapped compiler are experimental.
-   */
-  val unstableExperimentalEnabled: Boolean = versionString.contains("SNAPSHOT") || versionString.contains("NIGHTLY") || versionString.contains("nonbootstrapped")
-
   /** Whether the current version of compiler supports research plugins. */
   val researchPluginEnabled: Boolean = versionString.contains("SNAPSHOT") || versionString.contains("NIGHTLY") || versionString.contains("nonbootstrapped")
 

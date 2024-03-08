@@ -31,7 +31,7 @@ trait E:
   @deprecated
   protected implicit def same[A](a: A): A
 
-trait XD extends E:
+@experimental trait XD extends E:
   /**
    * Some important information :o
    *

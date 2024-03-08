@@ -1,3 +1,4 @@
+//> using options -experimental
 
 /* This is a version of ../pos/phantom.scala that tests phantom clases with separate compilation */
 object PhantomEq {

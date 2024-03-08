@@ -1,5 +1,6 @@
+import scala.language.experimental.clauseInterleaving
+
 object Test extends App {
-  import scala.language.experimental.clauseInterleaving
   trait Key { type Value }
   trait DB {
     def getOrElse(k: Key)[V >: k.Value](default: V): V // dependent type parameter

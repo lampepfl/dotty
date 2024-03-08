@@ -140,8 +140,7 @@ object Feature:
         em"""Experimental $which may only be used under experimental mode:
             |  1. in a definition marked as @experimental, or
             |  2. an experimental feature is imported in at the package level, or
-            |  3. compiling with the -experimental compiler flag, or
-            |  4. with a nightly or snapshot version of the compiler.$note
+            |  3. compiling with the -experimental compiler flag.$note
             |""", srcPos)
 
   private def ccException(sym: Symbol)(using Context): Boolean =
@@ -160,7 +159,6 @@ object Feature:
       checkExperimentalFeature("definition", srcPos, s"\n\n$note")
 
   def isExperimentalEnabledBySetting(using Context): Boolean =
-    (Properties.unstableExperimentalEnabled && !ctx.settings.YnoExperimental.value) ||
     ctx.settings.experimental.value ||
     experimentalAutoEnableFeatures.exists(enabledBySetting)
 

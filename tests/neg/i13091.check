@@ -1,0 +1,15 @@
+-- [E190] Potential Issue Warning: tests/neg/i13091.scala:7:17 ---------------------------------------------------------
+7 |def test: Unit = new Foo // error: class Foo is marked @experimental ...
+  |                 ^^^^^^^
+  |                 Discarded non-Unit value of type Foo. You may want to use `()`.
+  |
+  | longer explanation available when compiling with `-explain`
+-- Error: tests/neg/i13091.scala:7:21 ----------------------------------------------------------------------------------
+7 |def test: Unit = new Foo // error: class Foo is marked @experimental ...
+  |                     ^^^
+  |                     Experimental definition may only be used under experimental mode:
+  |                       1. in a definition marked as @experimental, or
+  |                       2. an experimental feature is imported in at the package level, or
+  |                       3. compiling with the -experimental compiler flag.
+  |
+  |                     class Foo is marked @experimental

@@ -1,3 +1,5 @@
+//> using options -experimental
+
 object Test {
   def main(args: Array[String]): Unit = {
     assert(Macro.foo1(1) == 0)
