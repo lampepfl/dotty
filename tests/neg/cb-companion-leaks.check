@@ -1,0 +1,66 @@
+-- [E194] Type Error: tests/neg/cb-companion-leaks.scala:11:23 ---------------------------------------------------------
+11 |  def foo[A: {C, D}] = A // error
+   |                       ^
+   |                       context bound companion value A cannot be used as a value
+   |--------------------------------------------------------------------------------------------------------------------
+   | Explanation (enabled by `-explain`)
+   |- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+   | A context bound companion is a symbol made up by the compiler to represent the
+   | witness or witnesses generated for the context bound(s) of a type parameter or type.
+   | For instance, in
+   |
+   |    class Monoid extends SemiGroup:
+   |      type Self
+   |      def unit: Self
+   |
+   |    type A: Monoid
+   |
+   | there is just a type `A` declared but not a value `A`. Nevertheless, one can write
+   | the selection `A.unit`, which works because the compiler created a context bound
+   | companion value with the (term-)name `A`. However, these context bound companions
+   | are not values themselves, they can only be referred to in selections.
+    --------------------------------------------------------------------------------------------------------------------
+-- [E194] Type Error: tests/neg/cb-companion-leaks.scala:15:10 ---------------------------------------------------------
+15 |  val x = A  // error
+   |          ^
+   |          context bound companion value A cannot be used as a value
+   |--------------------------------------------------------------------------------------------------------------------
+   | Explanation (enabled by `-explain`)
+   |- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+   | A context bound companion is a symbol made up by the compiler to represent the
+   | witness or witnesses generated for the context bound(s) of a type parameter or type.
+   | For instance, in
+   |
+   |    class Monoid extends SemiGroup:
+   |      type Self
+   |      def unit: Self
+   |
+   |    type A: Monoid
+   |
+   | there is just a type `A` declared but not a value `A`. Nevertheless, one can write
+   | the selection `A.unit`, which works because the compiler created a context bound
+   | companion value with the (term-)name `A`. However, these context bound companions
+   | are not values themselves, they can only be referred to in selections.
+    --------------------------------------------------------------------------------------------------------------------
+-- [E194] Type Error: tests/neg/cb-companion-leaks.scala:17:9 ----------------------------------------------------------
+17 |  val y: A.type = ??? // error
+   |         ^
+   |         context bound companion value A cannot be used as a value
+   |--------------------------------------------------------------------------------------------------------------------
+   | Explanation (enabled by `-explain`)
+   |- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+   | A context bound companion is a symbol made up by the compiler to represent the
+   | witness or witnesses generated for the context bound(s) of a type parameter or type.
+   | For instance, in
+   |
+   |    class Monoid extends SemiGroup:
+   |      type Self
+   |      def unit: Self
+   |
+   |    type A: Monoid
+   |
+   | there is just a type `A` declared but not a value `A`. Nevertheless, one can write
+   | the selection `A.unit`, which works because the compiler created a context bound
+   | companion value with the (term-)name `A`. However, these context bound companions
+   | are not values themselves, they can only be referred to in selections.
+    --------------------------------------------------------------------------------------------------------------------

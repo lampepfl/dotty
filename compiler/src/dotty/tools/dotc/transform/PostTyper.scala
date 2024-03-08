@@ -261,9 +261,13 @@ class PostTyper extends MacroTransform with InfoTransformer { thisPhase =>
       }
     }
 
-    def checkNoConstructorProxy(tree: Tree)(using Context): Unit =
+    def checkUsableAsValue(tree: Tree)(using Context): Unit =
+      def unusable(msg: Symbol => Message) =
+        report.error(msg(tree.symbol), tree.srcPos)
       if tree.symbol.is(ConstructorProxy) then
-        report.error(em"constructor proxy ${tree.symbol} cannot be used as a value", tree.srcPos)
+        unusable(ConstructorProxyNotValue(_))
+      if tree.symbol.isContextBoundCompanion then
+        unusable(ContextBoundCompanionNotValue(_))
 
     def checkStableSelection(tree: Tree)(using Context): Unit =
       def check(qual: Tree) =
@@ -293,7 +297,7 @@ class PostTyper extends MacroTransform with InfoTransformer { thisPhase =>
           if tree.isType then
             checkNotPackage(tree)
           else
-            checkNoConstructorProxy(tree)
+            checkUsableAsValue(tree)
             registerNeedsInlining(tree)
             tree.tpe match {
               case tpe: ThisType => This(tpe.cls).withSpan(tree.span)
@@ -305,7 +309,7 @@ class PostTyper extends MacroTransform with InfoTransformer { thisPhase =>
             Checking.checkRealizable(qual.tpe, qual.srcPos)
             withMode(Mode.Type)(super.transform(checkNotPackage(tree)))
           else
-            checkNoConstructorProxy(tree)
+            checkUsableAsValue(tree)
             transformSelect(tree, Nil)
         case tree: Apply =>
           val methType = tree.fun.tpe.widen.asInstanceOf[MethodType]
@@ -437,8 +441,14 @@ class PostTyper extends MacroTransform with InfoTransformer { thisPhase =>
                 val relativePath = util.SourceFile.relativePath(ctx.compilationUnit.source, reference)
                 sym.addAnnotation(Annotation(defn.SourceFileAnnot, Literal(Constants.Constant(relativePath)), tree.span))
           else
-            if !sym.is(Param) && !sym.owner.isOneOf(AbstractOrTrait) then
-              Checking.checkGoodBounds(tree.symbol)
+            if !sym.is(Param) then
+              if !sym.owner.isOneOf(AbstractOrTrait) then
+                Checking.checkGoodBounds(tree.symbol)
+            if sym.owner.isClass && sym.hasAnnotation(defn.WitnessNamesAnnot) then
+              val decls = sym.owner.info.decls
+              for cbCompanion <- decls.lookupAll(sym.name.toTermName) do
+                if cbCompanion.isContextBoundCompanion then
+                  decls.openForMutations.unlink(cbCompanion)
             (tree.rhs, sym.info) match
               case (rhs: LambdaTypeTree, bounds: TypeBounds) =>
                 VarianceChecker.checkLambda(rhs, bounds)

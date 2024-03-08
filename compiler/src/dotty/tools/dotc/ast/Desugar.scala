@@ -227,30 +227,41 @@ object desugar {
     addDefaultGetters(elimContextBounds(meth, isPrimaryConstructor))
 
   private def desugarContextBounds(
-      tname: TypeName, rhs: Tree,
+      tdef: TypeDef,
       evidenceBuf: ListBuffer[ValDef],
       flags: FlagSet,
-      freshName: => TermName)(using Context): Tree = rhs match
-    case ContextBounds(tbounds, cxbounds) =>
-      val isMember = flags.isAllOf(DeferredGivenFlags)
-      for bound <- cxbounds do
-        val evidenceName = bound match
-          case ContextBoundTypeTree(_, _, ownName) if !ownName.isEmpty =>
-            ownName
-          case _ if !isMember && cxbounds.tail.isEmpty && Feature.enabled(Feature.modularity) =>
-            tname.toTermName
-          case _ =>
-            if isMember then inventGivenOrExtensionName(bound)
-            else freshName
-        val evidenceParam = ValDef(evidenceName, bound, EmptyTree).withFlags(flags)
-        evidenceParam.pushAttachment(ContextBoundParam, ())
-        evidenceBuf += evidenceParam
-      tbounds
-    case LambdaTypeTree(tparams, body) =>
-      cpy.LambdaTypeTree(rhs)(tparams,
-        desugarContextBounds(tname, body, evidenceBuf, flags, freshName))
-    case _ =>
-      rhs
+      freshName: => TermName)(using Context): TypeDef =
+
+    val evidenceNames = ListBuffer[TermName]()
+
+    def desugarRhs(rhs: Tree): Tree = rhs match
+      case ContextBounds(tbounds, cxbounds) =>
+        val isMember = flags.isAllOf(DeferredGivenFlags)
+        for bound <- cxbounds do
+          val evidenceName = bound match
+            case ContextBoundTypeTree(_, _, ownName) if !ownName.isEmpty =>
+              ownName
+            case _ if !isMember && cxbounds.tail.isEmpty && Feature.enabled(Feature.modularity) =>
+              tdef.name.toTermName
+            case _ =>
+              if isMember then inventGivenOrExtensionName(bound)
+              else freshName
+          evidenceNames += evidenceName
+          val evidenceParam = ValDef(evidenceName, bound, EmptyTree).withFlags(flags)
+          evidenceParam.pushAttachment(ContextBoundParam, ())
+          evidenceBuf += evidenceParam
+        tbounds
+      case LambdaTypeTree(tparams, body) =>
+        cpy.LambdaTypeTree(rhs)(tparams, desugarRhs(body))
+      case _ =>
+        rhs
+
+    val tdef1 = cpy.TypeDef(tdef)(rhs = desugarRhs(tdef.rhs))
+    if evidenceNames.nonEmpty && !evidenceNames.contains(tdef.name.toTermName) then
+      val witnessNamesAnnot = WitnessNamesAnnot(evidenceNames.toList).withSpan(tdef.span)
+      tdef1.withAddedAnnotation(witnessNamesAnnot)
+    else
+      tdef1
   end desugarContextBounds
 
   private def elimContextBounds(meth: DefDef, isPrimaryConstructor: Boolean)(using Context): DefDef =
@@ -269,8 +280,7 @@ object desugar {
       val iflag = if Feature.sourceVersion.isAtLeast(`future`) then Given else Implicit
       val flags = if isPrimaryConstructor then iflag | LocalParamAccessor else iflag | Param
       mapParamss(paramss) {
-        tparam => cpy.TypeDef(tparam)(rhs =
-          desugarContextBounds(tparam.name, tparam.rhs, evidenceParamBuf, flags, freshName))
+        tparam => desugarContextBounds(tparam, evidenceParamBuf, flags, freshName)
       }(identity)
 
     rhs match
@@ -485,9 +495,8 @@ object desugar {
 
   def typeDef(tdef: TypeDef)(using Context): Tree =
     val evidenceBuf = new ListBuffer[ValDef]
-    val result = cpy.TypeDef(tdef)(rhs =
-      desugarContextBounds(tdef.name, tdef.rhs, evidenceBuf,
-        (tdef.mods.flags.toTermFlags & AccessFlags) | Lazy | DeferredGivenFlags, EmptyTermName))
+    val result = desugarContextBounds(tdef, evidenceBuf,
+        (tdef.mods.flags.toTermFlags & AccessFlags) | Lazy | DeferredGivenFlags, EmptyTermName)
     if evidenceBuf.isEmpty then result else Thicket(result :: evidenceBuf.toList)
 
   /** The expansion of a class definition. See inline comments for what is involved */

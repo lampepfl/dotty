@@ -754,6 +754,9 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
         else
           typedDynamicSelect(tree2, Nil, pt)
       else
+        if qual.tpe.typeSymbol == defn.CBCompanion then
+          val witnessSelection = typedCBSelect(tree0, pt, qual)
+          if !witnessSelection.isEmpty then return witnessSelection
         assignType(tree,
           rawType match
             case rawType: NamedType =>
@@ -761,6 +764,76 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
             case _ =>
               notAMemberErrorType(tree, qual, pt))
   end typedSelect
+
+  /** Expand a selection A.m on a context bound companion A with type
+   *  `<context-bound-companion>[ref_1 | ... | ref_N]` as described by
+   *  Step 3 of the doc comment of annotation.internal.WitnessNames.
+   *  @return   the best alternative if it exists,
+   *            or EmptyTree if no witness admits selecting with the given name,
+   *            or EmptyTree and report an ambiguity error of there are several
+   *            possible witnesses and no selection is better than the other
+   *            according to the critera given in Step 3.
+   */
+  def typedCBSelect(tree: untpd.Select, pt: Type, qual: Tree)(using Context): Tree =
+
+    type Alts = List[(/*prev: */Tree, /*prevState: */TyperState, /*prevWitness: */TermRef)]
+
+    /** Compare two alternative selections `alt1` and `alt2` from witness types
+     *  `wit1`, `wit2` according to the 3 criteria in the enclosing doc comment. I.e.
+     *
+     *      alt1 = qual1.m, alt2 = qual2.m, qual1: wit1, qual2: wit2
+     *
+     *  @return  1   if 1st alternative is preferred over 2nd
+     *          -1   if 2nd alternative is preferred over 1st
+     *           0   if neither alternative is preferred over the other
+     */
+    def compareAlts(alt1: Tree, alt2: Tree, wit1: TermRef, wit2: TermRef): Int =
+      val cmpPrefix = compare(wit1, wit2, preferGeneral = true)
+      typr.println(i"compare witnesses $wit1: ${wit1.info}, $wit2: ${wit2.info} = $cmpPrefix")
+      if cmpPrefix != 0 then cmpPrefix
+      else (alt1.tpe, alt2.tpe) match
+        case (tp1: TypeRef, tp2: TypeRef) =>
+          if tp1.dealias == tp2.dealias then 1 else 0
+        case (tp1: TermRef, tp2: TermRef) =>
+          if tp1.info.isSingleton && (tp1 frozen_=:= tp2) then 1
+          else compare(tp1, tp2, preferGeneral = false)
+        case (tp1: TermRef, _) => 1
+        case (_, tp2: TermRef) => -1
+        case _ => 0
+
+    /** Find the set of maximally preferred alternative among `prev` and the
+     *  remaining alternatives generated from `witnesses` with is a union type
+     *  of witness references.
+     */
+    def tryAlts(prevs: Alts, witnesses: Type): Alts = witnesses match
+      case OrType(wit1, wit2) =>
+        tryAlts(tryAlts(prevs, wit1), wit2)
+      case witness: TermRef =>
+        val altQual = tpd.ref(witness).withSpan(qual.span)
+        val altCtx = ctx.fresh.setNewTyperState()
+        val alt = typedSelect(tree, pt, altQual)(using altCtx)
+        def current = (alt, altCtx.typerState, witness)
+        if altCtx.reporter.hasErrors then prevs
+        else
+          val cmps = prevs.map: (prevTree, prevState, prevWitness) =>
+            compareAlts(prevTree, alt, prevWitness, witness)
+          if cmps.exists(_ == 1) then prevs
+          else current :: prevs.zip(cmps).collect{ case (prev, cmp) if cmp != -1 => prev }
+
+    qual.tpe.widen match
+      case AppliedType(_, arg :: Nil) =>
+        tryAlts(Nil, arg) match
+          case Nil => EmptyTree
+          case (best @ (bestTree, bestState, _)) :: Nil =>
+            bestState.commit()
+            bestTree
+          case multiAlts =>
+            report.error(
+              em"""Ambiguous witness reference. None of the following alternatives is more specific than the other:
+                  |${multiAlts.map((alt, _, witness) => i"\n  $witness.${tree.name}: ${alt.tpe.widen}")}""",
+              tree.srcPos)
+            EmptyTree
+  end typedCBSelect
 
   def typedSelect(tree: untpd.Select, pt: Type)(using Context): Tree = {
     record("typedSelect")

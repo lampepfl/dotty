@@ -1207,8 +1207,8 @@ object SymDenotations {
      */
     final def isEffectivelySealed(using Context): Boolean =
       isOneOf(FinalOrSealed)
-      || isClass && (!isOneOf(EffectivelyOpenFlags)
-      || isLocalToCompilationUnit)
+      || isClass
+        && (!isOneOf(EffectivelyOpenFlags) || isLocalToCompilationUnit)
 
     final def isLocalToCompilationUnit(using Context): Boolean =
       is(Private)

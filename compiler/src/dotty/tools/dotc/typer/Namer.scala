@@ -406,6 +406,7 @@ class Namer { typer: Typer =>
         enterSymbol(sym)
         setDocstring(sym, origStat)
         addEnumConstants(mdef, sym)
+        maybeAddCBCompanion(mdef, Nil)
         ctx
       case stats: Thicket =>
         stats.toList.foreach(recur)
@@ -1875,6 +1876,10 @@ class Namer { typer: Typer =>
     val paramSymss = normalizeIfConstructor(ddef.paramss.nestedMap(symbolOfTree), isConstructor)
     sym.setParamss(paramSymss)
 
+    if !ddef.name.is(DefaultGetterName) && !sym.is(Synthetic) then
+      for params <- ddef.paramss; param <- params do
+        maybeAddCBCompanion(param, paramSymss)
+
     /** Set every context bound evidence parameter of a class to be tracked,
      *  provided it has a type that has an abstract type member and the parameter's
      *  name is not a synthetic, unaddressable name. Reset private and local flags
@@ -2065,6 +2070,21 @@ class Namer { typer: Typer =>
       lhsType orElse WildcardType
     }
   end inferredResultType
+
+  /** If `mdef` is a TypeDef with a @WitnessNames annotation, add a context bound
+   *  companion, provided `mdef` is a paremeter exactly when paramSymss is non empty.
+   *  maybeAddCBCompanion is called in two places:
+   *   - when analyzing a TypeDef where we want to add a companion if it is
+   *     a member type. In this case the TypeDef is not a parameter and paramSymss is empty.
+   *   - when analyzing a DefDef and traversing all its type parameters.
+   *     In this case the TypeDef is a parameter and paramSymss is non-empty.
+   */
+  def maybeAddCBCompanion(mdef: DefTree, paramSymss: List[List[Symbol]])(using Context): Unit =
+    mdef match
+    case tdef: TypeDef if mdef.mods.is(Param) == paramSymss.nonEmpty =>
+      for case WitnessNamesAnnot(witnessNames) <- tdef.mods.annotations do
+        maybeAddContextBoundCompanionFor(symbolOfTree(tdef), witnessNames, paramSymss)
+    case _ =>
 
   /** Prepare a GADT-aware context used to type the RHS of a ValOrDefDef. */
   def prepareRhsCtx(rhsCtx: FreshContext, paramss: List[List[Symbol]])(using Context): FreshContext =

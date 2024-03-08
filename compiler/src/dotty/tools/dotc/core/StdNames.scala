@@ -288,6 +288,7 @@ object StdNames {
 
     // Compiler-internal
     val CAPTURE_ROOT: N             = "cap"
+    val CBCompanion: N              = "<context-bound-companion>"
     val CONSTRUCTOR: N              = "<init>"
     val STATIC_CONSTRUCTOR: N       = "<clinit>"
     val EVT2U: N                    = "evt2u$"
@@ -394,6 +395,7 @@ object StdNames {
     val TypeApply: N            = "TypeApply"
     val TypeRef: N              = "TypeRef"
     val UNIT : N                = "UNIT"
+    val WitnessNames: N         = "WitnessNames"
     val acc: N                  = "acc"
     val adhocExtensions: N      = "adhocExtensions"
     val andThen: N              = "andThen"
