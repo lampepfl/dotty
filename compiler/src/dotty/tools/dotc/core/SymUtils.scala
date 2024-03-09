@@ -88,7 +88,7 @@ class SymUtils:
     }
 
     def isContextBoundCompanion(using Context): Boolean =
-      self.is(Synthetic) && self.info.typeSymbol == defn.CBCompanion
+      self.is(Synthetic) && self.infoOrCompleter.typeSymbol == defn.CBCompanion
 
     /** Is this a case class for which a product mirror is generated?
     *  Excluded are value classes, abstract classes and case classes with more than one

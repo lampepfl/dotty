@@ -250,48 +250,42 @@ object NamerOps:
       rhsCtx.gadtState.addBound(psym, tr, isUpper = true)
     }
 
-  /** Create a context-bound companion for type symbol `tsym` unless it
-   *  would clash with another parameter. `tsym` is a context-bound symbol
-   *  that defined a set of witnesses with names `witnessNames`.
+  /** Create a context-bound companion for type symbol `tsym`, which has a context
+   *  bound that defines a set of witnesses with names `witnessNames`.
    *
-   *  @param paramSymss  If `tsym` is a type parameter, the other parameter symbols,
-   *                     including witnesses, of the method containing `tsym`.
-   *                     If `tsym` is an abstract type member, `paramSymss` is the
-   *                     empty list.
+   *  @param parans  If `tsym` is a type parameter, a list of parameter symbols
+   *                 that include all witnesses, otherwise the empty list.
    *
    *  The context-bound companion has as name the name of `tsym` translated to
    *  a term name. We create a synthetic val of the form
    *
-   *    val A: CBCompanion[witnessRef1 | ... | witnessRefN]
+   *    val A: `<context-bound-companion>`[witnessRef1 | ... | witnessRefN]
    *
    *  where
    *
-   *      CBCompanion is the <context-bound-companion> type created in Definitions
-   *      withnessRefK is a refence to the K'the witness.
+   *      <context-bound-companion> is the CBCompanion type created in Definitions
+   *      withnessRefK is a refence to the K'th witness.
    *
    *  The companion has the same access flags as the original type.
    */
-  def maybeAddContextBoundCompanionFor(tsym: Symbol, witnessNames: List[TermName], paramSymss: List[List[Symbol]])(using Context): Unit =
+  def addContextBoundCompanionFor(tsym: Symbol, witnessNames: List[TermName], params: List[Symbol])(using Context): Unit =
     val prefix = ctx.owner.thisType
     val companionName = tsym.name.toTermName
     val witnessRefs =
-      if paramSymss.nonEmpty then
-        if paramSymss.nestedExists(_.name == companionName) then Nil
-        else
-          witnessNames.map: witnessName =>
-            prefix.select(paramSymss.nestedFind(_.name == witnessName).get)
+      if params.nonEmpty then
+        witnessNames.map: witnessName =>
+            prefix.select(params.find(_.name == witnessName).get)
       else
-        witnessNames.map(prefix.select)
-    if witnessRefs.nonEmpty then
-      val cbtype = defn.CBCompanion.typeRef.appliedTo:
-        witnessRefs.reduce[Type](OrType(_, _, soft = false))
-      val cbc = newSymbol(
-          ctx.owner, companionName,
-          (tsym.flagsUNSAFE & AccessFlags) | Synthetic,
-          cbtype)
-      typr.println(i"contetx bpund companion created $cbc: $cbtype in ${ctx.owner}")
-      ctx.enter(cbc)
-  end maybeAddContextBoundCompanionFor
+        witnessNames.map(TermRef(prefix, _))
+    val cbtype = defn.CBCompanion.typeRef.appliedTo:
+      witnessRefs.reduce[Type](OrType(_, _, soft = false))
+    val cbc = newSymbol(
+        ctx.owner, companionName,
+        (tsym.flagsUNSAFE & (AccessFlags)).toTermFlags | Synthetic,
+        cbtype)
+    typr.println(s"context bound companion created $cbc for $witnessNames in ${ctx.owner}")
+    ctx.enter(cbc)
+  end addContextBoundCompanionFor
 
   /** Add context bound companions to all context-bound types declared in
    *  this class. This assumes that these types already have their
@@ -306,5 +300,5 @@ object NamerOps:
           if ann.symbol == defn.WitnessNamesAnnot then
             ann.tree match
               case ast.tpd.WitnessNamesAnnot(witnessNames) =>
-                maybeAddContextBoundCompanionFor(sym, witnessNames, Nil)
+                addContextBoundCompanionFor(sym, witnessNames, Nil)
 end NamerOps

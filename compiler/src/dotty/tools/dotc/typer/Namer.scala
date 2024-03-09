@@ -406,7 +406,11 @@ class Namer { typer: Typer =>
         enterSymbol(sym)
         setDocstring(sym, origStat)
         addEnumConstants(mdef, sym)
-        maybeAddCBCompanion(mdef, Nil)
+        mdef match
+          case tdef: TypeDef if ctx.owner.isClass =>
+            for case WitnessNamesAnnot(witnessNames) <- tdef.mods.annotations do
+              addContextBoundCompanionFor(symbolOfTree(tdef), witnessNames, Nil)
+          case _ =>
         ctx
       case stats: Thicket =>
         stats.toList.foreach(recur)
@@ -1663,11 +1667,9 @@ class Namer { typer: Typer =>
 
       val parentTypes = defn.adjustForTuple(cls, cls.typeParams,
         defn.adjustForBoxedUnit(cls,
-          addUsingTraits(
-            locally:
-              val isJava = ctx.isJava
-              ensureFirstIsClass(cls, parents.map(checkedParentType(_, isJava)))
-          )
+          addUsingTraits:
+            val isJava = ctx.isJava
+            ensureFirstIsClass(cls, parents.map(checkedParentType(_, isJava)))
         )
       )
       typr.println(i"completing $denot, parents = $parents%, %, parentTypes = $parentTypes%, %")
@@ -1738,12 +1740,6 @@ class Namer { typer: Typer =>
     case TypedSplice(_) =>
       val sym = tree.symbol
       if sym.isConstructor then sym.owner else sym
-
-  /** Enter and typecheck parameter list */
-  def completeParams(params: List[MemberDef])(using Context): Unit = {
-    index(params)
-    for (param <- params) typedAheadExpr(param)
-  }
 
   /** The signature of a module valdef.
    *  This will compute the corresponding module class TypeRef immediately
@@ -1843,6 +1839,30 @@ class Namer { typer: Typer =>
     // Beware: ddef.name need not match sym.name if sym was freshened!
     val isConstructor = sym.name == nme.CONSTRUCTOR
 
+    val witnessNamesOfParam = mutable.Map[TypeDef, List[TermName]]()
+    if !ddef.name.is(DefaultGetterName) && !sym.is(Synthetic) then
+      for params <- ddef.paramss; case tdef: TypeDef <- params do
+        for case WitnessNamesAnnot(ws) <- tdef.mods.annotations do
+          witnessNamesOfParam(tdef) = ws
+
+    /** Are all names in `wnames` defined by the longest prefix of all `params`
+     *  that have been typed ahead (i.e. that carry the TypedAhead attachment)?
+     */
+    def allParamsSeen(wnames: List[TermName], params: List[MemberDef]) =
+      (wnames.toSet[Name] -- params.takeWhile(_.hasAttachment(TypedAhead)).map(_.name)).isEmpty
+
+    /** Enter and typecheck parameter list, add context companions as.
+     *  Once all witness parameters for a context bound are seen, create a
+     *  context bound companion for it.
+     */
+    def completeParams(params: List[MemberDef])(using Context): Unit =
+      index(params)
+      for param <- params do
+        typedAheadExpr(param)
+        for (tdef, wnames) <- witnessNamesOfParam do
+          if wnames.contains(param.name) && allParamsSeen(wnames, params) then
+            addContextBoundCompanionFor(symbolOfTree(tdef), wnames, params.map(symbolOfTree))
+
     // The following 3 lines replace what was previously just completeParams(tparams).
     // But that can cause bad bounds being computed, as witnessed by
     // tests/pos/paramcycle.scala. The problematic sequence is this:
@@ -1876,9 +1896,6 @@ class Namer { typer: Typer =>
     val paramSymss = normalizeIfConstructor(ddef.paramss.nestedMap(symbolOfTree), isConstructor)
     sym.setParamss(paramSymss)
 
-    if !ddef.name.is(DefaultGetterName) && !sym.is(Synthetic) then
-      for params <- ddef.paramss; param <- params do
-        maybeAddCBCompanion(param, paramSymss)
 
     /** Set every context bound evidence parameter of a class to be tracked,
      *  provided it has a type that has an abstract type member and the parameter's
@@ -1894,7 +1911,6 @@ class Namer { typer: Typer =>
         case info: TempClassInfo =>
           if !sym.is(Tracked)
               && param.hasAttachment(ContextBoundParam)
-              && !param.name.is(ContextBoundParamName)
               && (sym.info.memberNames(abstractTypeNameFilter).nonEmpty
                   || sym.maybeOwner.maybeOwner.is(Given))
           then
@@ -2070,21 +2086,6 @@ class Namer { typer: Typer =>
       lhsType orElse WildcardType
     }
   end inferredResultType
-
-  /** If `mdef` is a TypeDef with a @WitnessNames annotation, add a context bound
-   *  companion, provided `mdef` is a paremeter exactly when paramSymss is non empty.
-   *  maybeAddCBCompanion is called in two places:
-   *   - when analyzing a TypeDef where we want to add a companion if it is
-   *     a member type. In this case the TypeDef is not a parameter and paramSymss is empty.
-   *   - when analyzing a DefDef and traversing all its type parameters.
-   *     In this case the TypeDef is a parameter and paramSymss is non-empty.
-   */
-  def maybeAddCBCompanion(mdef: DefTree, paramSymss: List[List[Symbol]])(using Context): Unit =
-    mdef match
-    case tdef: TypeDef if mdef.mods.is(Param) == paramSymss.nonEmpty =>
-      for case WitnessNamesAnnot(witnessNames) <- tdef.mods.annotations do
-        maybeAddContextBoundCompanionFor(symbolOfTree(tdef), witnessNames, paramSymss)
-    case _ =>
 
   /** Prepare a GADT-aware context used to type the RHS of a ValOrDefDef. */
   def prepareRhsCtx(rhsCtx: FreshContext, paramss: List[List[Symbol]])(using Context): FreshContext =

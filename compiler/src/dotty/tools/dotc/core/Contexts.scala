@@ -12,6 +12,7 @@ import Symbols.*
 import Scopes.*
 import Uniques.*
 import ast.Trees.*
+import Flags.ParamAccessor
 import ast.untpd
 import util.{NoSource, SimpleIdentityMap, SourceFile, HashSet, ReusableInstance}
 import typer.{Implicits, ImportInfo, SearchHistory, SearchRoot, TypeAssigner, Typer, Nullables}
@@ -399,7 +400,8 @@ object Contexts {
      *
      *  - as owner: The primary constructor of the class
      *  - as outer context: The context enclosing the class context
-     *  - as scope: The parameter accessors in the class context
+     *  - as scope: type parameters, the parameter accessors, and
+     *    the context bound companions in the class context,
      *
      *  The reasons for this peculiar choice of attributes are as follows:
      *
@@ -413,10 +415,11 @@ object Contexts {
      *    context see the constructor parameters instead, but then we'd need a final substitution step
      *    from constructor parameters to class parameter accessors.
      */
-    def superCallContext: Context = {
-      val locals = newScopeWith(owner.typeParams ++ owner.asClass.paramAccessors*)
-      superOrThisCallContext(owner.primaryConstructor, locals)
-    }
+    def superCallContext: Context =
+      val locals = owner.typeParams
+          ++ owner.asClass.unforcedDecls.filter: sym =>
+              sym.is(ParamAccessor) || sym.isContextBoundCompanion
+      superOrThisCallContext(owner.primaryConstructor, newScopeWith(locals*))
 
     /** The context for the arguments of a this(...) constructor call.
      *  The context is computed from the local auxiliary constructor context.

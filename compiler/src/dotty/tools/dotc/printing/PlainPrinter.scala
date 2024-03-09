@@ -430,11 +430,11 @@ class PlainPrinter(_ctx: Context) extends Printer {
     sym.isEffectiveRoot || sym.isAnonymousClass || sym.name.isReplWrapperName
 
   /** String representation of a definition's type following its name,
-   *  if symbol is completed, "?" otherwise.
+   *  if symbol is completed, ": ?" otherwise.
    */
   protected def toTextRHS(optType: Option[Type]): Text = optType match {
     case Some(tp) => toTextRHS(tp)
-    case None => "?"
+    case None => ": ?"
   }
 
   protected def decomposeLambdas(bounds: TypeBounds): (Text, TypeBounds) =
