@@ -89,6 +89,8 @@ object TestConfiguration {
   val picklingWithCompilerOptions =
     picklingOptions.withClasspath(withCompilerClasspath).withRunClasspath(withCompilerClasspath)
 
+  val explicitNullsOptions = defaultOptions and "-Yexplicit-nulls"
+
   /** Default target of the generated class files */
   private def defaultTarget: String = {
     import scala.util.Properties.isJavaAtLeast

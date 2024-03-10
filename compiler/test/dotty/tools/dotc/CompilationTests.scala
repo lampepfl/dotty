@@ -194,22 +194,24 @@ class CompilationTests {
   @Test def explicitNullsNeg: Unit = {
     implicit val testGroup: TestGroup = TestGroup("explicitNullsNeg")
     aggregateTests(
-      compileFilesInDir("tests/explicit-nulls/neg", defaultOptions and "-Yexplicit-nulls"),
-      compileFilesInDir("tests/explicit-nulls/unsafe-common", defaultOptions and "-Yexplicit-nulls"),
+      compileFilesInDir("tests/explicit-nulls/neg", explicitNullsOptions),
+      compileFilesInDir("tests/explicit-nulls/flexible-types-common", explicitNullsOptions and "-Yno-flexible-types"),
+      compileFilesInDir("tests/explicit-nulls/unsafe-common", explicitNullsOptions and "-Yno-flexible-types"),
     )
   }.checkExpectedErrors()
 
   @Test def explicitNullsPos: Unit = {
     implicit val testGroup: TestGroup = TestGroup("explicitNullsPos")
     aggregateTests(
-      compileFilesInDir("tests/explicit-nulls/pos", defaultOptions and "-Yexplicit-nulls"),
-      compileFilesInDir("tests/explicit-nulls/unsafe-common", defaultOptions and "-Yexplicit-nulls" and "-language:unsafeNulls"),
+      compileFilesInDir("tests/explicit-nulls/pos", explicitNullsOptions),
+      compileFilesInDir("tests/explicit-nulls/flexible-types-common", explicitNullsOptions),
+      compileFilesInDir("tests/explicit-nulls/unsafe-common", explicitNullsOptions and "-language:unsafeNulls" and "-Yno-flexible-types"),
     )
   }.checkCompile()
 
   @Test def explicitNullsRun: Unit = {
     implicit val testGroup: TestGroup = TestGroup("explicitNullsRun")
-    compileFilesInDir("tests/explicit-nulls/run", defaultOptions and "-Yexplicit-nulls")
+    compileFilesInDir("tests/explicit-nulls/run", explicitNullsOptions)
   }.checkRuns()
 
   // initialization tests

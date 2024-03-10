@@ -908,6 +908,13 @@ object Build {
         "-Ddotty.tests.classes.dottyTastyInspector=" + jars("scala3-tasty-inspector"),
       )
     },
+    // For compatibility at this moment, both the bootstrapped and the non-bootstrapped
+    // compilers are compiled without flexible types.
+    // We should move the flag to commonDottyCompilerSettings once the reference
+    // compiler is updated.
+    // Then, the next step is to enable flexible types by default and reduce the use of
+    // `unsafeNulls`.
+    scalacOptions ++= Seq("-Yno-flexible-types"),
     packageAll := {
       (`scala3-compiler` / packageAll).value ++ Seq(
         "scala3-compiler" -> (Compile / packageBin).value.getAbsolutePath,

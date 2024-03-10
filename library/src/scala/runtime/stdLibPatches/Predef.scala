@@ -1,5 +1,7 @@
 package scala.runtime.stdLibPatches
 
+import scala.annotation.experimental
+
 object Predef:
   import compiletime.summonFrom
 
@@ -61,4 +63,12 @@ object Predef:
     inline def ne(inline y: AnyRef | Null): Boolean =
       !(x eq y)
 
+  extension (inline opt: Option.type)
+    /** Converts a value of a nullable type `T | Null` to an `Option[T]`.
+     *
+     *  @param  x the value to be converted
+     *  @return   an option value containing `x`.
+     */
+    @experimental
+    inline def fromNullable[T](t: T | Null): Option[T] = Option(t).asInstanceOf
 end Predef

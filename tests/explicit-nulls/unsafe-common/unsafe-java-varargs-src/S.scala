@@ -12,8 +12,8 @@ class S {
   val arg3: Array[String] | Null = ???
   val arg4: Array[String | Null] | Null = ???
 
-  j.foo(arg1: _*)
-  j.foo(arg2: _*)
-  j.foo(arg3: _*) // error
-  j.foo(arg4: _*) // error
+  j.foo(arg1*)
+  j.foo(arg2*)
+  j.foo(arg3*) // error
+  j.foo(arg4*) // error
 }

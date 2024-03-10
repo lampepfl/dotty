@@ -16,4 +16,14 @@ class S {
 
   // Multiple arguments, some null.
   Names.setNames(null, null, "hello", "world", null)
+
+  val arg1: Array[String] = ???
+  val arg2: Array[String | Null] = ???
+  val arg3: Array[String] | Null = ???
+  val arg4: Array[String | Null] | Null = ???
+
+  Names.setNames(arg1*)
+  Names.setNames(arg2*)
+  Names.setNames(arg3*) // error
+  Names.setNames(arg4*) // error
 }
