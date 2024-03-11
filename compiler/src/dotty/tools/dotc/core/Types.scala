@@ -5142,20 +5142,9 @@ object Types extends TypeUtils {
     def apply(bound: Type, scrutinee: Type, cases: List[Type])(using Context): MatchType =
       unique(new CachedMatchType(bound, scrutinee, cases))
 
-    def thatReducesUsingGadt(tp: Type)(using Context): Boolean = tp match
-      case MatchType.InDisguise(mt) => mt.reducesUsingGadt
-      case mt: MatchType            => mt.reducesUsingGadt
-      case _                        => false
-
-    /** Extractor for match types hidden behind an AppliedType/MatchAlias. */
-    object InDisguise:
-      def unapply(tp: AppliedType)(using Context): Option[MatchType] = tp match
-        case AppliedType(tycon: TypeRef, args) => tycon.info match
-          case MatchAlias(alias) => alias.applyIfParameterized(args) match
-            case mt: MatchType => Some(mt)
-            case _ => None
-          case _ => None
-        case _ => None
+    def thatReducesUsingGadt(tp: Type)(using Context): Boolean = tp.underlyingMatchType match
+      case mt: MatchType => mt.reducesUsingGadt
+      case _ => false
   }
 
   enum MatchTypeCasePattern:
