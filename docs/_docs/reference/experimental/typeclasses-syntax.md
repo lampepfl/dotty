@@ -34,7 +34,7 @@ def reduce[A : Monoid](xs: List[A]): A = ???
 Since we don't have a name for the `Monoid` instance of `A`, we need to resort to `summon` in the body of `reduce`:
 ```scala
 def reduce[A : Monoid](xs: List[A]): A =
-  xs.foldLeft(summon Monoid[A])(_ `combine` _)
+  xs.foldLeft(summon[Monoid[A]].unit)(_ `combine` _)
 ```
 That's generally considered too painful to write and read, hence people usually adopt one of two alternatives. Either, eschew context bounds and switch to using clauses:
 ```scala
