@@ -1,5 +1,5 @@
 package tests
-package exports1
+package exports
 
 class A: //unexpected
   def aDefInt: Int
@@ -21,7 +21,7 @@ class A: //unexpected
    = ???
   def fn[T, U]: T => U
    = ???
-  object Object //expected: val Obj: Object.type
+  object Object //expected: final val Obj: Object.type
   val x: HKT[List, Int] //expected: val x: A.this.HKT[List, Int]
    = ???
   class Class(val a: Int, val b: Int) extends Serializable //expected: final type Class = a.Class
@@ -43,3 +43,11 @@ object X: //unexpected
    = 1
   var xVar1: 1
    = 1
+
+class B: //unexpected
+  val a: A
+   = new A
+  export a.{Object => Obj, _}
+  export X._
+  def obj: Obj.type
+   = Obj
