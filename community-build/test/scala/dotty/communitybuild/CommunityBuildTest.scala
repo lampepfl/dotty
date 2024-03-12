@@ -71,7 +71,7 @@ class CommunityBuildTestC:
   @Test def jacksonModuleScala = projects.jacksonModuleScala.run()
   @Test def libretto = projects.libretto.run()
   @Test def minitest = projects.minitest.run()
-  //@Test def onnxScala = projects.onnxScala.run()
+  @Test def onnxScala = projects.onnxScala.run()
   @Test def oslib = projects.oslib.run()
   // @Test def oslibWatch = projects.oslibWatch.run()
   @Test def parboiled2 = projects.parboiled2.run()
