@@ -1065,15 +1065,23 @@ class Inliner(val call: tpd.Tree)(using Context):
    *  This corresponds to the symbols that will need to be interpreted.
    */
   private def macroDependencies(tree: Tree)(using Context) =
+    val typeAccumulator = new TypeAccumulator[List[Symbol]] {
+      def apply(x: List[Symbol], tp: Type): List[Symbol] = tp match
+        case tp: TermRef =>
+          if tp.symbol.isDefinedInCurrentRun then foldOver(tp.symbol :: x, tp)
+          else foldOver(x, tp)
+        case tp: ThisType if tp.typeSymbol.isDefinedInCurrentRun =>
+          foldOver(tp.typeSymbol :: x, tp)
+        case _ =>
+          x
+    }
     new TreeAccumulator[List[Symbol]] {
       override def apply(syms: List[Symbol], tree: tpd.Tree)(using Context): List[Symbol] =
-        tree match {
-          case tree: RefTree if tree.isTerm && level == -1 && tree.symbol.isDefinedInCurrentRun && !tree.symbol.isLocal =>
-            foldOver(tree.symbol :: syms, tree)
-          case _: This if level == -1 && tree.symbol.isDefinedInCurrentRun =>
-            tree.symbol :: syms
+        tree match
+          case tree: RefTree if tree.isTerm && level == -1 && !tree.symbol.isLocal =>
+            typeAccumulator(syms, tree.tpe)
           case _: TypTree => syms
           case _ => foldOver(syms, tree)
-        }
     }.apply(Nil, tree)
+
 end Inliner
