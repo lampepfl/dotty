@@ -598,9 +598,11 @@ object Tuples {
     )
   }
 
-  def map[F[_]](self: Tuple, f: [t] => t => F[t]): Tuple = self match {
+  def map[T <: Tuple, F[_ <: Tuple.Union[T]]](self: T, f: (t: Tuple.Union[T]) => F[t.type]): Tuple = self match {
     case EmptyTuple => self
-    case _ => fromIArray(self.productIterator.map(f(_).asInstanceOf[Object]).toArray.asInstanceOf[IArray[Object]]) // TODO use toIArray
+    case _ =>
+      val iterator = self.productIterator.asInstanceOf[Iterator[Tuple.Union[T]]]
+      fromIArray(iterator.map(f(_)).toArray.asInstanceOf[IArray[Object]]) // TODO use toIArray
   }
 
   def take(self: Tuple, n: Int): Tuple = {

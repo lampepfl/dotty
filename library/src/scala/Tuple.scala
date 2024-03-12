@@ -56,7 +56,7 @@ sealed trait Tuple extends Product {
    *  If the tuple is of the form `a1 *: ... *: Tuple` (that is, the tail is not known
    *  to be the cons type.
    */
-  inline def map[F[_]](f: [t] => t => F[t]): Map[this.type, F] =
+  inline def map[F[_ <: Union[this.type]]](f: (t: Union[this.type]) => F[t.type]): Map[this.type, F] =
     runtime.Tuples.map(this, f).asInstanceOf[Map[this.type, F]]
 
   /** Given a tuple `(a1, ..., am)`, returns the tuple `(a1, ..., an)` consisting
