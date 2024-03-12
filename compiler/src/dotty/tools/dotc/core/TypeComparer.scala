@@ -1575,7 +1575,7 @@ class TypeComparer(@constructorOnly initctx: Context) extends ConstraintHandling
    *  Note: It would be legal to do the lifting also if M does not contain opaque types,
    *  but in this case the retries in tryLiftedToThis would be redundant.
    */
-  private def liftToThis(tp: Type): Type = {
+  def liftToThis(tp: Type): Type = {
 
     def findEnclosingThis(moduleClass: Symbol, from: Symbol): Type =
       if ((from.owner eq moduleClass) && from.isPackageObject && from.is(Opaque)) from.thisType
@@ -1596,7 +1596,7 @@ class TypeComparer(@constructorOnly initctx: Context) extends ConstraintHandling
         val tycon1 = liftToThis(tp.tycon)
         if (tycon1 ne tp.tycon) tp.derivedAppliedType(tycon1, tp.args) else tp
       case tp: TypeVar if tp.isInstantiated =>
-        liftToThis(tp.inst)
+        liftToThis(tp.instanceOpt)
       case tp: AnnotatedType =>
         val parent1 = liftToThis(tp.parent)
         if (parent1 ne tp.parent) tp.derivedAnnotatedType(parent1, tp.annot) else tp
