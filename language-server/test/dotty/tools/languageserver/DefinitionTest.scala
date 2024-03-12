@@ -378,4 +378,38 @@ class DefinitionTest {
     .definition(m3 to m4, Nil)
     .definition(m5 to m6, Nil)
     .definition(m7 to m8, Nil)
+
+  @Test def typeParam: Unit = {
+    code"""|class Foo[${m1}T${m2}]:
+           |  def test: ${m3}T${m4}"""
+      .definition(m3 to m4, List(m1 to m2))
+  }
+
+  @Test def enumTypeParam: Unit = {
+    code"""|enum Test[${m1}T${m2}]:
+           |  case EnumCase(value: ${m3}T${m4})"""
+      .definition(m3 to m4, List(m1 to m2))
+  }
+
+  @Test def extMethodTypeParam: Unit = {
+    code"""extension [${m1}T${m2}](string: String) def xxxx(y: ${m3}T${m4}) = ???"""
+      .definition(m3 to m4, List(m1 to m2))
+  }
+
+  @Test def typeParamCovariant: Unit = {
+    code"""|class Foo[+${m1}T${m2}]:
+           |  def test: ${m3}T${m4}"""
+      .definition(m3 to m4, List(m1 to m2))
+  }
+
+  @Test def enumTypeParamCovariant: Unit = {
+    code"""|enum Test[+${m1}T${m2}]:
+           |  case EnumCase(value: ${m3}T${m4})"""
+      .definition(m3 to m4, List(m1 to m2))
+  }
+
+  @Test def extMethodTypeParamCovariant: Unit = {
+    code"""extension [+${m1}T${m2}](string: String) def xxxx(y: ${m3}T${m4}) = ???"""
+      .definition(m3 to m4, List(m1 to m2))
+  }
 }

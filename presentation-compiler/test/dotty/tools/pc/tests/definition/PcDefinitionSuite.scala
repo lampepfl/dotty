@@ -461,6 +461,24 @@ class PcDefinitionSuite extends BasePcDefinitionSuite:
          |""".stripMargin
     )
 
+  @Test def `enum-class-type-param` =
+    check(
+      """|
+         |enum Option[<<AA>>]
+         |  case Some(x: A@@A)
+         |  case None
+         |""".stripMargin
+    )
+
+  @Test def `enum-class-type-param-covariant` =
+    check(
+      """|
+         |enum Option[+<<AA>>]
+         |  case Some(x: A@@A)
+         |  case None
+         |""".stripMargin
+    )
+
   @Test def `derives-def` =
     check(
       """|
