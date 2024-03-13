@@ -55,11 +55,8 @@ class StaticSiteLoader(val root: File, val args: Scaladoc.Args)(using StaticSite
           .map(relativizeIfNeeded)
           .map(_.toFile)
           .filter(_.exists)
-          .map(loadTemplateFile(_))
-        val title = (
-          optionTitle.map(TemplateName.SidebarDefined(_)) ++
-          indexPageOpt.map(_.title)
-        ).headOption.getOrElse {
+          .map(loadTemplateFile(_, optionTitle.map(TemplateName.SidebarDefined(_))))
+        val title = indexPageOpt.map(_.title).getOrElse {
           report.error(s"Title for subsection needs to be set in YAML config or in index file")
           TemplateName.FilenameDefined("unnamed_section")
         }

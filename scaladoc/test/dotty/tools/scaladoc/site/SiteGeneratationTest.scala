@@ -124,3 +124,10 @@ class SiteGeneratationTest extends BaseHtmlTest:
         )
     }
   }
+
+  @Test
+  def sidebarFile() = withGeneratedSite(testDocPath.resolve("sidebar")) {
+    withHtmlFile("docs/index.html")(
+      _.assertTextsIn("#leftColumn #docs-nav > div:nth-child(1) > span > a > span", "A Directory Subsection"))
+    withHtmlFile("docs/directory/index.html")(_.assertTextsIn("title", "A Directory Subsection"))
+  }

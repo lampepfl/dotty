@@ -1,0 +1,5 @@
+index: index.md
+subsection:
+  - title: A Directory Subsection
+    index: directory/index.md
+    directory: directory
