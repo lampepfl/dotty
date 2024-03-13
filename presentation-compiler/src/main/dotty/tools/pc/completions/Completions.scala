@@ -36,6 +36,17 @@ import dotty.tools.pc.utils.MtagsEnrichments.*
 import dotty.tools.dotc.core.Denotations.SingleDenotation
 import dotty.tools.dotc.interactive.Interactive
 
+import java.nio.file.Path
+import java.nio.file.Paths
+import scala.collection.mutable
+import scala.meta.internal.metals.ReportContext
+import scala.meta.internal.mtags.CoursierComplete
+import scala.meta.internal.pc.CompletionFuzzy
+import scala.meta.internal.pc.IdentifierComparator
+import scala.meta.internal.pc.MemberOrdering
+import scala.meta.pc.*
+import scala.collection.concurrent.TrieMap
+
 class Completions(
     text: String,
     ctx: Context,
@@ -72,7 +83,7 @@ class Completions(
       case (_: Ident) :: (_: SeqLiteral) :: _ => false
       case _ => true
 
-  private lazy val allowTemplateSuffix: Boolean =
+  private lazy val isNew: Boolean =
     path match
       case _ :: New(selectOrIdent: (Select | Ident)) :: _ => true
       case _ => false
@@ -105,14 +116,23 @@ class Completions(
     end if
   end includeSymbol
 
+  def enrichedCompilerCompletions(qualType: Type): (List[CompletionValue], SymbolSearch.Result) =
+    val compilerCompletions = Completion
+      .rawCompletions(completionPos.originalCursorPosition, completionMode, completionPos.query, path, adjustedPath)
+
+    compilerCompletions
+      .toList
+      .flatMap(toCompletionValues)
+      .filterInteresting(qualType)
+
   def completions(): (List[CompletionValue], SymbolSearch.Result) =
     val (advanced, exclusive) = advancedCompletions(path, completionPos)
     val (all, result) =
       if exclusive then (advanced, SymbolSearch.Result.COMPLETE)
       else
-        val keywords =
-          KeywordsCompletions.contribute(path, completionPos, comments)
+        val keywords = KeywordsCompletions.contribute(path, completionPos, comments)
         val allAdvanced = advanced ++ keywords
+
         path match
           // should not show completions for toplevel
           case Nil | (_: PackageDef) :: _ if completionPos.originalCursorPosition.source.file.extension != "sc" =>
@@ -121,17 +141,10 @@ class Completions(
             (allAdvanced, SymbolSearch.Result.COMPLETE)
           case Select(qual, _) :: _ =>
             val compilerCompletions = Completion.rawCompletions(completionPos.originalCursorPosition, completionMode, completionPos.query, path, adjustedPath)
-            val (compiler, result) = compilerCompletions
-              .toList
-              .flatMap(toCompletionValues)
-              .filterInteresting(qual.typeOpt.widenDealias)
+            val (compiler, result) = enrichedCompilerCompletions(qual.typeOpt.widenDealias)
             (allAdvanced ++ compiler, result)
           case _ =>
-            val compilerCompletions = Completion.rawCompletions(completionPos.originalCursorPosition, completionMode, completionPos.query, path, adjustedPath)
-            val (compiler, result) = compilerCompletions
-              .toList
-              .flatMap(toCompletionValues)
-              .filterInteresting()
+            val (compiler, result) = enrichedCompilerCompletions(defn.AnyType)
             (allAdvanced ++ compiler, result)
         end match
 
@@ -184,16 +197,15 @@ class Completions(
     )
   end isAbstractType
 
-  private def findSuffix(symbol: Symbol): CompletionSuffix =
-    CompletionSuffix.empty
+  private def findSuffix(symbol: Symbol): CompletionAffix =
+    CompletionAffix.empty
       .chain { suffix => // for [] suffix
-        if shouldAddSnippet && symbol.info.typeParams.nonEmpty
-        then suffix.withNewSuffixSnippet(SuffixKind.Bracket)
+        if shouldAddSnippet && symbol.info.typeParams.nonEmpty then
+          suffix.withNewSuffixSnippet(SuffixKind.Bracket)
         else suffix
       }
       .chain { suffix => // for () suffix
-        if shouldAddSnippet && symbol.is(Flags.Method)
-        then
+        if shouldAddSnippet && symbol.is(Flags.Method) then
           val paramss = getParams(symbol)
           paramss match
             case Nil => suffix
@@ -215,9 +227,7 @@ class Completions(
         else suffix
       }
       .chain { suffix => // for {} suffix
-        if shouldAddSnippet && allowTemplateSuffix
-          && isAbstractType(symbol)
-        then
+        if shouldAddSnippet && isNew && isAbstractType(symbol) then
           if suffix.hasSnippet then suffix.withNewSuffix(SuffixKind.Template)
           else suffix.withNewSuffixSnippet(SuffixKind.Template)
         else suffix
@@ -228,32 +238,46 @@ class Completions(
   def completionsWithSuffix(
       denot: SingleDenotation,
       label: String,
-      toCompletionValue: (String, SingleDenotation, CompletionSuffix) => CompletionValue
+      toCompletionValue: (String, SingleDenotation, CompletionAffix) => CompletionValue
   ): List[CompletionValue] =
     val sym = denot.symbol
-    // find the apply completion that would need a snippet
     val methodDenots: List[SingleDenotation] =
-      if shouldAddSnippet && completionMode.is(Mode.Term) &&
+      if shouldAddSnippet && (completionMode.is(Mode.Term) || (isNew && !sym.isClass && !sym.isField)) &&
         (sym.is(Flags.Module) || sym.isField || sym.isClass && !sym.is(Flags.Trait)) && !sym.is(Flags.JavaDefined)
       then
-        val info =
-          /* Companion will be added even for normal classes now,
-           * but it will not show up from classpath. We can suggest
-           * constructors based on those synthetic applies.
-           */
-          if sym.isClass && sym.companionModule.exists then sym.companionModule.info
-          else denot.info
-        val applyDenots = info.member(nme.apply).allSymbols.map(_.asSeenFrom(info).asSingleDenotation)
-        denot :: applyDenots
-      else denot :: Nil
+        val constructors = if sym.isAllOf(ConstructorProxyModule) then
+          sym.companionClass.info.member(nme.CONSTRUCTOR).allSymbols
+        else
+          val companionApplies  = denot.info.member(nme.apply).allSymbols
+          val classConstructors = if sym.companionClass.exists && !sym.companionClass.is(Abstract) then
+            sym.companionClass.info.member(nme.CONSTRUCTOR).allSymbols
+          else Nil
+
+          if companionApplies.exists(_.is(Synthetic)) then
+            companionApplies ++ classConstructors.filter(!_.isPrimaryConstructor)
+          else
+            companionApplies ++ classConstructors
+
+        val applyDenots = constructors.map(_.asSeenFrom(denot.info).asSingleDenotation)
+          .filter(_.symbol.isAccessibleFrom(denot.info))
+
+        if sym.isAllOf(ConstructorProxyModule) || sym.is(Trait) then applyDenots
+        else denot :: applyDenots
+      else
+        denot :: Nil
+
+
+    val disambiguiateInits = methodDenots.exists(_.symbol.isConstructor) && methodDenots.exists(_.symbol.name == nme.apply)
 
     methodDenots.map { methodDenot =>
+      val prefix = if methodDenot.symbol.isConstructor && disambiguiateInits then PrefixKind.New else PrefixKind.NoPrefix
       val suffix = findSuffix(methodDenot.symbol)
+      val affix = suffix.withNewPrefix(prefix)
       val name = undoBacktick(label)
       toCompletionValue(
         name,
         methodDenot,
-        suffix
+        affix
       )
     }
   end completionsWithSuffix
@@ -569,13 +593,39 @@ class Completions(
         sym.showFullName + sigString
       else sym.fullName.stripModuleClassSuffix.show
 
+  /** If we try to complete TypeName, we should favor types over terms with same name value and without suffix.
+   */
+  def deduplicateCompletions(completions: List[CompletionValue]): List[CompletionValue] =
+    val typeResultMappings = mutable.Map.empty[Name, Seq[CompletionValue]]
+    val (symbolicCompletions, rest) = completions.partition:
+      _.isInstanceOf[CompletionValue.Symbolic]
+
+    val symbolicCompletionsMap = symbolicCompletions
+      .collect { case symbolic: CompletionValue.Symbolic => symbolic }
+      .groupBy(_.symbol.fullName) // we somehow have to ignore proxy type
+
+    symbolicCompletionsMap.foreach: (name, denots) =>
+      lazy val existsTypeWithSuffix: Boolean = symbolicCompletionsMap
+        .get(name.toTypeName)
+        .forall(_.forall(sym => sym.snippetSuffix.suffixes.nonEmpty))
+
+      if completionMode.is(Mode.Term) && !completionMode.is(Mode.ImportOrExport) then
+        typeResultMappings += name -> denots
+      // show non synthetic symbols
+      // companion test should not result TrieMap[K, V]
+      else if name.isTermName && existsTypeWithSuffix then
+        typeResultMappings += name -> denots
+      else if name.isTypeName then
+        typeResultMappings += name -> denots
+
+    typeResultMappings.toList.unzip._2.flatten ++ rest
+
   extension (l: List[CompletionValue])
     def filterInteresting(
         qualType: Type = ctx.definitions.AnyType,
         enrich: Boolean = true
     ): (List[CompletionValue], SymbolSearch.Result) =
-
-      val isSeen = mutable.Set.empty[String]
+      val alreadySeen = mutable.Set.empty[String]
       val buf = List.newBuilder[CompletionValue]
       def visit(head: CompletionValue): Boolean =
         val (id, include) =
@@ -586,14 +636,9 @@ class Completions(
             case symOnly: CompletionValue.Symbolic =>
               val sym = symOnly.symbol
               val name = SemanticdbSymbols.symbolName(sym)
-              val nameId =
-                if sym.isClass || sym.is(Module) then
-                  // drop #|. at the end to avoid duplication
-                  name.substring(0, name.length() - 1).nn
-                else name
               val suffix =
                 if symOnly.snippetSuffix.addLabelSnippet then "[]" else ""
-              val id = nameId + suffix
+              val id = name + suffix
               val include = includeSymbol(sym)
               (id, include)
             case kw: CompletionValue.Keyword => (kw.label, true)
@@ -604,8 +649,8 @@ class Completions(
               (fileSysMember.label, true)
             case ii: CompletionValue.IvyImport => (ii.label, true)
 
-        if !isSeen(id) && include then
-          isSeen += id
+        if !alreadySeen(id) && include then
+          alreadySeen += id
           buf += head
           true
         else false
@@ -615,12 +660,9 @@ class Completions(
 
       if enrich then
         val searchResult =
-          enrichWithSymbolSearch(visit, qualType).getOrElse(
-            SymbolSearch.Result.COMPLETE
-          )
-        (buf.result, searchResult)
-      else (buf.result, SymbolSearch.Result.COMPLETE)
-
+          enrichWithSymbolSearch(visit, qualType).getOrElse(SymbolSearch.Result.COMPLETE)
+        (deduplicateCompletions(buf.result), searchResult)
+      else (deduplicateCompletions(buf.result), SymbolSearch.Result.COMPLETE)
     end filterInteresting
   end extension
 

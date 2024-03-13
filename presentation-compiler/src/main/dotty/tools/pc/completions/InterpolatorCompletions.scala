@@ -162,7 +162,7 @@ object InterpolatorCompletions:
               CompletionValue.Interpolator(
                 denot.symbol,
                 label,
-                Some(newText(name, suffix.toEditOpt, identOrSelect)),
+                Some(newText(name, suffix.toSuffixOpt, identOrSelect)),
                 Nil,
                 Some(completionPos.originalCursorPosition.withStart(identOrSelect.span.start).toLsp),
                 // Needed for VS Code which will not show the completion otherwise
@@ -293,7 +293,7 @@ object InterpolatorCompletions:
             CompletionValue.Interpolator(
               denot.symbol,
               label,
-              Some(newText(name, suffix.toEditOpt)),
+              Some(newText(name, suffix.toSuffixOpt)),
               additionalEdits(),
               Some(nameRange),
               None,

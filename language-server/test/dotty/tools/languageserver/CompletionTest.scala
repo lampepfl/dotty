@@ -1707,4 +1707,27 @@ class CompletionTest {
      .completion(m1, Set(
        ("getOrElse", Method, "[V1 >: String](key: Int, default: => V1): V1"),
      ))
+
+  @Test def methodsWithInstantiatedTypeVars2: Unit =
+    code"""|object Test:
+           |  class TestSelect()
+           |object T:
+           |  extension (x: Test.TestSel$m1)
+           |"""
+     .completion(m1, Set(
+       ("getOrElse", Method, "[V1 >: String](key: Int, default: => V1): V1"),
+     ))
+
+  @Test def methodsWithInstantiatedTypeVars3: Unit =
+    code"""|
+           |class TestSelect()
+           |class Test(x: TestSel$m1)
+           |"""
+     .completion(m1, Set(
+       ("getOrElse", Method, "[V1 >: String](key: Int, default: => V1): V1"),
+     ))
+
+
+
+
 }

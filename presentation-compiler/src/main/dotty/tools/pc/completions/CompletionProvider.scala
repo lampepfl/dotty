@@ -196,7 +196,8 @@ class CompletionProvider(
       item
     end mkItem
 
-    val completionTextSuffix = completion.snippetSuffix.toEdit
+    val completionTextSuffix = completion.snippetSuffix.toSuffix
+    val completionTextPrefix = completion.snippetSuffix.toPrefix
 
     lazy val isInStringInterpolation =
       path match
@@ -232,7 +233,7 @@ class CompletionProvider(
                   mkItem(nameEdit.getNewText().nn, other.toList, range = Some(nameEdit.getRange().nn))
                 case _ =>
                   mkItem(
-                    v.insertText.getOrElse( ident.backticked(backtickSoftKeyword) + completionTextSuffix),
+                    v.insertText.getOrElse(completionTextPrefix + ident.backticked(backtickSoftKeyword) + completionTextSuffix),
                     edits.edits,
                     range = v.range
                   )
@@ -242,6 +243,7 @@ class CompletionProvider(
                 case IndexedContext.Result.InScope =>
                   mkItem(
                     v.insertText.getOrElse(
+                      completionTextPrefix +
                       ident.backticked(
                         backtickSoftKeyword
                       ) + completionTextSuffix
@@ -250,17 +252,17 @@ class CompletionProvider(
                   )
                 case _ if isInStringInterpolation =>
                   mkItem(
-                    "{" + sym.fullNameBackticked + completionTextSuffix + "}",
+                    "{" + completionTextPrefix + sym.fullNameBackticked + completionTextSuffix + "}",
                     range = v.range
                   )
                 case _ if v.isExtensionMethod =>
                   mkItem(
-                    ident.backticked(backtickSoftKeyword) + completionTextSuffix,
+                    completionTextPrefix + ident.backticked(backtickSoftKeyword) + completionTextSuffix,
                     range = v.range
                   )
                 case _ =>
                   mkItem(
-                    sym.fullNameBackticked(
+                    completionTextPrefix + sym.fullNameBackticked(
                       backtickSoftKeyword
                     ) + completionTextSuffix,
                     range = v.range
@@ -279,7 +281,7 @@ class CompletionProvider(
         val insert =
           completion.insertText.getOrElse(ident.backticked(backtickSoftKeyword))
         mkItem(
-          insert + completionTextSuffix,
+          completionTextPrefix + insert + completionTextSuffix,
           range = completion.range
         )
     end match
