@@ -84,7 +84,7 @@ object language:
     object captureChecking
 
     /** Experimental support for automatic conversions of arguments, without requiring
-     *  a langauge import `import scala.language.implicitConversions`.
+     *  a language import `import scala.language.implicitConversions`.
      *
      *  @see [[https://dotty.epfl.ch/docs/reference/experimental/into-modifier]]
      */
