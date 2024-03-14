@@ -1,0 +1,1 @@
+def Test() = foo.test()
