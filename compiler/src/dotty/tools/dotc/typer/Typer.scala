@@ -365,7 +365,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
 
       /** Is `denot` the denotation of a self symbol? */
       def isSelfDenot(denot: Denotation)(using Context) = denot match {
-        case denot: SymDenotation => denot.is(SelfName)
+        case denot: SymDenotation => denot.isSelfSym
         case _ => false
       }
 

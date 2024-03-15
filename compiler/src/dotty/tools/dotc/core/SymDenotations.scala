@@ -710,22 +710,8 @@ object SymDenotations {
     def isProvisional(using Context): Boolean =
       flagsUNSAFE.is(Provisional) // do not force the info to check the flag
 
-    /** Is this the denotation of a self symbol of some class?
-     *  This is the case if one of two conditions holds:
-     *  1. It is the symbol referred to in the selfInfo part of the ClassInfo
-     *     which is the type of this symbol's owner.
-     *  2. This symbol is owned by a class, it's selfInfo field refers to a type
-     *     (indicating the self definition does not introduce a name), and the
-     *     symbol's name is "_".
-     *  TODO: Find a more robust way to characterize self symbols, maybe by
-     *       spending a Flag on them?
-     */
-    final def isSelfSym(using Context): Boolean = owner.infoOrCompleter match {
-      case ClassInfo(_, _, _, _, selfInfo) =>
-        selfInfo == symbol ||
-          selfInfo.isInstanceOf[Type] && name == nme.WILDCARD
-      case _ => false
-    }
+    /** Is this the denotation of a self symbol of some class? */
+    final def isSelfSym(using Context): Boolean = this.is(SelfName)
 
     /** Is this definition contained in `boundary`?
      *  Same as `ownersIterator contains boundary` but more efficient.
