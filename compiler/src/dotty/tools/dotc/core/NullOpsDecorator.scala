@@ -9,7 +9,7 @@ object NullOpsDecorator:
 
   extension (self: Type)
     def stripFlexible(using Context): Type = self match
-      case FlexibleType(tp) => tp
+      case FlexibleType(_, tp) => tp
       case _ => self
 
     /** Syntactically strips the nullability from this type.

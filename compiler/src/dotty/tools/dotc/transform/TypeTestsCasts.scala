@@ -152,7 +152,7 @@ object TypeTestsCasts {
             // See TypeComparer#either
             recur(tp1, P) && recur(tp2, P)
           case tpX: FlexibleType =>
-            recur(tpX.original, P)
+            recur(tpX.underlying, P)
           case x =>
             // always false test warnings are emitted elsewhere
             // provablyDisjoint wants fully applied types as input; because we're in the middle of erasure, we sometimes get raw types here

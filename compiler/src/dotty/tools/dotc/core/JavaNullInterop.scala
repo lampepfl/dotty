@@ -100,8 +100,9 @@ object JavaNullInterop {
 
     /** Should we nullify `tp` at the outermost level? */
     def needsNull(tp: Type): Boolean =
-      !(outermostLevelAlreadyNullable || (tp match {
-        case tp: TypeRef =>
+      if outermostLevelAlreadyNullable then false
+      else tp match
+        case tp: TypeRef if
           // We don't modify value types because they're non-nullable even in Java.
           tp.symbol.isValueClass
           // We don't modify unit types.
@@ -113,9 +114,8 @@ object JavaNullInterop {
           // then its Scala signature will be `def setNames(names: (String|Null)*): Unit`.
           // This is because `setNames(null)` passes as argument a single-element array containing the value `null`,
           // and not a `null` array.
-          || !ctx.flexibleTypes && tp.isRef(defn.RepeatedParamClass)
-        case _ => false
-      }))
+          || !ctx.flexibleTypes && tp.isRef(defn.RepeatedParamClass) => false
+        case _ => true
 
     override def apply(tp: Type): Type = tp match {
       case tp: TypeRef if needsNull(tp) => nullify(tp)

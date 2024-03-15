@@ -294,7 +294,7 @@ class PlainPrinter(_ctx: Context) extends Printer {
             && !printDebug
         then atPrec(GlobalPrec)( Str("into ") ~ toText(tpe) )
         else toTextLocal(tpe) ~ " " ~ toText(annot)
-      case FlexibleType(tpe) =>
+      case FlexibleType(_, tpe) =>
         "(" ~ toText(tpe) ~ ")?"
       case tp: TypeVar =>
         def toTextCaret(tp: Type) = if printDebug then toTextLocal(tp) ~ Str("^") else toText(tp)
