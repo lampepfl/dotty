@@ -1,0 +1,33 @@
+[[syntax trees at end of                     typer]] // tests/printing/dependent-annot-19846.scala
+package <empty> {
+  class lambdaAnnot(g: () => Int) extends scala.annotation.Annotation(),
+    annotation.StaticAnnotation {
+    private[this] val g: () => Int
+  }
+  final lazy module val Test: Test = new Test()
+  final module class Test() extends Object() { this: Test.type =>
+    val y: Int = ???
+    val z:
+      Int @lambdaAnnot(
+        {
+          def $anonfun(): Int = Test.y
+          closure($anonfun)
+        }
+      )
+     = f(Test.y)
+  }
+  final lazy module val dependent-annot-19846$package:
+    dependent-annot-19846$package = new dependent-annot-19846$package()
+  final module class dependent-annot-19846$package() extends Object() {
+    this: dependent-annot-19846$package.type =>
+    def f(x: Int):
+      Int @lambdaAnnot(
+        {
+          def $anonfun(): Int = x
+          closure($anonfun)
+        }
+      )
+     = x
+  }
+}
+
