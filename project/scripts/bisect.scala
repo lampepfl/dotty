@@ -1,3 +1,4 @@
+//> using jvm 17 // Maximal JDK version which can be used with all Scala 3 versions, can be overriden via command line arguments '--jvm=21'
 /*
 This script will bisect a problem with the compiler based on success/failure of the validation script passed as an argument.
 It starts with a fast bisection on released nightly builds.
@@ -124,6 +125,7 @@ object ValidationScript:
 
   def tmpScalaCliScript(command: String, args: Seq[String]): File = tmpScript(s"""
     |#!/usr/bin/env bash
+    |export JAVA_HOME=${sys.props("java.home")}
     |scala-cli ${command} -S "$$1" --server=false ${args.mkString(" ")}
     |""".stripMargin
   )
@@ -242,8 +244,10 @@ class CommitBisect(validationScript: File, shouldFail: Boolean, bootstrapped: Bo
     val bisectRunScript = raw"""
       |scalaVersion=$$(sbt "print ${scala3CompilerProject}/version" | tail -n1)
       |rm -rf out
-      |sbt "clean; set every doc := new File(\"unused\"); set scaladoc/Compile/resourceGenerators := (\`${scala3Project}\`/Compile/resourceGenerators).value; ${scala3Project}/publishLocal"
-      |${validationCommandStatusModifier}${validationScript.getAbsolutePath} "$$scalaVersion"
+      |export JAVA_HOME=${sys.props("java.home")}
+      |(sbt "clean; set every doc := new File(\"unused\"); set scaladoc/Compile/resourceGenerators := (\`${scala3Project}\`/Compile/resourceGenerators).value; ${scala3Project}/publishLocal" \
+      |  || (echo "Failed to build compiler, skip $$scalaVersion"; git bisect skip) \
+      |) && ${validationCommandStatusModifier}${validationScript.getAbsolutePath} "$$scalaVersion"
     """.stripMargin
     "git bisect start".!
     s"git bisect bad $fistBadHash".!
