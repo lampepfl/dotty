@@ -248,6 +248,8 @@ class Definitions {
     @tu lazy val Compiletime_summonFrom   : Symbol = CompiletimePackageClass.requiredMethod("summonFrom")
     @tu lazy val Compiletime_summonInline : Symbol = CompiletimePackageClass.requiredMethod("summonInline")
     @tu lazy val Compiletime_summonAll    : Symbol = CompiletimePackageClass.requiredMethod("summonAll")
+    @tu lazy val Compiletime_hasCustomShowAnnot: ClassSymbol = CompiletimePackageClass.requiredClass("hasCustomShow")
+    @tu lazy val Compiletime_CustomShowType    : TypeRef = CompiletimePackageClass.requiredClass("CustomShow").typeRef
   @tu lazy val CompiletimeTestingPackage: Symbol = requiredPackage("scala.compiletime.testing")
     @tu lazy val CompiletimeTesting_typeChecks: Symbol = CompiletimeTestingPackage.requiredMethod("typeChecks")
     @tu lazy val CompiletimeTesting_typeCheckErrors: Symbol = CompiletimeTestingPackage.requiredMethod("typeCheckErrors")

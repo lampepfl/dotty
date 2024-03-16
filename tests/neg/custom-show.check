@@ -1,0 +1,28 @@
+-- [E007] Type Mismatch Error: tests/neg/custom-show.scala:7:42 --------------------------------------------------------
+7 |  val x: Foo["To Infinity And Beyond!"] = 1 // error
+  |                                          ^
+  |                                          Found:    (1 : Int)
+  |                                          Required: Regular.Foo[("To Infinity And Beyond!" : String)]
+  |
+  | longer explanation available when compiling with `-explain`
+-- [E007] Type Mismatch Error: tests/neg/custom-show.scala:17:42 -------------------------------------------------------
+17 |  val x: Foo["To Infinity And Beyond!"] = 1 // error
+   |                                          ^
+   |                                          Found:    (1 : Int)
+   |                                          Required: Baz
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E007] Type Mismatch Error: tests/neg/custom-show.scala:26:42 -------------------------------------------------------
+26 |  val x: Foo["To Infinity And Beyond!"] = 1 // error
+   |                                          ^
+   |                                          Found:    (1 : Int)
+   |                                          Required: Baz
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E007] Type Mismatch Error: tests/neg/custom-show.scala:32:42 -------------------------------------------------------
+32 |  val x: Foo["To Infinity And Beyond!"] = 1 // error
+   |                                          ^
+   |                                       Found:    (1 : Int)
+   |                                       Required: CustomMissingImplicit.Foo[("To Infinity And Beyond!" : String)]
+   |
+   | longer explanation available when compiling with `-explain`

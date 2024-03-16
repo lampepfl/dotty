@@ -4545,6 +4545,27 @@ object Types extends TypeUtils {
       case tycon: TypeRef if defn.isCompiletimeAppliedType(tycon.symbol) && args.forall(_.isStable) => true
       case _ => false
 
+    /** Override show with an optional custom show mechanism */
+    override def show(using Context): String =
+      import dotty.tools.dotc.util.Spans.NoSpan
+      val hasCustomShow =
+        tycon.typeSymbol.annotations.exists(_.tree.tpe.derivesFrom(defn.Compiletime_hasCustomShowAnnot))
+      if (hasCustomShow)
+        val evTyper = new typer.Typer
+        val evCtx = ctx.fresh.setTyper(evTyper)
+        val showTpe = defn.Compiletime_CustomShowType.appliedTo(this)
+        val evidence = evTyper.inferImplicitArg(showTpe, NoSpan)(using evCtx)
+        evidence.tpe match
+          case fail: typer.Implicits.SearchFailureType =>
+            super.show
+          case tp =>
+            tp.widenDealias.memberInfo(tp.typeSymbol.requiredType("Out")).widenDealias match
+              case TypeAlias(ConstantType(Constant(showStr: String))) => showStr
+              case ConstantType(Constant(showStr: String)) => showStr
+              case _ => super.show
+      else
+        super.show
+
     override def underlying(using Context): Type = tycon
 
     override def superType(using Context): Type =
