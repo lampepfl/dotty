@@ -273,6 +273,7 @@ object StdNames {
     final val MethodParametersATTR: N             = "MethodParameters"
     final val LineNumberTableATTR: N              = "LineNumberTable"
     final val LocalVariableTableATTR: N           = "LocalVariableTable"
+    final val RecordATTR: N                       = "Record" // Introduced in JEP-395
     final val RuntimeVisibleAnnotationATTR: N     = "RuntimeVisibleAnnotations"   // RetentionPolicy.RUNTIME
     final val RuntimeInvisibleAnnotationATTR: N   = "RuntimeInvisibleAnnotations" // RetentionPolicy.CLASS
     final val RuntimeParamAnnotationATTR: N       = "RuntimeVisibleParameterAnnotations" // RetentionPolicy.RUNTIME (annotations on parameters)

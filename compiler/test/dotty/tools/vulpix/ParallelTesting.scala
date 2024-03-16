@@ -543,9 +543,29 @@ trait ParallelTesting extends RunnerOrchestration { self =>
       val allArgs = flags.all
 
       if testIsFiltered then
+
+        import TestFlags.CompilationMode
+
         // If a test contains a Java file that cannot be parsed by Dotty's Java source parser, its
         // name must contain the string "JAVA_ONLY".
-        val dottyFiles = files.filterNot(_.getName.contains("JAVA_ONLY")).map(_.getPath)
+        val (dottyFiles, allArgs) = flags.compilationMode match
+          // case CompilationMode.Mixed => files.filterNot(_.getName.contains("JAVA_ONLY")).map(_.getPath)
+          case _ =>
+            val (javaFiles, dottyFiles) = files.partition(_.getName.endsWith(".java"))
+            val javaErrors = compileWithJavac(javaFiles.map(_.getPath))
+            if (javaErrors.isDefined) {
+              echo(s"\njava compilation failed: \n${ javaErrors.get }")
+              fail(failure = JavaCompilationFailure(javaErrors.get))
+            }
+            // val classFiles = javaFiles.map { file =>
+            //   val name = file.getName
+            //   val className = name.substring(0, name.length - ".java".length) + ".class"
+            //   file.toPath.resolveSibling(className)
+            // }
+            // TODO: More robust?
+            val classPath = javaFiles.head.toPath.getParent.toString
+            (dottyFiles.map(_.getPath), flags.withClasspath(classPath).all)
+
         driver.process(allArgs ++ dottyFiles, reporter = reporter)
 
         // todo a better mechanism than ONLY. test: -scala-only?

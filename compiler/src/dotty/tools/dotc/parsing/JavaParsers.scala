@@ -876,10 +876,11 @@ object JavaParsers {
         fieldsByName -= name
       end for
 
+      // The `Synthetic` flag here is only used by the `Namer` to evict overriden symbols during mixed-compilation
       val accessors =
         (for (name, (tpt, annots)) <- fieldsByName yield
           DefDef(name, List(Nil), tpt, unimplementedExpr)
-            .withMods(Modifiers(Flags.JavaDefined | Flags.Method | Flags.Synthetic))
+            .withMods(Modifiers(Flags.JavaDefined | Flags.Method | Flags.ParamAccessor | Flags.Synthetic))
         ).toList
 
       // generate the canonical constructor

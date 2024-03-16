@@ -2,19 +2,19 @@
 21 |val testA = summon[Mirror.Of[A]] // error: Not a sealed trait
    |                                ^
    |No given instance of type scala.deriving.Mirror.Of[A] was found for parameter x of method summon in object Predef. Failed to synthesize an instance of type scala.deriving.Mirror.Of[A]:
-   |	* trait A is not a generic product because it is not a case class
+   |	* trait A is not a generic product because it is not a case class or record class
    |	* trait A is not a generic sum because it is not a sealed trait
 -- [E172] Type Error: tests/neg/mirror-synthesis-errors.scala:22:32 ----------------------------------------------------
 22 |val testC = summon[Mirror.Of[C]] // error: Does not have subclasses
    |                                ^
    |No given instance of type scala.deriving.Mirror.Of[C] was found for parameter x of method summon in object Predef. Failed to synthesize an instance of type scala.deriving.Mirror.Of[C]:
-   |	* trait C is not a generic product because it is not a case class
+   |	* trait C is not a generic product because it is not a case class or record class
    |	* trait C is not a generic sum because it does not have subclasses
 -- [E172] Type Error: tests/neg/mirror-synthesis-errors.scala:23:32 ----------------------------------------------------
 23 |val testD = summon[Mirror.Of[D]] // error: child SubD takes more than one parameter list
    |                                ^
    |No given instance of type scala.deriving.Mirror.Of[D] was found for parameter x of method summon in object Predef. Failed to synthesize an instance of type scala.deriving.Mirror.Of[D]:
-   |	* class D is not a generic product because it is not a case class
+   |	* class D is not a generic product because it is not a case class or record class
    |	* class D is not a generic sum because its child class SubD is not a generic product because it takes more than one parameter list
 -- [E172] Type Error: tests/neg/mirror-synthesis-errors.scala:24:38 ----------------------------------------------------
 24 |val testSubD = summon[Mirror.Of[SubD]] // error: takes more than one parameter list
@@ -26,17 +26,17 @@
 25 |val testE = summon[Mirror.Of[E]] // error: Not an abstract class
    |                                ^
    |No given instance of type scala.deriving.Mirror.Of[E] was found for parameter x of method summon in object Predef. Failed to synthesize an instance of type scala.deriving.Mirror.Of[E]:
-   |	* class E is not a generic product because it is not a case class
+   |	* class E is not a generic product because it is not a case class or record class
    |	* class E is not a generic sum because it is not an abstract class
 -- [E172] Type Error: tests/neg/mirror-synthesis-errors.scala:26:32 ----------------------------------------------------
 26 |val testF = summon[Mirror.Of[F]] // error: No children
    |                                ^
    |No given instance of type scala.deriving.Mirror.Of[F] was found for parameter x of method summon in object Predef. Failed to synthesize an instance of type scala.deriving.Mirror.Of[F]:
-   |	* trait F is not a generic product because it is not a case class
+   |	* trait F is not a generic product because it is not a case class or record class
    |	* trait F is not a generic sum because it does not have subclasses
 -- [E172] Type Error: tests/neg/mirror-synthesis-errors.scala:27:36 ----------------------------------------------------
 27 |val testG = summon[Mirror.Of[Foo.G]] // error: Has anonymous subclasses
    |                                    ^
    |No given instance of type scala.deriving.Mirror.Of[Foo.G] was found for parameter x of method summon in object Predef. Failed to synthesize an instance of type scala.deriving.Mirror.Of[Foo.G]:
-   |	* trait G is not a generic product because it is not a case class
+   |	* trait G is not a generic product because it is not a case class or record class
    |	* trait G is not a generic sum because it has anonymous or inaccessible subclasses

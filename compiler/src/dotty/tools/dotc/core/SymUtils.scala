@@ -99,13 +99,14 @@ class SymUtils:
       def canAccessCtor: Boolean =
         def isAccessible(sym: Symbol): Boolean = ctx.owner.isContainedIn(sym)
         def isSub(sym: Symbol): Boolean = ctx.owner.ownersIterator.exists(_.derivesFrom(sym))
-        val ctor = self.primaryConstructor
+        val ctor = if defn.isJavaRecordClass(self) then self.javaCanonicalConstructor else self.primaryConstructor
         (!ctor.isOneOf(Private | Protected) || isSub(self)) // we cant access the ctor because we do not extend cls
         && (!ctor.privateWithin.exists || isAccessible(ctor.privateWithin)) // check scope is compatible
 
 
       def companionMirror = self.useCompanionAsProductMirror
-      if (!self.is(CaseClass)) "it is not a case class"
+
+      if (!(self.is(CaseClass) || defn.isJavaRecordClass(self))) "it is not a case class or record class"
       else if (self.is(Abstract)) "it is an abstract class"
       else if (self.primaryConstructor.info.paramInfoss.length != 1) "it takes more than one parameter list"
       else if self.isDerivedValueClass then "it is a value class"
@@ -146,7 +147,7 @@ class SymUtils:
       && (!self.is(Method) || self.is(Accessor))
 
     def useCompanionAsProductMirror(using Context): Boolean =
-      self.linkedClass.exists && !self.is(Scala2x) && !self.linkedClass.is(Case)
+      self.linkedClass.exists && !self.is(Scala2x) && !self.linkedClass.is(Case) && !defn.isJavaRecordClass(self)
 
     def useCompanionAsSumMirror(using Context): Boolean =
       def companionExtendsSum(using Context): Boolean =
@@ -248,6 +249,16 @@ class SymUtils:
 
     def caseAccessors(using Context): List[Symbol] =
       self.info.decls.filter(_.is(CaseAccessor))
+
+    // TODO: I'm convinced that we need to introduce a flag to get the canonical constructor.
+    //       we should also check whether the names are erased in the ctor. If not, we should
+    //       be able to infer the components directly from the constructor.
+    def javaCanonicalConstructor(using Context): Symbol =
+      self.info.decls.filter(_.isConstructor).tail.head
+
+    // TODO: Check if `Synthetic` is stamped properly
+    def javaRecordComponents(using Context): List[Symbol] =
+      self.info.decls.filter(_.is(ParamAccessor))
 
     def getter(using Context): Symbol =
       if (self.isGetter) self else accessorNamed(self.asTerm.name.getterName)

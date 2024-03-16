@@ -49,6 +49,10 @@ object Applications {
     ref.info.widenExpr.annotatedToRepeated
   }
 
+  // TODO: Error here
+  def isJavaRecordMatch(tp: Type, numArgs: Int, errorPos: SrcPos = NoSourcePosition)(using Context): Boolean =
+    defn.isJavaRecordClass(tp.typeSymbol)
+
   /** Does `tp` fit the "product match" conditions as an unapply result type
    *  for a pattern with `numArgs` subpatterns?
    *  This is the case if `tp` has members `_1` to `_N` where `N == numArgs`.
@@ -106,6 +110,20 @@ object Applications {
       hasMethod(nme.toSeq, toSeqTp(elemTp))
 
     if (isValid) elemTp else NoType
+  }
+
+  def javaRecordComponentTypes(tp: Type, errorPos: SrcPos)(using Context): List[Type] = {
+
+    val params = tp.typeSymbol.javaRecordComponents.map(_.info.resultType)
+
+    tp match
+    case tp: AppliedType =>
+      val argsIter = tp.args.iterator
+      for (param <- params) yield param match
+        case param if param.typeSymbol.isTypeParam => argsIter.next()
+        case param => param
+    case _ => params
+
   }
 
   def productSelectorTypes(tp: Type, errorPos: SrcPos)(using Context): List[Type] = {
@@ -192,6 +210,8 @@ object Applications {
           // which is better than the message in `fail`.
       else if unapplyResult.derivesFrom(defn.NonEmptyTupleClass) then
         foldApplyTupleType(unapplyResult)
+      else if (isJavaRecordMatch(unapplyResult, args.length, pos)) then
+        javaRecordComponentTypes(unapplyResult, pos)
       else fail
     }
   }

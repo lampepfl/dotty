@@ -8,7 +8,9 @@ final case class TestFlags(
   defaultClassPath: String,
   runClassPath: String, // class path that is used when running `run` tests (not compiling)
   options: Array[String],
-  javacOptions: Array[String]) {
+  javacOptions: Array[String],
+  compilationMode: TestFlags.CompilationMode = TestFlags.CompilationMode.Mixed
+) {
 
   def and(flags: String*): TestFlags =
     TestFlags(defaultClassPath, runClassPath, options ++ flags, javacOptions)
@@ -19,6 +21,9 @@ final case class TestFlags(
   def withClasspath(classPath: String): TestFlags =
     TestFlags(s"$defaultClassPath${JFile.pathSeparator}$classPath", runClassPath, options, javacOptions)
 
+  def compileJavaThenScala: TestFlags =
+    TestFlags(defaultClassPath, runClassPath, options, javacOptions, TestFlags.CompilationMode.JavaThenScala)  
+   
   def withRunClasspath(classPath: String): TestFlags =
     TestFlags(defaultClassPath, s"$runClassPath${JFile.pathSeparator}$classPath", options, javacOptions)
 
@@ -54,5 +59,10 @@ final case class TestFlags(
 }
 
 object TestFlags {
+
+  enum CompilationMode {
+    case Mixed, JavaThenScala
+  }
+
   def apply(classPath: String, flags: Array[String]): TestFlags = TestFlags(classPath, classPath, flags, Array.empty)
 }

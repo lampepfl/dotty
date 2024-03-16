@@ -481,13 +481,21 @@ object desugar {
       case Select(qual, tpnme.AnyVal) => isScala(qual)
       case _ => false
     }
+
     def isScala(tree: Tree): Boolean = tree match {
       case Ident(nme.scala) => true
       case Select(Ident(nme.ROOTPKG), nme.scala) => true
       case _ => false
     }
 
+    def isRecord(tree: Tree): Boolean = tree match {
+      case Select(Select(Select(Ident(nme.ROOTPKG), nme.java), nme.lang), tpnme.Record) => true
+      case _ => false
+    }
+
     def namePos = cdef.sourcePos.withSpan(cdef.nameSpan)
+
+    val isJavaRecord = mods.is(JavaDefined) && parents.exists(isRecord)
 
     val isObject = mods.is(Module)
     val isCaseClass  = mods.is(Case) && !isObject
@@ -755,6 +763,11 @@ object desugar {
 
     val companionMembers = defaultGetters ::: enumCases
 
+    def tupleApply(params: List[untpd.Tree]): untpd.Apply = {
+      val fun = Select(Ident(nme.scala), s"${StdNames.str.Tuple}$arity".toTermName)
+      Apply(fun, params)
+    }
+
     // The companion object definitions, if a companion is needed, Nil otherwise.
     // companion definitions include:
     // 1. If class is a case class case class C[Ts](p1: T1, ..., pN: TN)(moreParams):
@@ -787,9 +800,8 @@ object desugar {
               case vparam :: Nil =>
                 Apply(scalaDot(nme.Option), Select(Ident(unapplyParamName), vparam.name))
               case vparams =>
-                val tupleApply = Select(Ident(nme.scala), s"Tuple$arity".toTermName)
-                val members = vparams.map(vparam => Select(Ident(unapplyParamName), vparam.name))
-                Apply(scalaDot(nme.Option), Apply(tupleApply, members))
+                val members = vparams.map(param => Select(Ident(unapplyParamName), param.name))
+                Apply(scalaDot(nme.Option), tupleApply(members))
 
           val hasRepeatedParam = constrVparamss.head.exists {
             case ValDef(_, tpt, _) => isRepeated(tpt)
@@ -818,6 +830,43 @@ object desugar {
         companionDefs(anyRef, companionMembers)
       else if isValueClass && !isObject then
         companionDefs(anyRef, Nil)
+      else if (isJavaRecord) {
+
+        /** Get the canonical constructor of the Java record.
+          *
+          * Java classes have a dummy constructor; see [[JavaParsers.makeTemplate]] for
+          * more details
+          */
+        def canonicalConstructor(impl: Template): DefDef = {
+          impl.body.collectFirst {
+            case ddef: DefDef if ddef.name.isConstructorName && ddef.mods.is(Synthetic) =>
+              ddef
+          }.get
+        }
+
+        val constr1 = canonicalConstructor(impl)
+        val tParams = constr1.leadingTypeParams
+        val vParams = asTermOnly(constr1.trailingParamss).head
+        val arity = vParams.length
+
+        val classTypeRef = appliedRef(classTycon)
+
+        val unapplyParam = makeSyntheticParameter(tpt = classTypeRef)
+
+        val unapplyRHS =
+          if (arity == 0) Literal(Constant(true))
+          else Ident(unapplyParam.name)
+
+        val unapplyResTp = if (arity == 0) Literal(Constant(true)) else TypeTree()
+
+        val unapplyMeth = DefDef(
+          nme.unapply,
+          joinParams(derivedTparams, (unapplyParam :: Nil) :: Nil),
+          unapplyResTp,
+          unapplyRHS
+        ).withMods(synthetic | Inline)
+        companionDefs(anyRef, unapplyMeth :: Nil)
+      }
       else Nil
 
     enumCompanionRef match {

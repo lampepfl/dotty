@@ -261,8 +261,9 @@ class PostTyper extends MacroTransform with InfoTransformer { thisPhase =>
       }
     }
 
+    // TODO: Add this check back in at some point.
     def checkNoConstructorProxy(tree: Tree)(using Context): Unit =
-      if tree.symbol.is(ConstructorProxy) then
+      if tree.symbol.is(ConstructorProxy) && tree.symbol.name != nme.unapply then
         report.error(em"constructor proxy ${tree.symbol} cannot be used as a value", tree.srcPos)
 
     def checkStableSelection(tree: Tree)(using Context): Unit =
@@ -308,6 +309,7 @@ class PostTyper extends MacroTransform with InfoTransformer { thisPhase =>
             checkNoConstructorProxy(tree)
             transformSelect(tree, Nil)
         case tree: Apply =>
+          // println(tree.show)
           val methType = tree.fun.tpe.widen.asInstanceOf[MethodType]
           val app =
             if (methType.hasErasedParams)

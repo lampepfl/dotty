@@ -366,6 +366,7 @@ abstract class SymbolLoader extends LazyType { self =>
         if !denot.isCompleted &&
            !denot.completer.isInstanceOf[SymbolLoaders.SecondCompleter] then
           if denot.is(ModuleClass) && NamerOps.needsConstructorProxies(other) then
+            // TODO: What to do here?
             NamerOps.makeConstructorCompanion(denot.sourceModule.asTerm, other.asClass)
             denot.resetFlag(Touched)
           else

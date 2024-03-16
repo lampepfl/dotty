@@ -343,8 +343,15 @@ object PatternMatcher {
             .select(defn.RuntimeTuples_apply)
             .appliedTo(receiver, Literal(Constant(i)))
 
+        def resultTypeSym = unapp.symbol.info.resultType.typeSymbol
+
+        // TODO: Check Scala -> Java, erased?
+        def isJavaRecordUnapply(sym: Symbol) = defn.isJavaRecordClass(resultTypeSym)
+        def tupleSel(sym: Symbol) = ref(scrutinee).select(sym)
+        def recordSel(sym: Symbol) = tupleSel(sym).appliedToTermArgs(Nil)
+
+        // TODO: Move this to the correct location
         if (isSyntheticScala2Unapply(unapp.symbol) && caseAccessors.length == args.length)
-          def tupleSel(sym: Symbol) = ref(scrutinee).select(sym)
           val isGenericTuple = defn.isTupleClass(caseClass) &&
             !defn.isTupleNType(tree.tpe match { case tp: OrType => tp.join case tp => tp }) // widen even hard unions, to see if it's a union of tuples
           val components = if isGenericTuple then caseAccessors.indices.toList.map(tupleApp(_, ref(scrutinee))) else caseAccessors.map(tupleSel)
@@ -369,7 +376,10 @@ object PatternMatcher {
             else if unappResult.info <:< defn.NonEmptyTupleTypeRef then
               val components = (0 until foldApplyTupleType(unappResult.denot.info).length).toList.map(tupleApp(_, ref(unappResult)))
               matchArgsPlan(components, args, onSuccess)
-            else {
+            else if (isJavaRecordUnapply(unapp.symbol.owner)) {
+              val components = resultTypeSym.javaRecordComponents.map(recordSel)
+              matchArgsPlan(components, args, onSuccess)
+            } else {
               assert(isGetMatch(unapp.tpe))
               val argsPlan = {
                 val get = ref(unappResult).select(nme.get, _.info.isParameterless)

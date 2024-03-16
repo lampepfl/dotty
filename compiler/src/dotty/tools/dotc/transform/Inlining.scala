@@ -5,6 +5,8 @@ import core.*
 import Flags.*
 import Contexts.*
 import Symbols.*
+import StdNames.*
+import Decorators.*
 
 import dotty.tools.dotc.ast.tpd
 import dotty.tools.dotc.ast.Trees.*
@@ -13,6 +15,8 @@ import dotty.tools.dotc.inlines.Inlines
 import dotty.tools.dotc.ast.TreeMapWithImplicits
 import dotty.tools.dotc.core.DenotTransformers.IdentityDenotTransformer
 import dotty.tools.dotc.staging.StagingLevel
+
+import config.Printers.inlining
 
 import scala.collection.mutable.ListBuffer
 
@@ -55,8 +59,9 @@ class Inlining extends MacroTransform, IdentityDenotTransformer {
     }
 
   def newTransformer(using Context): Transformer = new Transformer {
-    override def transform(tree: tpd.Tree)(using Context): tpd.Tree =
+    override def transform(tree: tpd.Tree)(using Context): tpd.Tree = {
       new InliningTreeMap().transform(tree)
+    }
   }
 
   private class InliningTreeMap extends TreeMapWithImplicits {
@@ -88,6 +93,11 @@ class Inlining extends MacroTransform, IdentityDenotTransformer {
 
             flatTree(trees2)
           else super.transform(tree)
+        case Apply(fun, args) if fun.symbol.name == nme.unapply && fun.symbol.is(ConstructorProxy) =>
+          // TODO: Add for using it as a value
+          val tree1 = args.head
+          inlining.println(i"reducing unapply proxy: $tree -> $tree1")
+          tree1
         case _: Typed | _: Block =>
           super.transform(tree)
         case _ if Inlines.needsInlining(tree) =>

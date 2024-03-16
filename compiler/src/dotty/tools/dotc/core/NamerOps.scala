@@ -82,6 +82,9 @@ object NamerOps:
   /** The flags of an `apply` method that serves as a constructor proxy */
   val ApplyProxyFlags = Synthetic | ConstructorProxy | Inline | Method
 
+  /** TODO: It would be nice if this was inline. Probably want an extra flag for `Proxy`? */
+  val UnApplyProxyFlags = Synthetic | Method | Inline | ConstructorProxy
+
   /** If this is a reference to a class and the reference has a stable prefix, the reference
    *  otherwise NoType
    */
@@ -105,6 +108,8 @@ object NamerOps:
     def complete(denot: SymDenotation)(using Context): Unit =
       denot.info = constr.info
 
+  // This is weird, but possible.
+
   /** Add constructor proxy apply methods to `scope`. Proxies are for constructors
    *  in `cls` and they reside in `modcls`.
    */
@@ -120,6 +125,24 @@ object NamerOps:
       if dcl.isConstructor then scope.enter(proxy(dcl))
     scope
   end addConstructorApplies
+
+  def addIdentUnApply(scope: MutableScope, cls: ClassSymbol, modCls: ClassSymbol)(using ctx: Context): scope.type =
+    def proxy(constr: Symbol): Symbol =
+      val typeRef = cls.typeRef
+      newSymbol(
+        modCls, nme.unapply,
+        // The modifiers on unapply are essentially the same as on the constructor
+        UnApplyProxyFlags | (constr.flagsUNSAFE & AccessFlags),
+        MethodType(typeRef :: Nil, typeRef),
+        cls.privateWithin,
+        // TODO: Does this work? Or are we going to run into issues because the type it not the same?
+        constr.coord
+      )
+
+    val decl = cls.info.decls.find(_.isConstructor)
+    scope.enter(proxy(decl))
+    scope
+  end addIdentUnApply
 
   /** The completer of a constructor companion for class `cls`, where
    *  `modul` is the companion symbol and `modcls` is its class.
@@ -150,6 +173,7 @@ object NamerOps:
     newSymbol(tsym.owner, tsym.name.toTermName,
         ConstructorCompanionFlags | StableRealizable | Method, ExprType(prefix.select(proxy)), coord = tsym.coord)
 
+  // TODO: Rename to addSyntheticProxies
   /** Add all necessary constructor proxy symbols for members of class `cls`. This means:
    *
    *   - if a member is a class, or type alias, that needs a constructor companion, add one,
@@ -172,17 +196,20 @@ object NamerOps:
             then
               classConstructorCompanion(mbr).entered
           case _ =>
+            // TODO: What is this?
             underlyingStableClassRef(mbr.info.loBound): @unchecked match
               case ref: TypeRef =>
                 val proxy = ref.symbol.registeredCompanion
                 if proxy.is(ConstructorProxy) && !memberExists(cls, mbr.name.toTermName) then
                   typeConstructorCompanion(mbr, ref.prefix, proxy).entered
 
-    if cls.is(Module)
-       && needsConstructorProxies(cls.linkedClass)
-       && !memberExists(cls, nme.apply)
-    then
-      addConstructorApplies(cls.info.decls.openForMutations, cls.linkedClass.asClass, cls)
+    if cls.is(Module) then
+      if(needsConstructorProxies(cls.linkedClass) && !memberExists(cls, nme.apply)) then
+        addConstructorApplies(cls.info.decls.openForMutations, cls.linkedClass.asClass, cls)
+
+      if(defn.isJavaRecordClass(cls.linkedClass) && !memberExists(cls, nme.unapply)) then
+        addIdentUnApply(cls.info.decls.openForMutations, cls.linkedClass.asClass, cls)
+
   end addConstructorProxies
 
   /** Turn `modul` into a constructor companion for class `cls` */

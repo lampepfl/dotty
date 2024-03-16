@@ -972,6 +972,9 @@ class Definitions {
     @tu lazy val RuntimeTuples_isInstanceOfEmptyTuple: Symbol = RuntimeTuplesModule.requiredMethod("isInstanceOfEmptyTuple")
     @tu lazy val RuntimeTuples_isInstanceOfNonEmptyTuple: Symbol = RuntimeTuplesModule.requiredMethod("isInstanceOfNonEmptyTuple")
 
+  @tu lazy val JavaRecordReflectMirrorTypeRef: TypeRef = requiredClassRef("scala.runtime.JavaRecordMirror")
+  @tu lazy val JavaRecordReflectMirrorModule: Symbol = requiredModule("scala.runtime.JavaRecordMirror")
+
   @tu lazy val TupledFunctionTypeRef: TypeRef = requiredClassRef("scala.util.TupledFunction")
   def TupledFunctionClass(using Context): ClassSymbol = TupledFunctionTypeRef.symbol.asClass
   def RuntimeTupleFunctionsModule(using Context): Symbol = requiredModule("scala.runtime.TupledFunctions")
@@ -1635,6 +1638,7 @@ class Definitions {
   def isAbstractFunctionClass(cls: Symbol): Boolean = isVarArityClass(cls, str.AbstractFunction)
   def isTupleClass(cls: Symbol): Boolean = isVarArityClass(cls, str.Tuple)
   def isProductClass(cls: Symbol): Boolean = isVarArityClass(cls, str.Product)
+  def isJavaRecordClass(cls: Symbol): Boolean = cls.is(JavaDefined) && cls.derivesFrom(JavaRecordClass)
 
   def isBoxedUnitClass(cls: Symbol): Boolean =
     cls.isClass && (cls.owner eq ScalaRuntimePackageClass) && cls.name == tpnme.BoxedUnit

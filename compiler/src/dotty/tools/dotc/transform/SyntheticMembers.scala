@@ -521,6 +521,7 @@ class SyntheticMembers(thisPhase: DenotTransformer) {
     def computeFromCaseClass: (Type, List[Type]) =
       val (baseRef, baseInfo) =
         val rawRef = caseClass.typeRef
+        // TODO: HERE!!
         val rawInfo = caseClass.primaryConstructor.info
         optInfo match
           case Some(info) =>
