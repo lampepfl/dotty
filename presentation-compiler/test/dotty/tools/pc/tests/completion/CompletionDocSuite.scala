@@ -156,8 +156,8 @@ class CompletionDocSuite extends BaseCompletionSuite:
         |Found documentation for scala/collection/Iterator.
         |Iterator scala.collection
         |""".stripMargin,
-
-      includeDocs = true
+      includeDocs = true,
+      topLines = Some(1)
     )
 
   @Test def `scala5` =

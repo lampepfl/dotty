@@ -698,28 +698,26 @@ class CompletionKeywordSuite extends BaseCompletionSuite:
 
   @Test def `derives-with-extends` =
     check(
-      """
-        |package foo
-        |
-        |trait Bar {}
-        |trait Baz {}
-        |
-        |class Foo(x: Int) extends Bar with Baz der@@
-                """.stripMargin,
+      """|package foo
+         |
+         |trait Bar {}
+         |trait Baz {}
+         |
+         |class Foo(x: Int) extends Bar with Baz der@@
+         |""".stripMargin,
       """|derives
          |""".stripMargin
     )
 
   @Test def `derives-with-constructor-extends` =
     check(
-      """
-        |package foo
-        |
-        |trait Bar {}
-        |class Baz(b: Int) {}
-        |
-        |class Foo(x: Int) extends Bar with Baz(1) der@@
-                  """.stripMargin,
+      """|package foo
+         |
+         |trait Bar {}
+         |class Baz(b: Int) {}
+         |
+         |class Foo(x: Int) extends Bar with Baz(1) der@@
+         |""".stripMargin,
       """|derives
          |""".stripMargin
     )

@@ -123,7 +123,7 @@ abstract class BaseCompletionSuite extends BasePCSuite:
 
     if (assertSingleItem && items.length != 1) then
       fail(
-        s"expected single completion item, obtained ${items.length} items.\n${items}"
+        s"expected single completion item, obtained ${items.length} items.\n${items.map(_.getLabel.nn + "\n")}"
       )
 
     if (items.size <= itemIndex) then

@@ -16,12 +16,12 @@ class CompletionSnippetNegSuite extends BaseCompletionSuite:
 
   @Test def `member` =
     checkSnippet(
-      """
-        |object Main {
-        |  List.appl@@
-        |}
-        |""".stripMargin,
-      "apply"
+      """|object Main {
+         |  List.appl@@
+         |}
+         |""".stripMargin,
+      """|apply
+         |unapplySeq""".stripMargin
     )
 
   @Test def `scope` =
