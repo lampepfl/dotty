@@ -6,20 +6,14 @@ import dotty.tools.dotc.core.Flags
 import dotty.tools.dotc.core.Symbols.*
 import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
-import dotty.tools.dotc.parsing.Tokens.closingRegionTokens
-import dotty.tools.dotc.reporting.ErrorMessageID
-import dotty.tools.dotc.reporting.ExpectedTokenButFound
 import dotty.tools.dotc.util.Signatures
 import dotty.tools.dotc.util.SourceFile
-import dotty.tools.dotc.util.Spans
-import dotty.tools.dotc.util.Spans.Span
 import dotty.tools.pc.printer.ShortenedTypePrinter
 import dotty.tools.pc.printer.ShortenedTypePrinter.IncludeDefaultParam
 import dotty.tools.pc.utils.MtagsEnrichments.*
 import org.eclipse.lsp4j as l
 
 import scala.jdk.CollectionConverters.*
-import scala.jdk.OptionConverters.*
 import scala.meta.internal.metals.ReportContext
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.SymbolDocumentation

@@ -196,8 +196,8 @@ class CompletionProvider(
       item
     end mkItem
 
-    val completionTextSuffix = completion.snippetSuffix.toSuffix
-    val completionTextPrefix = completion.snippetSuffix.toPrefix
+    val completionTextSuffix = completion.snippetAffix.toSuffix
+    val completionTextPrefix = completion.snippetAffix.toPrefix
 
     lazy val isInStringInterpolation =
       path match
@@ -280,7 +280,7 @@ class CompletionProvider(
       case _ =>
         val nameText = completion.insertText.getOrElse(ident.backticked(backtickSoftKeyword))
         val nameWithAffixes = completionTextPrefix + nameText + completionTextSuffix
-        val insertText = if completion.snippetSuffix.nonEmpty && isInStringInterpolation then
+        val insertText = if completion.snippetAffix.nonEmpty && isInStringInterpolation then
           "{" + nameWithAffixes + "}"
         else nameWithAffixes
         mkItem(insertText, range = completion.range)

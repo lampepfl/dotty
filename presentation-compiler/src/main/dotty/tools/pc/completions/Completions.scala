@@ -13,7 +13,6 @@ import scala.meta.pc.*
 
 import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.ast.untpd
-import dotty.tools.dotc.ast.NavigateAST
 import dotty.tools.dotc.core.Comments.Comment
 import dotty.tools.dotc.core.Constants.Constant
 import dotty.tools.dotc.core.Contexts.*
@@ -34,18 +33,6 @@ import dotty.tools.pc.completions.OverrideCompletions.OverrideExtractor
 import dotty.tools.pc.buildinfo.BuildInfo
 import dotty.tools.pc.utils.MtagsEnrichments.*
 import dotty.tools.dotc.core.Denotations.SingleDenotation
-import dotty.tools.dotc.interactive.Interactive
-
-import java.nio.file.Path
-import java.nio.file.Paths
-import scala.collection.mutable
-import scala.meta.internal.metals.ReportContext
-import scala.meta.internal.mtags.CoursierComplete
-import scala.meta.internal.pc.CompletionFuzzy
-import scala.meta.internal.pc.IdentifierComparator
-import scala.meta.internal.pc.MemberOrdering
-import scala.meta.pc.*
-import scala.collection.concurrent.TrieMap
 
 class Completions(
     text: String,
@@ -138,7 +125,6 @@ class Completions(
           case Select(qual, _) :: _ if qual.typeOpt.isErroneous =>
             (allAdvanced, SymbolSearch.Result.COMPLETE)
           case Select(qual, _) :: _ =>
-            val compilerCompletions = Completion.rawCompletions(completionPos.originalCursorPosition, completionMode, completionPos.query, path, adjustedPath)
             val (compiler, result) = enrichedCompilerCompletions(qual.typeOpt.widenDealias)
             (allAdvanced ++ compiler, result)
           case _ =>
@@ -531,7 +517,7 @@ class Completions(
                 CompletionValue.Workspace(
                   label = undoBacktick(sym.decodedName),
                   denotation = sym,
-                  snippetSuffix = CompletionAffix.empty,
+                  snippetAffix = CompletionAffix.empty,
                   importSymbol = sym
                 )
               )
@@ -618,7 +604,7 @@ class Completions(
     symbolicCompletionsMap.foreach: (name, denots) =>
       lazy val existsTypeWithSuffix: Boolean = symbolicCompletionsMap
         .get(name.toTypeName)
-        .forall(_.forall(sym => sym.snippetSuffix.suffixes.nonEmpty))
+        .forall(_.forall(sym => sym.snippetAffix.suffixes.nonEmpty))
 
       if completionMode.is(Mode.Term) && !completionMode.is(Mode.ImportOrExport) then
         typeResultMappings += name -> denots
@@ -648,7 +634,7 @@ class Completions(
               val sym = symOnly.symbol
               val name = SemanticdbSymbols.symbolName(sym)
               val suffix =
-                if symOnly.snippetSuffix.addLabelSnippet then "[]" else ""
+                if symOnly.snippetAffix.addLabelSnippet then "[]" else ""
               val id = name + suffix
               val include = includeSymbol(sym)
               (id, include)

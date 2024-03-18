@@ -15,7 +15,6 @@ import dotty.tools.toOption
 import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.core.Constants.Constant
 import dotty.tools.dotc.core.Contexts.Context
-import dotty.tools.dotc.core.Definitions
 import dotty.tools.dotc.core.Denotations.Denotation
 import dotty.tools.dotc.core.Flags
 import dotty.tools.dotc.core.Flags.*
@@ -24,7 +23,6 @@ import dotty.tools.dotc.core.Symbols.NoSymbol
 import dotty.tools.dotc.core.Symbols.Symbol
 import dotty.tools.dotc.core.Types.AndType
 import dotty.tools.dotc.core.Types.ClassInfo
-import dotty.tools.dotc.core.Types.NoType
 import dotty.tools.dotc.core.Types.OrType
 import dotty.tools.dotc.core.Types.Type
 import dotty.tools.dotc.core.Types.TypeRef
