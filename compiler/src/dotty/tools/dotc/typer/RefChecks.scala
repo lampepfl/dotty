@@ -1245,10 +1245,34 @@ class RefChecks extends MiniPhase { thisPhase =>
     tree
   }
 
+  // TODO: Refactor with the one in checkUnaryMethods
+  def checkExtensionParameters(sym: Symbol)(using Context): Unit =
+    if sym.is(Extension) || sym.name.is(ExtMethName) then
+      println(s"checkExtensionParameters: ${tpe.show}")
+      sym.info match
+        case tpe: MethodType =>
+          assert(tpe.paramNames.length == 1)
+          if tpe.isContextualMethod then checkExtensionParameters(tpe.resType)
+          else
+            val param: Type = tpe.paramInfos.head
+            val paramSymbol: Symbol = tpe.paramNames.head
+            // TODO: Add test of default argument here
+            param match
+              case ExprType(_) =>
+                report.error(em"$param is bad", paramSymbol.srcPos) // TODO: Find correct way to get position
+            
+            println(param.show)
+            println(param)
+            assert(true)
+            println("Done")
+        case tpe: PolyType =>
+          checkExtensionParameters(tpe.resType)
+
   override def transformDefDef(tree: DefDef)(using Context): DefDef = {
     checkNoPrivateOverrides(tree)
     checkImplicitNotFoundAnnotation.defDef(tree.symbol.denot)
     checkUnaryMethods(tree.symbol)
+    checkExtensionParameters(tree.symbol)
     tree
   }
 
