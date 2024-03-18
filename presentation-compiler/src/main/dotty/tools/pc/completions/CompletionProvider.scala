@@ -278,12 +278,13 @@ class CompletionProvider(
       case v: CompletionValue.Interpolator if v.isWorkspace || v.isExtension =>
         mkItemWithImports(v)
       case _ =>
-        val insert =
-          completion.insertText.getOrElse(ident.backticked(backtickSoftKeyword))
-        mkItem(
-          completionTextPrefix + insert + completionTextSuffix,
-          range = completion.range
-        )
+        val nameText = completion.insertText.getOrElse(ident.backticked(backtickSoftKeyword))
+        val nameWithAffixes = completionTextPrefix + nameText + completionTextSuffix
+        val insertText = if completion.snippetSuffix.nonEmpty && isInStringInterpolation then
+          "{" + nameWithAffixes + "}"
+        else nameWithAffixes
+        mkItem(insertText, range = completion.range)
+
     end match
   end completionItems
 end CompletionProvider

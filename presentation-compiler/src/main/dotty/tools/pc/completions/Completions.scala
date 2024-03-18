@@ -80,7 +80,6 @@ class Completions(
         false
       case (_: (Import | Export)) :: _ => false
       case _ :: (_: (Import | Export)) :: _ => false
-      case (_: Ident) :: (_: SeqLiteral) :: _ => false
       case _ => true
 
   private lazy val isNew: Boolean =
@@ -99,7 +98,6 @@ class Completions(
     val generalExclude =
       isUninterestingSymbol(sym) ||
         !isNotLocalForwardReference(sym) ||
-        sym.isPackageObject ||
         hasSyntheticCursorSuffix
 
     def isWildcardParam(sym: Symbol) =
@@ -170,13 +168,17 @@ class Completions(
   inline private def undoBacktick(label: String): String =
     label.stripPrefix("`").stripSuffix("`")
 
+  // TODO This has to be refactored to properly split extension methods
+  // This method has to be fixed even further. The similar problem will be present in shortened type printer.
   private def getParams(symbol: Symbol) =
     lazy val extensionParam = symbol.extensionParam
     if symbol.is(Flags.Extension) then
       symbol.paramSymss.filterNot(
         _.contains(extensionParam)
       )
-    else symbol.paramSymss
+    else if symbol.isConstructor then
+      symbol.owner.paramSymss
+    else symbol.paramSymss.filter(!_.exists(_.isTypeParam))
 
   private def isAbstractType(symbol: Symbol) =
     (symbol.info.typeSymbol.is(Trait) // trait A{ def doSomething: Int}
@@ -241,15 +243,19 @@ class Completions(
       toCompletionValue: (String, SingleDenotation, CompletionAffix) => CompletionValue
   ): List[CompletionValue] =
     val sym = denot.symbol
+    val hasNonSyntheticConstructor = sym.name.isTypeName && sym.isClass
+      && !sym.is(ModuleClass) && !sym.is(Trait) && !sym.is(Abstract) && !sym.is(Flags.JavaDefined)
+
     val methodDenots: List[SingleDenotation] =
-      if shouldAddSnippet && (completionMode.is(Mode.Term) || (isNew && !sym.isClass && !sym.isField)) &&
-        (sym.is(Flags.Module) || sym.isField || sym.isClass && !sym.is(Flags.Trait)) && !sym.is(Flags.JavaDefined)
-      then
+      if shouldAddSnippet && isNew && hasNonSyntheticConstructor then
+        sym.info.member(nme.CONSTRUCTOR).allSymbols.map(_.asSingleDenotation)
+          .filter(_.symbol.isAccessibleFrom(denot.info))
+      else if shouldAddSnippet && completionMode.is(Mode.Term) && sym.name.isTermName && !sym.is(Flags.Method) && !sym.is(Flags.JavaDefined) then
         val constructors = if sym.isAllOf(ConstructorProxyModule) then
           sym.companionClass.info.member(nme.CONSTRUCTOR).allSymbols
         else
           val companionApplies  = denot.info.member(nme.apply).allSymbols
-          val classConstructors = if sym.companionClass.exists && !sym.companionClass.is(Abstract) then
+          val classConstructors = if sym.companionClass.exists then
             sym.companionClass.info.member(nme.CONSTRUCTOR).allSymbols
           else Nil
 
@@ -258,27 +264,23 @@ class Completions(
           else
             companionApplies ++ classConstructors
 
-        val applyDenots = constructors.map(_.asSeenFrom(denot.info).asSingleDenotation)
+        val extraDenots = constructors.map(_.asSeenFrom(denot.info).asSingleDenotation)
           .filter(_.symbol.isAccessibleFrom(denot.info))
 
-        if sym.isAllOf(ConstructorProxyModule) || sym.is(Trait) then applyDenots
-        else denot :: applyDenots
-      else
-        denot :: Nil
+        if sym.isAllOf(ConstructorProxyModule) || sym.is(Trait) then extraDenots
+        else denot :: extraDenots
 
+      else denot :: Nil
 
-    val disambiguiateInits = methodDenots.exists(_.symbol.isConstructor) && methodDenots.exists(_.symbol.name == nme.apply)
+    val requiresInitDisambiguiation = methodDenots.exists(_.symbol.isConstructor) && methodDenots.exists(_.symbol.name == nme.apply)
 
     methodDenots.map { methodDenot =>
-      val prefix = if methodDenot.symbol.isConstructor && disambiguiateInits then PrefixKind.New else PrefixKind.NoPrefix
       val suffix = findSuffix(methodDenot.symbol)
-      val affix = suffix.withNewPrefix(prefix)
+      val affix = if methodDenot.symbol.isConstructor && requiresInitDisambiguiation then
+        suffix.withNewPrefix(PrefixKind.New)
+      else suffix
       val name = undoBacktick(label)
-      toCompletionValue(
-        name,
-        methodDenot,
-        affix
-      )
+      toCompletionValue(name, methodDenot, affix)
     }
   end completionsWithSuffix
 
@@ -519,11 +521,20 @@ class Completions(
     val query = completionPos.query
     if completionMode.is(Mode.Scope) && query.nonEmpty then
       val visitor = new CompilerSearchVisitor(sym =>
-        if !(sym.is(Flags.ExtensionMethod) ||
-          (sym.maybeOwner.is(Flags.Implicit) && sym.maybeOwner.isClass))
+        if Completion.isValidCompletionSymbol(sym, completionMode) &&
+          !(sym.is(Flags.ExtensionMethod) || (sym.maybeOwner.is(Flags.Implicit) && sym.maybeOwner.isClass))
         then
           indexedContext.lookupSym(sym) match
             case IndexedContext.Result.InScope => false
+            case _ if completionMode.is(Mode.ImportOrExport) =>
+              visit(
+                CompletionValue.Workspace(
+                  label = undoBacktick(sym.decodedName),
+                  denotation = sym,
+                  snippetSuffix = CompletionAffix.empty,
+                  importSymbol = sym
+                )
+              )
             case _ =>
               completionsWithSuffix(
                 sym,
@@ -904,6 +915,16 @@ class Completions(
         prioritizeCaseKeyword || prioritizeNamed
       end compareCompletionValue
 
+      def methodScore(v: CompletionValue.Symbolic)(using Context): Int =
+        val sym = v.symbol
+        val workspacePenalty = if v.isInstanceOf[CompletionValue.Workspace] then 3 else 0
+        val methodPenalty =
+          if isNew && sym.isConstructor then -1
+          else if !completionMode.is(Mode.Member) && sym.name == nme.apply then 1
+          else if sym.isConstructor then 2
+          else 0
+        workspacePenalty + methodPenalty
+
       override def compare(o1: CompletionValue, o2: CompletionValue): Int =
         (o1, o2) match
           case (o1: CompletionValue.NamedArg, o2: CompletionValue.NamedArg) =>
@@ -923,32 +944,39 @@ class Completions(
               val byLocalSymbol = compareLocalSymbols(s1, s2)
               if byLocalSymbol != 0 then byLocalSymbol
               else
-                val byRelevance = compareByRelevance(o1, o2)
-                if byRelevance != 0 then byRelevance
+                val byFuzzy = Integer.compare(
+                  fuzzyScore(sym1),
+                  fuzzyScore(sym2)
+                )
+                if byFuzzy != 0 then byFuzzy
                 else
-                  val byFuzzy = Integer.compare(
-                    fuzzyScore(sym1),
-                    fuzzyScore(sym2)
+                  val byMethodScore = Integer.compare(
+                    methodScore(sym1),
+                    methodScore(sym2)
                   )
-                  if byFuzzy != 0 then byFuzzy
+                  if byMethodScore != 0 then byMethodScore
                   else
-                    val byIdentifier = IdentifierComparator.compare(
-                      s1.name.show,
-                      s2.name.show
-                    )
-                    if byIdentifier != 0 then byIdentifier
+                    val byRelevance = compareByRelevance(o1, o2)
+                    if byRelevance != 0 then byRelevance
                     else
-                      val byOwner =
-                        s1.owner.fullName.toString
-                          .compareTo(s2.owner.fullName.toString)
-                      if byOwner != 0 then byOwner
+                      val byIdentifier = IdentifierComparator.compare(
+                        s1.name.show,
+                        s2.name.show
+                      )
+                      if byIdentifier != 0 then byIdentifier
                       else
-                        val byParamCount = Integer.compare(
-                          s1.paramSymss.flatten.size,
-                          s2.paramSymss.flatten.size
-                        )
-                        if byParamCount != 0 then byParamCount
-                        else s1.detailString.compareTo(s2.detailString)
+                        val byOwner =
+                          s1.owner.fullName.toString
+                            .compareTo(s2.owner.fullName.toString)
+                        if byOwner != 0 then byOwner
+                        else
+                          val byParamCount = Integer.compare(
+                            s1.paramSymss.flatten.size,
+                            s2.paramSymss.flatten.size
+                          )
+                          if byParamCount != 0 then byParamCount
+                          else s1.detailString.compareTo(s2.detailString)
+                    end if
                   end if
                 end if
               end if

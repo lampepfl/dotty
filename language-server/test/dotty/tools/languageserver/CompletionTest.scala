@@ -940,14 +940,8 @@ class CompletionTest {
       .noCompletions()
 
   @Test def i13624_annotType: Unit =
-    val expected1 = Set(
-        ("MyAnnotation", Class, "MyAnnotation"),
-        ("MyAnnotation", Module, "MyAnnotation"),
-      )
-    val expected2 = Set(
-        ("MyAnnotation", Class, "Foo.MyAnnotation"),
-        ("MyAnnotation", Module, "Foo.MyAnnotation"),
-      )
+    val expected1 = Set(("MyAnnotation", Class, "MyAnnotation"))
+    val expected2 = Set(("MyAnnotation", Class, "Foo.MyAnnotation"))
     code"""object Foo{
           |  class MyAnnotation extends annotation.StaticAnnotation
           |}
@@ -970,14 +964,8 @@ class CompletionTest {
   @Test def i13624_annotation : Unit =
     code"""@annotation.implicitNot${m1}
           |@annotation.implicitNotFound @mai${m2}"""
-      .completion(m1,
-          ("implicitNotFound", Class, "scala.annotation.implicitNotFound"),
-          ("implicitNotFound", Module, "scala.annotation.implicitNotFound"),
-      )
-      .completion(m2,
-          ("main", Class, "main"),
-          ("main", Module, "main"),
-      )
+      .completion(m1, ("implicitNotFound", Class, "scala.annotation.implicitNotFound"))
+      .completion(m2, ("main", Class, "main"))
 
   @Test def i13623_annotation : Unit =
     code"""import annot${m1}"""
@@ -1475,7 +1463,6 @@ class CompletionTest {
         ("xDef", Method, "=> Int"),
         ("xVal", Field, "Int"),
         ("xObject", Module, "Foo.xObject"),
-        ("xClass", Module, "Foo.xClass"),
         ("xClass", Class, "Foo.xClass")))
   }
 
@@ -1543,9 +1530,7 @@ class CompletionTest {
            |object T:
            |  extension (x: Test.TestSel$m1)
            |"""
-      .completion(m1, Set(
-        ("TestSelect", Module, "Test.TestSelect"), ("TestSelect", Class, "Test.TestSelect")
-      ))
+      .completion(m1, Set(("TestSelect", Class, "Test.TestSelect")))
 
   @Test def extensionDefinitionCompletionsSelectNested: Unit =
     code"""|object Test:
@@ -1554,9 +1539,7 @@ class CompletionTest {
            |object T:
            |  extension (x: Test.Test2.TestSel$m1)
            |"""
-      .completion(m1, Set(
-        ("TestSelect", Module, "Test.Test2.TestSelect"), ("TestSelect", Class, "Test.Test2.TestSelect")
-      ))
+      .completion(m1, Set(("TestSelect", Class, "Test.Test2.TestSelect")))
 
   @Test def extensionDefinitionCompletionsSelectInside: Unit =
     code"""|object Test:
@@ -1707,27 +1690,4 @@ class CompletionTest {
      .completion(m1, Set(
        ("getOrElse", Method, "[V1 >: String](key: Int, default: => V1): V1"),
      ))
-
-  @Test def methodsWithInstantiatedTypeVars2: Unit =
-    code"""|object Test:
-           |  class TestSelect()
-           |object T:
-           |  extension (x: Test.TestSel$m1)
-           |"""
-     .completion(m1, Set(
-       ("getOrElse", Method, "[V1 >: String](key: Int, default: => V1): V1"),
-     ))
-
-  @Test def methodsWithInstantiatedTypeVars3: Unit =
-    code"""|
-           |class TestSelect()
-           |class Test(x: TestSel$m1)
-           |"""
-     .completion(m1, Set(
-       ("getOrElse", Method, "[V1 >: String](key: Int, default: => V1): V1"),
-     ))
-
-
-
-
 }

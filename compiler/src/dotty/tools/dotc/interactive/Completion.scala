@@ -125,7 +125,7 @@ object Completion:
   def completionPrefix(path: List[untpd.Tree], pos: SourcePosition)(using Context): String =
     def fallback: Int =
       var i = pos.point - 1
-      while i >= 0 && Chars.isIdentifierPart(pos.source.content()(i)) do i -= 1
+      while i >= 0 && Character.isUnicodeIdentifierPart(pos.source.content()(i)) do i -= 1
       i + 1
 
     path match
@@ -272,6 +272,32 @@ object Completion:
   def description(denot: SingleDenotation)(using Context): String =
     if denot.isType then denot.symbol.showFullName
     else denot.info.widenTermRefExpr.show
+
+  /** Include in completion sets only symbols that
+   *   1. is not absent (info is not NoType)
+   *   2. are not a primary constructor,
+   *   3. have an existing source symbol,
+   *   4. are the module class in case of packages,
+   *   5. are mutable accessors, to exclude setters for `var`,
+   *   6. symbol is not a package object
+   *   7. symbol is not an artifact of the compiler
+   *   8. symbol is not a constructor proxy module when in type completion mode
+   *   9. have same term/type kind as name prefix given so far
+   */
+  def isValidCompletionSymbol(sym: Symbol, completionMode: Mode)(using Context): Boolean =
+    sym.exists &&
+    !sym.isAbsent() &&
+    !sym.isPrimaryConstructor &&
+    sym.sourceSymbol.exists &&
+    (!sym.is(Package) || sym.is(ModuleClass)) &&
+    !sym.isAllOf(Mutable | Accessor) &&
+    !sym.isPackageObject &&
+    !sym.is(Artifact) &&
+    !(completionMode.is(Mode.Type) && sym.isAllOf(ConstructorProxyModule)) &&
+    (
+         (completionMode.is(Mode.Term) && (sym.isTerm || sym.is(ModuleClass))
+      || (completionMode.is(Mode.Type) && (sym.isType || sym.isStableMember)))
+    )
 
   given ScopeOrdering(using Context): Ordering[Seq[SingleDenotation]] with
     val order =
@@ -526,34 +552,13 @@ object Completion:
       extMethodsWithAppliedReceiver.groupByName
 
     /** Include in completion sets only symbols that
-     *   1. start with given name prefix, and
-     *   2. is not absent (info is not NoType)
-     *   3. are not a primary constructor,
-     *   4. have an existing source symbol,
-     *   5. are the module class in case of packages,
-     *   6. are mutable accessors, to exclude setters for `var`,
-     *   7. symbol is not a package object
-     *   8. symbol is not an artifact of the compiler
-     *   9. have same term/type kind as name prefix given so far
+     *   1. match the filter method,
+     *   2. satisfy [[Completion.isValidCompletionSymbol]]
      */
     private def include(denot: SingleDenotation, nameInScope: Name)(using Context): Boolean =
-      val sym = denot.symbol
-
-
       nameInScope.startsWith(prefix) &&
-      sym.exists &&
       completionsFilter(NoType, nameInScope) &&
-      !sym.isAbsent() &&
-      !sym.isPrimaryConstructor &&
-      sym.sourceSymbol.exists &&
-      (!sym.is(Package) || sym.is(ModuleClass)) &&
-      !sym.isAllOf(Mutable | Accessor) &&
-      !sym.isPackageObject &&
-      !sym.is(Artifact) &&
-      (
-           (mode.is(Mode.Term) && (sym.isTerm || sym.is(ModuleClass))
-        || (mode.is(Mode.Type) && (sym.isType || sym.isStableMember)))
-      )
+      isValidCompletionSymbol(denot.symbol, mode)
 
     private def extractRefinements(site: Type)(using Context): Seq[SingleDenotation] =
       site match

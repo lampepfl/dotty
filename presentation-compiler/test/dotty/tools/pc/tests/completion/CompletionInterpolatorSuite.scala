@@ -542,7 +542,7 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite:
          |}
          |""".stripMargin,
       """s"Hello $hello@@"""".stripMargin,
-      """s"Hello $helloMethod"""".stripMargin,
+      """s"Hello ${helloMethod($0)}"""".stripMargin,
       filter = _.contains("a: Int")
     )
 
@@ -626,10 +626,10 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite:
          |  s"this is an interesting ${java.nio.file.Paths}"
          |}
          |""".stripMargin,
+      itemIndex = 0,
       assertSingleItem = false,
-      // Scala 3 has an additional Paths() completion
-      itemIndex = 2
     )
+
 
   @Test def `auto-imports-prefix-with-interpolator` =
     checkEdit(
@@ -644,7 +644,6 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite:
          |  s"this is an interesting ${java.nio.file.Paths}"
          |}
          |""".stripMargin,
-      // Scala 3 has an additional Paths object completion
       itemIndex = 1,
       assertSingleItem = false
     )
@@ -745,7 +744,8 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite:
          |object Main {
          |  val a = s"${ListBuffer($0)}""
          |}""".stripMargin,
-      filter = _.contains("[A]")
+      assertSingleItem = false,
+      itemIndex = 1
     )
 
   @Test def `dont-show-when-writing-before-dollar` =

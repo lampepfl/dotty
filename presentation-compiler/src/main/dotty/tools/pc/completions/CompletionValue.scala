@@ -96,7 +96,7 @@ object CompletionValue:
     override def labelWithDescription(
         printer: ShortenedTypePrinter
     )(using Context): String =
-      if symbol.isConstructor then snippetSuffix.toPrefix + label
+      if symbol.isConstructor then s"${snippetSuffix.toPrefix}${label}${description(printer)}"
       else if symbol.is(Method) then s"${label}${description(printer)}"
       else if symbol.is(Mutable) then s"$label: ${description(printer)}"
       else if symbol.is(Package) || symbol.is(Module) || symbol.isClass then
@@ -143,7 +143,9 @@ object CompletionValue:
     override def completionItemDataKind: Integer = CompletionSource.WorkspaceKind.ordinal
 
     override def labelWithDescription(printer: ShortenedTypePrinter)(using Context): String =
-      if symbol.is(Method) && symbol.name != nme.apply && !symbol.isConstructor then
+      if symbol.isConstructor || symbol.name == nme.apply then
+        s"${snippetSuffix.toPrefix}${label}${description(printer)} - ${printer.fullNameString(importSymbol.effectiveOwner)}"
+      else if symbol.is(Method) then
         s"${labelWithSuffix(printer)} - ${printer.fullNameString(symbol.effectiveOwner)}"
       else if symbol.is(Package) || symbol.is(Module) || symbol.isClass then
         s"${labelWithSuffix(printer)} -${description(printer)}"
