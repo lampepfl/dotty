@@ -763,6 +763,7 @@ object TypeOps:
     // 1. Replace type parameters in T with tvars
     // 2. Replace `A.this.C` with `A#C` (see tests/patmat/i12681.scala)
     // 3. Replace non-reducing MatchType with its bound
+    // 4. Drop type refinements unless tp1 if final or a case class (i18736)
     //
     val approximateParent = new TypeMap {
       val boundTypeParams = util.HashMap[TypeRef, TypeVar]()
@@ -788,6 +789,9 @@ object TypeOps:
             assert(tv <:< apply(hi))
             apply(lo) <:< tv //  no assert, since bounds might conflict
             tv
+
+        case RefinedType(parent, _, _) if !tp1.symbol.isOneOf(FinalOrCase) =>
+          apply(parent)
 
         case tp @ AppliedType(tycon: TypeRef, _) if !tycon.dealias.typeSymbol.isClass && !tp.isMatchAlias =>
 

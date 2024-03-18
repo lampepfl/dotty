@@ -233,7 +233,7 @@ trait PatternTypeConstrainer { self: TypeComparer =>
   def constrainSimplePatternType(patternTp: Type, scrutineeTp: Type, forceInvariantRefinement: Boolean): Boolean = {
     def refinementIsInvariant(tp: Type): Boolean = tp match {
       case tp: SingletonType => true
-      case tp: ClassInfo => tp.cls.is(Final) || tp.cls.is(Case)
+      case tp: ClassInfo => tp.cls.isOneOf(FinalOrCase)
       case tp: TypeProxy => refinementIsInvariant(tp.superType)
       case _ => false
     }
