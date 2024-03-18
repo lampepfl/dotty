@@ -6,11 +6,11 @@ import scala.collection.mutable
 
 @experimental
 class addCountToString(msg: String) extends MacroAnnotation:
-  def transform(using Quotes)(tree: quotes.reflect.Definition): List[quotes.reflect.Definition] =
+  def transform(using Quotes)(definition: quotes.reflect.Definition, companion: Option[quotes.reflect.Definition]): List[quotes.reflect.Definition] =
     import quotes.reflect._
-    tree match
+    definition match
       case ClassDef(name, ctr, parents, self, body) =>
-        val cls = tree.symbol
+        val cls = definition.symbol
         val countVarSym = Symbol.newVal(cls, Symbol.freshName("count"), TypeRepr.of[Int], Flags.Mutable | Flags.Private, Symbol.noSymbol)
 
         val toStringMethType = Symbol.requiredMethod("java.lang.Object.toString").info
@@ -26,9 +26,9 @@ class addCountToString(msg: String) extends MacroAnnotation:
           )
         ))
 
-        val newClassDef = ClassDef.copy(tree)(name, ctr, parents, self, countVarDef :: toStringDef :: body)
+        val newClassDef = ClassDef.copy(definition)(name, ctr, parents, self, countVarDef :: toStringDef :: body)
         List(newClassDef)
 
       case _ =>
         report.error("Annotation only supports `class`")
-        List(tree)
+        List(definition)

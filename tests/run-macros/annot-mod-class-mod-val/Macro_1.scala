@@ -6,11 +6,11 @@ import scala.collection.mutable
 
 @experimental
 class setValue(field: String, value: String) extends MacroAnnotation:
-  def transform(using Quotes)(tree: quotes.reflect.Definition): List[quotes.reflect.Definition] =
+  def transform(using Quotes)(definition: quotes.reflect.Definition, companion: Option[quotes.reflect.Definition]): List[quotes.reflect.Definition] =
     import quotes.reflect._
-    tree match
+    definition match
       case ClassDef(name, ctr, parents, self, body) =>
-        val cls = tree.symbol
+        val cls = definition.symbol
         val valSym = cls.fieldMember(field)
 
         val newBody = body.span(_.symbol != valSym) match
@@ -21,7 +21,7 @@ class setValue(field: String, value: String) extends MacroAnnotation:
             report.error(s"`val $field` was not defined")
             body
 
-        List(ClassDef.copy(tree)(name, ctr, parents, self, newBody))
+        List(ClassDef.copy(definition)(name, ctr, parents, self, newBody))
       case _ =>
         report.error("Annotation only supports `class`")
-        List(tree)
+        List(definition)

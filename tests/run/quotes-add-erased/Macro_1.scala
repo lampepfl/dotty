@@ -7,7 +7,7 @@ import scala.quoted._
 class NewAnnotation extends scala.annotation.Annotation
 
 class erasedParamsMethod extends MacroAnnotation:
-  def transform(using Quotes)(tree: quotes.reflect.Definition): List[quotes.reflect.Definition] =
+  def transform(using Quotes)(tree: quotes.reflect.Definition, companion: Option[quotes.reflect.Definition]): List[quotes.reflect.Definition] =
     import quotes.reflect._
     tree match
       case ClassDef(name, ctr, parents, self, body) =>

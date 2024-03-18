@@ -6,9 +6,9 @@ import scala.collection.mutable.Map
 
 @experimental
 class memoize extends MacroAnnotation {
-  def transform(using Quotes)(tree: quotes.reflect.Definition): List[quotes.reflect.Definition] =
+  def transform(using Quotes)(definition: quotes.reflect.Definition, companion: Option[quotes.reflect.Definition]): List[quotes.reflect.Definition] =
     import quotes.reflect._
-    tree match
+    definition match
       case DefDef(name, params, tpt, Some(fibTree)) =>
         val cacheName = Symbol.freshName(name + "Cache")
         val cacheSymbol = Symbol.newVal(Symbol.spliceOwner, cacheName, TypeRepr.of[Map[Int, Int]], Flags.EmptyFlags, Symbol.noSymbol)
@@ -17,7 +17,7 @@ class memoize extends MacroAnnotation {
           '{Map.empty[Int, Int]}.asTerm
         val cacheVal = ValDef(cacheSymbol, Some(cacheRhs))
         val rhs =
-          given Quotes = tree.symbol.asQuotes
+          given Quotes = definition.symbol.asQuotes
           val fibCache = Ref(cacheSymbol).asExprOf[Map[Int, Int]]
           val n = Ref(params.head.params.head.symbol).asExprOf[Int]
           '{
@@ -28,6 +28,6 @@ class memoize extends MacroAnnotation {
               $fibCache($n) = res
               res
           }.asTerm
-        val newFib = DefDef.copy(tree)(name, params, tpt, Some(rhs))
+        val newFib = DefDef.copy(definition)(name, params, tpt, Some(rhs))
         List(cacheVal, newFib)
 }

@@ -6,10 +6,10 @@ import scala.collection.mutable.Map
 
 @experimental
 class returnClassName extends MacroAnnotation {
-  def transform(using Quotes)(tree: quotes.reflect.Definition): List[quotes.reflect.Definition] =
+  def transform(using Quotes)(definition: quotes.reflect.Definition, companion: Option[quotes.reflect.Definition]): List[quotes.reflect.Definition] =
     import quotes.reflect._
-    tree match
+    definition match
       case DefDef(name, params, tpt, _) =>
         val rhs = Literal(StringConstant(Symbol.spliceOwner.name.stripSuffix("$")))
-        List(DefDef.copy(tree)(name, params, tpt, Some(rhs)))
+        List(DefDef.copy(definition)(name, params, tpt, Some(rhs)))
 }

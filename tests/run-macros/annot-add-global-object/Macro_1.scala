@@ -6,9 +6,9 @@ import scala.collection.mutable
 
 @experimental
 class addClass extends MacroAnnotation:
-  def transform(using Quotes)(tree: quotes.reflect.Definition): List[quotes.reflect.Definition] =
+  def transform(using Quotes)(definition: quotes.reflect.Definition, companion: Option[quotes.reflect.Definition]): List[quotes.reflect.Definition] =
     import quotes.reflect._
-    tree match
+    definition match
       case DefDef(name, List(TermParamClause(Nil)), tpt, Some(rhs)) =>
         val parents = List(TypeTree.of[Object])
         def decls(cls: Symbol): List[Symbol] =
@@ -23,8 +23,8 @@ class addClass extends MacroAnnotation:
 
         val modDef = ClassDef.module(mod, parents, body = List(runDef))
 
-        val newDef = DefDef.copy(tree)(name, List(TermParamClause(Nil)), tpt, Some(Apply(Select(Ref(mod), runSym), Nil)))
+        val newDef = DefDef.copy(definition)(name, List(TermParamClause(Nil)), tpt, Some(Apply(Select(Ref(mod), runSym), Nil)))
         modDef.toList ::: newDef :: Nil
       case _ =>
         report.error("Annotation only supports `def` with one argument")
-        List(tree)
+        List(definition)

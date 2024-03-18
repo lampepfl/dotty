@@ -5,11 +5,11 @@ import scala.quoted.*
 
 @experimental
 class equals extends MacroAnnotation:
-  def transform(using Quotes)(tree: quotes.reflect.Definition): List[quotes.reflect.Definition] =
+  def transform(using Quotes)(definition: quotes.reflect.Definition, companion: Option[quotes.reflect.Definition]): List[quotes.reflect.Definition] =
     import quotes.reflect.*
-    tree match
+    definition match
       case ClassDef(className, ctr, parents, self, body) =>
-        val cls = tree.symbol
+        val cls = definition.symbol
 
         val constructorParameters = ctr.paramss.collect { case clause: TermParamClause => clause }
         if constructorParameters.size != 1 || constructorParameters.head.params.isEmpty then
@@ -42,10 +42,10 @@ class equals extends MacroAnnotation:
         val hashCodeOverrideDef = DefDef(hashCodeOverrideSym, _ => Some(Ref(hashSym)))
 
         val newBody = equalsOverrideDef :: hashVal :: hashCodeOverrideDef :: body
-        List(ClassDef.copy(tree)(className, ctr, parents, self, newBody))
+        List(ClassDef.copy(definition)(className, ctr, parents, self, newBody))
       case _ =>
         report.error("Annotation only supports `class`")
-        List(tree)
+        List(definition)
 
   private def equalsExpr[T: Type](that: Expr[Any], thisFields: List[Expr[Any]])(using Quotes): Expr[Boolean] =
     '{

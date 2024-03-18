@@ -7,8 +7,8 @@ import scala.annotation.MacroAnnotation
 object ChangeVal:
   @experimental
   class change(i: Int) extends MacroAnnotation {
-    def transform(using Quotes)(tree: quotes.reflect.Definition): List[quotes.reflect.Definition] =
+    def transform(using Quotes)(definition: quotes.reflect.Definition, companion: Option[quotes.reflect.Definition]): List[quotes.reflect.Definition] =
       import quotes.reflect.*
-      tree match
-        case ValDef(n, t, _) => List(ValDef.copy(tree)(n, t, Some(Literal(IntConstant(i)))))
+      definition match
+        case ValDef(n, t, _) => List(ValDef.copy(definition)(n, t, Some(Literal(IntConstant(i)))))
   }

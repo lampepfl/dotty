@@ -32,6 +32,7 @@ class MacroAnnotations(phase: IdentityDenotTransformer):
    *  Returns a list with transformed definition and any added definitions.
    */
   def expandAnnotations(tree: MemberDef)(using Context): List[DefTree] =
+    //println(i"defTree = ${tree.symbol.defTree}")
     if !hasMacroAnnotation(tree.symbol) then
       List(tree)
     else if tree.symbol.is(Module) && !tree.symbol.isClass then
@@ -88,7 +89,7 @@ class MacroAnnotations(phase: IdentityDenotTransformer):
     // TODO: Remove when scala.annaotaion.MacroAnnotation is no longer experimental
     import scala.reflect.Selectable.reflectiveSelectable
     type MacroAnnotation = {
-      def transform(using Quotes)(tree: Object/*Erased type of quotes.refelct.Definition*/): List[MemberDef /*quotes.refelct.Definition known to be MemberDef in QuotesImpl*/]
+      def transform(using Quotes)(tree: Object/*Erased type of quotes.refelct.Definition*/, companion: Option[Object/*Erased type of quotes.refelct.Definition*/]): List[MemberDef /*quotes.refelct.Definition known to be MemberDef in QuotesImpl*/]
     }
 
     // Interpret macro annotation instantiation `new myAnnot(..)`
@@ -97,7 +98,7 @@ class MacroAnnotations(phase: IdentityDenotTransformer):
     assert(annotInstance.getClass.getClassLoader.loadClass("scala.annotation.MacroAnnotation").isInstance(annotInstance))
 
     val quotes = QuotesImpl()(using SpliceScope.contextWithNewSpliceScope(tree.symbol.sourcePos)(using MacroExpansion.context(tree)).withOwner(tree.symbol.owner))
-    try annotInstance.transform(using quotes)(tree.asInstanceOf[quotes.reflect.Definition])
+    try annotInstance.transform(using quotes)(tree.asInstanceOf[quotes.reflect.Definition], None)
     catch
       // TODO: Replace this case when scala.annaotaion.MacroAnnotation is no longer experimental and reflectiveSelectable is not used
       //       Replace this case with the nested cases.

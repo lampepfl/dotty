@@ -5,11 +5,11 @@ import scala.quoted.*
 
 @experimental
 class data extends MacroAnnotation:
-  def transform(using Quotes)(tree: quotes.reflect.Definition): List[quotes.reflect.Definition] =
+  def transform(using Quotes)(definition: quotes.reflect.Definition, companion: Option[quotes.reflect.Definition]): List[quotes.reflect.Definition] =
     import quotes.reflect.*
-    tree match
+    definition match
       case ClassDef(className, ctr, parents, self, body) =>
-        val cls = tree.symbol
+        val cls = definition.symbol
 
         val constructorParameters = ctr.paramss.collect { case clause: TermParamClause => clause }
         if constructorParameters.size != 1 || constructorParameters.head.params.isEmpty then
@@ -51,10 +51,10 @@ class data extends MacroAnnotation:
         val equalsOverrideDef = DefDef(equalsOverrideSym, equalsOverrideDefBody)
 
         val newBody = toStringDef :: hashCodeOverrideDef :: equalsOverrideDef :: body
-        List(ClassDef.copy(tree)(className, ctr, parents, self, newBody))
+        List(ClassDef.copy(definition)(className, ctr, parents, self, newBody))
       case _ =>
         report.error("Annotation only supports `class`")
-        List(tree)
+        List(definition)
 
   private def toStringExpr(className: String, thisFields: List[Expr[Any]])(using Quotes): Expr[String] =
     val fieldsSeq = Expr.ofSeq(thisFields)
