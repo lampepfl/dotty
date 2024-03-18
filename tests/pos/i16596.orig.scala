@@ -1,6 +1,6 @@
 import scala.compiletime.ops.int
 
-type Count0[N,T] <: Tuple = (N,T) match
+type Count0[N <: Int,T] <: Tuple = (N,T) match
   case (0,_)      => EmptyTuple
   case (N,String) => String *: Count0[int.-[N, 1], String]
   case (N,Int)    => Int *: Count0[int.-[N, 1], Int]
@@ -8,7 +8,7 @@ type Count0[N,T] <: Tuple = (N,T) match
   case (N,Double) => Double *: Count0[int.-[N, 1], Double]
 
 
-type Count1[N,T] <: Tuple = (N,T) match
+type Count1[N <: Int,T] <: Tuple = (N,T) match
   case (0,T)      => EmptyTuple
   case (N,String) => String *: Count1[int.-[N, 1], String]
   case (N,Int)    => Int *: Count1[int.-[N, 1], Int]

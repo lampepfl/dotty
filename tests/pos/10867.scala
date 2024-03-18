@@ -1,8 +1,9 @@
 object Test {
+  // e.g inserts[z, (a, b)] =:= ((z, a, b), (a, z, b), (a, b, z))
   type inserts[a, as <: Tuple] <: Tuple =
     as match
       case EmptyTuple => (a *: EmptyTuple) *: EmptyTuple
-      case y *: ys => (a *: y *: ys) *: Tuple.Map[inserts[a, ys], [t <: Tuple] =>> y *: t]
+      case y *: ys => (a *: y *: ys) *: Tuple.Map[inserts[a, ys], [t] =>> y *: (t & Tuple)]
 
   type inserts2[a] =
     [as <: Tuple] =>> inserts[a, as]

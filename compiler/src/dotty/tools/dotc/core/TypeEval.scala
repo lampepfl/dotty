@@ -21,6 +21,7 @@ object TypeEval:
           case tp: TypeProxy =>
             val tp1 = tp.superType
             if tp1.isStable then tp1.fixForEvaluation else tp
+          case AndType(tp1: ConstantType, tp2) if tp1.frozen_<:<(tp2) => tp1
           case tp => tp
 
       def constValue(tp: Type): Option[Any] = tp.fixForEvaluation match

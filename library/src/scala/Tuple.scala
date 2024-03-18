@@ -147,13 +147,13 @@ object Tuple {
   /** Converts a tuple `(T1, ..., Tn)` to `(F[T1], ..., F[Tn])` */
   type Map[Tup <: Tuple, F[_ <: Union[Tup]]] <: Tuple = Tup match {
     case EmptyTuple => EmptyTuple
-    case h *: t => F[h] *: Map[t, F]
+    case h *: t => F[h & Union[Tup]] *: Map[t, [x <: Union[t]] =>> F[x & Union[Tup]]]
   }
 
   /** Converts a tuple `(T1, ..., Tn)` to a flattened `(..F[T1], ..., ..F[Tn])` */
   type FlatMap[Tup <: Tuple, F[_ <: Union[Tup]] <: Tuple] <: Tuple = Tup match {
     case EmptyTuple => EmptyTuple
-    case h *: t => Concat[F[h], FlatMap[t, F]]
+    case h *: t => Concat[F[h & Union[Tup]], FlatMap[t, [x <: Union[t]] =>> F[x & Union[Tup]]]]
   }
 
   /** Filters out those members of the tuple for which the predicate `P` returns `false`.

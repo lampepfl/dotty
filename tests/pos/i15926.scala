@@ -15,14 +15,18 @@ type NatSum[X <: NatT, Y <: NatT] <: NatT = Y match
 type NatDif[X <: NatT, Y <: NatT] <: IntT = Y match
   case Zero => X
   case Succ[y] => X match
-    case Zero => Minus[Y]
+    case Zero => Minus[Y & Succ[y]]
     case Succ[x] => NatDif[x, y]
 
 type Sum[X <: IntT, Y <: IntT] <: IntT = Y match
   case Zero => X
   case Minus[y] => X match
-    case Minus[x] => Minus[NatSum[x, y]]
-    case _ => NatDif[X, y]
+    case Minus[x] => Negate[NatSum[x, y]]
+    case _ => NatDif[X & NatT, y]
   case _ => X match
-    case Minus[x] => NatDif[Y, x]
-    case _ => NatSum[X, Y]
+    case Minus[x] => NatDif[Y & NatT, x]
+    case _ => NatSum[X & NatT, Y & NatT]
+
+type Negate[A] <: IntT = A match
+  case Zero    => Zero
+  case Succ[x] => Minus[A & Succ[x]]

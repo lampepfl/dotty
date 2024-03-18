@@ -1487,10 +1487,15 @@ class TypeComparer(@constructorOnly initctx: Context) extends ConstraintHandling
      *  Delegates to compareS if `tycon` is scala.compiletime.S. Otherwise, constant folds if possible.
      */
     def compareCompiletimeAppliedType(tp: AppliedType, other: Type, fromBelow: Boolean): Boolean = {
-      if (defn.isCompiletime_S(tp.tycon.typeSymbol)) compareS(tp, other, fromBelow)
-      else {
+      defn.isCompiletime_S(tp.tycon.typeSymbol) && compareS(tp, other, fromBelow)
+      || {
         val folded = tp.tryCompiletimeConstantFold
         if (fromBelow) recur(other, folded) else recur(folded, other)
+      } || other.match {
+        case other: TypeRef if !fromBelow && other.symbol == defn.SingletonClass =>
+          tp.args.forall(arg => isSubType(arg, defn.SingletonType))
+          // Compile-time operations with singleton arguments are singletons
+        case _ => false
       }
     }
 

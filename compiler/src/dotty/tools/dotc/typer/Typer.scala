@@ -2018,13 +2018,19 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
       }
       if !ctx.isAfterTyper && pt != defn.ImplicitScrutineeTypeRef then
         withMode(Mode.GadtConstraintInference) {
-          TypeComparer.constrainPatternType(pat1.tpe, selType)
+          selType match
+            case scr: TypeRef if ctx.gadt.contains(scr.symbol) => pat1.tpe match
+              case pat: TypeRef => scr <:< pat
+              case _ => TypeComparer.constrainPatternType(pat1.tpe, selType)
+            case _ => TypeComparer.constrainPatternType(pat1.tpe, selType)
         }
       val pat2 = indexPattern(cdef).transform(pat1)
       var body1 = typedType(cdef.body, pt)
       if !body1.isType then
         assert(ctx.reporter.errorsReported)
         body1 = TypeTree(errorType(em"<error: not a type>", cdef.srcPos))
+      else if ctx.gadt.isNarrowing then
+        pat2.putAttachment(InferredGadtConstraints, ctx.gadt)
       assignType(cpy.CaseDef(cdef)(pat2, EmptyTree, body1), pat2, body1)
     }
     caseRest(using ctx.fresh.setFreshGADTBounds.setNewScope)

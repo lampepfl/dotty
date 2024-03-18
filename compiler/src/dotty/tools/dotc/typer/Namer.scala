@@ -1003,7 +1003,10 @@ class Namer { typer: Typer =>
 
     override final def typeSig(sym: Symbol): Type =
       val tparamSyms = completerTypeParams(sym)(using ictx)
-      given ctx: Context = nestedCtx.nn
+      given ctx: Context = if tparamSyms.isEmpty then nestedCtx.nn else
+        given ctx: Context = nestedCtx.nn.fresh.setFreshGADTBounds
+        ctx.gadtState.addToConstraint(tparamSyms)
+        ctx
 
       def abstracted(tp: TypeBounds): TypeBounds =
         HKTypeLambda.boundsFromParams(tparamSyms, tp)

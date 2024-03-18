@@ -38,7 +38,7 @@ object Sums extends App:
     case false => A
     case true  => Inc[A]
 
-  type PlusLoop[A <: Tuple, B <: Tuple, O] <: Tuple = (A, B) match
+  type PlusLoop[A <: Tuple, B <: Tuple, O <: Boolean] <: Tuple = (A, B) match
     case (EmptyTuple, EmptyTuple) =>
       O match
         case true  => (true *: EmptyTuple)
@@ -47,4 +47,4 @@ object Sums extends App:
     case (A, EmptyTuple)          => IncT[A, O]
     case (a *: as, b *: bs)       =>
       PlusTri[a, b, O] match
-        case (x, y) => y *: PlusLoop[as, bs, x]
+        case (x, y) => y *: PlusLoop[as, bs, x & Boolean]

@@ -4,7 +4,7 @@ import scala.deriving.Mirror
 import scala.reflect.ClassTag
 
 type TupleUnionLub[T <: Tuple, Lub, Acc <: Lub] <: Lub = T match {
-  case (h & Lub) *: t => TupleUnionLub[t, Lub, Acc | h]
+  case (h & Lub) *: t => TupleUnionLub[t, Lub, (Acc | h) & Lub]
   case EmptyTuple     => Acc
 }
 

@@ -333,7 +333,7 @@ package shapeless {
     def Inl[E](elem: E): E :+: Nothing = :+:(elem)
     def Inr[Elems <: CList](elems: Elems): Nothing :+: Elems = :+:(elems.e)
 
-    type CListRefl[T <: Tuple] = T match {
+    type CListRefl[T <: Tuple] <: CList = T match {
       case EmptyTuple => CNil
       case h *: tl => h :+: CListRefl[tl]
     }
@@ -358,7 +358,7 @@ package shapeless {
 
     object Generic:
 
-      type Repr[T, M, Elems] = M match
+      type Repr[T, M, Elems <: Tuple] = M match
         case Mirror.Sum { type MirroredType = T } => CListRefl[Elems]
         case Mirror.Product { type MirroredType = T } => Elems
 

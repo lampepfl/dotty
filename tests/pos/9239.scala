@@ -10,17 +10,17 @@ object ABug:
   type Zero = B0 :: Nil
   type One  = B1 :: Nil
 
-  type --[B <: Bin] =
+  type --[B <: Bin] <: Bin =
     B match
       case B1 :: d => B0 :: d
       case B0 :: B1 :: Nil => B1 :: Nil
       case B0 :: d => B1 :: --[d]
 
-  type ×[N <: Bin, M <: Bin] =
+  type ×[N <: Bin, M <: Bin] <: Bin =
     (N, M) match
       case (Zero, ?) => Zero
 
-  type ![N <: Bin] =
+  type ![N <: Bin] <: Bin =
     N match
       case Zero => One
       case One => One

@@ -10,7 +10,7 @@ object Test {
 
   type TupleMap[Tup <: Tuple, Bound, F[_ <: Bound]] <: Tuple = Tup match {
     case EmptyTuple => EmptyTuple
-    case h *: t => F[h] *: TupleMap[t, Bound, F]
+    case h *: t => F[h & Bound] *: TupleMap[t, Bound, F]
   }
   type TupleDedup[Tup <: Tuple, Mask] <: Tuple = Tup match {
     case EmptyTuple => EmptyTuple
