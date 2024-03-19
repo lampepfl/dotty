@@ -3597,15 +3597,15 @@ object Types extends TypeUtils {
     private var myUnionPeriod: Period = Nowhere
 
     override def widenUnionWithoutNull(using Context): Type =
-      if myUnionPeriod != ctx.period then
+      if !isSoft then this
+      else if myUnionPeriod != ctx.period then
         myUnion =
-          if isSoft then
-            TypeComparer.lub(tp1.widenUnionWithoutNull, tp2.widenUnionWithoutNull, canConstrain = true, isSoft = isSoft) match
-              case union: OrType => union.join
-              case res => res
-          else derivedOrType(tp1.widenUnionWithoutNull, tp2.widenUnionWithoutNull, soft = isSoft)
+          TypeComparer.lub(tp1.widenUnionWithoutNull, tp2.widenUnionWithoutNull, canConstrain = true, isSoft = isSoft) match
+            case union: OrType => union.join
+            case res => res
         if !isProvisional then myUnionPeriod = ctx.period
-      myUnion
+        myUnion
+      else myUnion
 
     private var atomsRunId: RunId = NoRunId
     private var myAtoms: Atoms = uninitialized
