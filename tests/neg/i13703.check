@@ -1,10 +1,5 @@
--- Error: tests/neg/i13703.scala:3:17 ----------------------------------------------------------------------------------
-3 |val f: Foo { var i: Int } = new Foo { var i: Int = 0 } // error
-  |             ^^^^^^^^^^
-  |             refinement cannot be a mutable var.
-  |             You can use an explicit getter i and setter i_= instead
--- [E007] Type Mismatch Error: tests/neg/i13703.scala:5:78 -------------------------------------------------------------
-5 |val f2: Foo { val i: Int; def i_=(x: Int): Unit } = new Foo { var i: Int = 0 } // error
+-- [E007] Type Mismatch Error: tests/neg/i13703.scala:3:78 -------------------------------------------------------------
+3 |val f2: Foo { val i: Int; def i_=(x: Int): Unit } = new Foo { var i: Int = 0 } // error
   |                                                                              ^
   |                                                                  Found:    Object with Foo {...}
   |                                                                  Required: Foo{val i: Int; def i_=(x: Int): Unit}

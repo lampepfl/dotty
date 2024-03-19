@@ -2211,7 +2211,6 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
     val refineCls = createSymbol(refineClsDef).asClass
     val TypeDef(_, impl: Template) = typed(refineClsDef): @unchecked
     val refinements1 = impl.body
-    assert(tree.refinements.hasSameLengthAs(refinements1), i"${tree.refinements}%, % > $refinements1%, %")
     val seen = mutable.Set[Symbol]()
     for (refinement <- refinements1) { // TODO: get clarity whether we want to enforce these conditions
       typr.println(s"adding refinement $refinement")

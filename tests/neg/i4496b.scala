@@ -5,7 +5,7 @@ trait Foo2 { def a: Int }
 trait Foo3 { var a: Int }
 
 object TestStructuralVar {
-  type T0 = {var a: Int} // error
+  type T0 = {var a: Int}
   object TestStructuralVar {
     type T = {val a: Int; def a_=(x: Int): Unit}
     def upcast1(v: Foo1): T = v // error
