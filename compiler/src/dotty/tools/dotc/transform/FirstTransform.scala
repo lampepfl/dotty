@@ -173,7 +173,7 @@ class FirstTransform extends MiniPhase with InfoTransformer { thisPhase =>
 
   override def transformTypeApply(tree: TypeApply)(using Context): Tree =
     constToLiteral(tree)
-
+  
   override def transformApply(tree: Apply)(using Context): Tree =
     constToLiteral(foldCondition(tree))
 

@@ -1,0 +1,12 @@
+-- Deprecation Warning: tests/warn/i19077.scala:8:6 ----------------------------
+8 |  f(x = 2) // warn
+  |    ^^^^^
+  |    naming parameter x is deprecated
+-- Deprecation Warning: tests/warn/i19077.scala:9:6 ----------------------------
+9 |  g(x = 2) // warn
+  |    ^^^^^
+  |    naming parameter x is deprecated
+-- Deprecation Warning: tests/warn/i19077.scala:10:6 ---------------------------
+10 |  h(x = 2) // warn
+   |    ^^^^^
+   |    naming parameter x is deprecated
