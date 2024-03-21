@@ -790,10 +790,13 @@ trait TypedTreeInfo extends TreeInfo[Type] { self: Trees.Instance[Type] =>
 
   /** An extractor for def of a closure contained the block of the closure. */
   object closureDef {
+    private def isDefaultArg(tree:Tree): Boolean = tree match
+      case ValDef(_, _, Select(_,name)) if name.is(NameKinds.DefaultGetterName) => true
+      case _ => false
     def unapply(tree: Tree)(using Context): Option[DefDef] = tree match {
       case Block((meth : DefDef) :: Nil, closure: Closure) if meth.symbol == closure.meth.symbol =>
         Some(meth)
-      case Block(Nil, expr) =>
+      case Block(stmts, expr) if stmts.forall(isDefaultArg) =>
         unapply(expr)
       case _ =>
         None

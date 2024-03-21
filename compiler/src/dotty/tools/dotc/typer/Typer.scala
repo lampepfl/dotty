@@ -4450,10 +4450,10 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
       case _ =>
 
   private def checkStatementPurity(tree: tpd.Tree)(original: untpd.Tree, exprOwner: Symbol, isUnitExpr: Boolean = false)(using Context): Unit =
+    val isPure = isPureExpr(tree)
     if !tree.tpe.isErroneous
       && !ctx.isAfterTyper
       && !tree.isInstanceOf[Inlined]
-      && isPureExpr(tree)
       && !isSelfOrSuperConstrCall(tree)
     then tree match
       case closureDef(meth)
@@ -4466,12 +4466,16 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
         // if the original tree was a lambda. This does not work always either since
         // sometimes we do not have the original anymore and use the transformed tree instead.
         // But taken together, the two criteria are quite accurate.
-        missingArgs(tree, tree.tpe.widen)
-      case _ if isUnitExpr =>
-        report.warning(PureUnitExpression(original, tree.tpe), original.srcPos)
+        if isPure then
+          missingArgs(tree, tree.tpe.widen)
+        else
+          report.warning(UnusedNonUnitValue(tree.tpe),original.srcPos)
+      case _ if isPure =>
+        if isUnitExpr then
+          report.warning(PureUnitExpression(original, tree.tpe), original.srcPos)
+        else
+          report.warning(PureExpressionInStatementPosition(original, exprOwner), original.srcPos)
       case _ =>
-        report.warning(PureExpressionInStatementPosition(original, exprOwner), original.srcPos)
-
   /** Types the body Scala 2 macro declaration `def f = macro <body>` */
   protected def typedScala2MacroBody(call: untpd.Tree)(using Context): Tree =
     // TODO check that call is to a method with valid signature

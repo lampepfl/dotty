@@ -1,0 +1,4 @@
+-- [E176] Potential Issue Warning: tests/warn/i19266.scala:5:7 ---------------------------------------------------------
+5 |    fn1(1) // warn
+  |    ^^^^^^
+  |    unused value of type Double => Some[String]
