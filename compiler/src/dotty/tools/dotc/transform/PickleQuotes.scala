@@ -203,6 +203,16 @@ class PickleQuotes extends MacroTransform {
   private def getPicklableHoleType(tpe: Type, isStagedClasses: Symbol => Boolean)(using Context) =
     new TypeOps.AvoidMap {
       def toAvoid(tp: NamedType) = !isStagedClasses(tp.typeSymbol) && !isStaticPrefix(tp)
+      override def apply(tp: Type): Type = tp match
+        case tp: ThisType if tp.typeSymbol.isLocal =>
+          // ThisType is only used inside a class.
+          // In general, either they don't appear in the type to be avoided, or
+          // it must be a class that encloses the block whose type is to be avoided.
+          // However, as we may be extracting a splice that contains a reference to
+          // a local class, we need to be careful to avoid the ThisType of the local
+          // class.
+          super.apply(tp.widen)
+        case _ => super.apply(tp)
     }.apply(tpe)
 }
 
