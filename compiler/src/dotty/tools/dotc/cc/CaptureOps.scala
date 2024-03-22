@@ -207,6 +207,17 @@ extension (tp: Type)
     case _: TypeRef | _: AppliedType => tp.typeSymbol.hasAnnotation(defn.CapabilityAnnot)
     case _ => false
 
+  /** Check if the class has universal capability, which means:
+   *  1. the class has a capability annotation,
+   *  2. the class is an impure function type,
+   *  3. or one of its base classes has universal capability.
+   */
+  def hasUniversalCapability(using Context): Boolean = tp match
+    case CapturingType(parent, ref) =>
+      ref.isUniversal || parent.hasUniversalCapability
+    case tp =>
+      tp.isCapabilityClassRef || tp.parents.exists(_.hasUniversalCapability)
+
   /** Drop @retains annotations everywhere */
   def dropAllRetains(using Context): Type = // TODO we should drop retains from inferred types before unpickling
     val tm = new TypeMap:
