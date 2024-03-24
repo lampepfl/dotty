@@ -571,7 +571,7 @@ object CheckUnused:
           sortedPatVars :::
           unsetLocalDefs :::
           unsetPrivateDefs
-        unsorted.sortBy { s => 
+        unsorted.sortBy { s =>
           val pos = s.namePos.sourcePos
           (pos.line, pos.column)
         }
