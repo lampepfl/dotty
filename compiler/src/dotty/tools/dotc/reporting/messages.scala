@@ -3160,7 +3160,7 @@ extends SyntaxMsg(VolatileOnValID):
   protected def msg(using Context): String = "values cannot be volatile"
   protected def explain(using Context): String = ""
 
-class UnusedSymbol(pos: SourcePosition,_msg: String, _actions: List[CodeAction])(using Context)
+class UnusedSymbol(pos: SourcePosition, _msg: String, _actions: List[CodeAction])(using Context)
 extends Message(UnusedSymbolID) {
   def kind = MessageKind.UnusedSymbol
 
@@ -3170,10 +3170,8 @@ extends Message(UnusedSymbolID) {
 }
 
 object UnusedSymbol {
-    private def createRemoveLocalDefAction(tree: tpd.DefTree)(using Context): List[CodeAction] = {
-      import scala.language.unsafeNulls
-
-      val source = tree.sourcePos.source
+    private def createRemoveLocalDefAction(tree: SourcePosition)(using Context): List[CodeAction] = {
+      val source = tree.source
       val endLine = source.offsetToLine(tree.sourcePos.end - 1)
       val nextLineOffset = source.lineToOffset(endLine + 1)
       val startOffset = source.lineToOffset(tree.sourcePos.startLine)
@@ -3191,10 +3189,10 @@ object UnusedSymbol {
         )
       )
     }
-    def imports(pos: SourcePosition)(using Context): UnusedSymbol= new UnusedSymbol(pos, i"unused import", List.empty)
-    def localDefs(tree: tpd.NamedDefTree)(using Context): UnusedSymbol = new UnusedSymbol(tree.namePos, i"unused local definition", createRemoveLocalDefAction(tree))
-    def explicitParams(tree: tpd.NamedDefTree)(using Context): UnusedSymbol = new UnusedSymbol(tree.namePos, i"unused explicit parameter", List.empty)
-    def implicitParams(tree: tpd.NamedDefTree)(using Context): UnusedSymbol = new UnusedSymbol(tree.namePos, i"unused implicit parameter", List.empty)
-    def privateMembers(tree: tpd.NamedDefTree)(using Context): UnusedSymbol = new UnusedSymbol(tree.namePos, i"unused private member", List.empty)
-    def patVars(tree: tpd.NamedDefTree)(using Context): UnusedSymbol = new UnusedSymbol(tree.namePos, i"unused pattern variable", List.empty)
+    def imports(pos: SourcePosition)(using Context): UnusedSymbol = new UnusedSymbol(pos, i"unused import", List.empty)
+    def localDefs(tree: SourcePosition)(using Context): UnusedSymbol = new UnusedSymbol(tree, i"unused local definition", createRemoveLocalDefAction(tree))
+    def explicitParams(tree: SourcePosition)(using Context): UnusedSymbol = new UnusedSymbol(tree, i"unused explicit parameter", List.empty)
+    def implicitParams(tree: SourcePosition)(using Context): UnusedSymbol = new UnusedSymbol(tree, i"unused implicit parameter", List.empty)
+    def privateMembers(tree: SourcePosition)(using Context): UnusedSymbol = new UnusedSymbol(tree, i"unused private member", List.empty)
+    def patVars(tree: SourcePosition)(using Context): UnusedSymbol = new UnusedSymbol(tree, i"unused pattern variable", List.empty)
 }

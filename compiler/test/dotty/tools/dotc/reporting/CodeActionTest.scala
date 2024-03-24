@@ -16,7 +16,7 @@ import org.junit.Test
   * diagnostic for a given code snippet.
   */
 class CodeActionTest extends DottyTest:
- 
+
   @Test def convertToFunctionValue =
     checkCodeAction(
       """|object Test:

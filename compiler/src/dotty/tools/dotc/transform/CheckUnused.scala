@@ -283,26 +283,25 @@ class CheckUnused private (phaseMode: CheckUnused.PhaseMode, suffix: String, _ke
   /** Do the actual reporting given the result of the anaylsis */
   private def reportUnused(res: UnusedData.UnusedResult)(using Context): Unit =
     res.warnings.toList.sortBy{
-      case us: UnusedSymbol.ImportSelector => us.pos.line
-      case us: UnusedSymbol.Symbol => us.tree.sourcePos.line
+      case us: UnusedSymbol => us.namePos.sourcePos.line
       }(using Ordering[Int]).foreach { s =>
       s match
-        case UnusedSymbol.ImportSelector(srcPos, _) =>
-          report.warning(UnusedSymbolMessage.imports(srcPos.sourcePos))
-        case UnusedSymbol.Symbol(t, WarnTypes.LocalDefs) =>
-          report.warning(UnusedSymbolMessage.localDefs(t), t)
-        case UnusedSymbol.Symbol(t, WarnTypes.ExplicitParams) =>
-          report.warning(UnusedSymbolMessage.explicitParams(t), t)
-        case UnusedSymbol.Symbol(t, WarnTypes.ImplicitParams) =>
-          report.warning(UnusedSymbolMessage.implicitParams(t), t)
-        case UnusedSymbol.Symbol(t, WarnTypes.PrivateMembers) =>
-          report.warning(UnusedSymbolMessage.privateMembers(t), t)
-        case UnusedSymbol.Symbol(t, WarnTypes.PatVars) =>
-          report.warning(UnusedSymbolMessage.patVars(t), t)
-        case UnusedSymbol.Symbol(t, WarnTypes.UnsetLocals) =>
-          report.warning("unset local variable, consider using an immutable val instead", t)
-        case UnusedSymbol.Symbol(t, WarnTypes.UnsetPrivates) =>
-          report.warning("unset private variable, consider using an immutable val instead", t)
+        case UnusedSymbol(_, namePos, WarnTypes.Imports) =>
+          report.warning(UnusedSymbolMessage.imports(namePos.sourcePos), namePos)
+        case UnusedSymbol(treePos, namePos, WarnTypes.LocalDefs) =>
+          report.warning(UnusedSymbolMessage.localDefs(treePos.sourcePos), namePos)
+        case UnusedSymbol(treePos, namePos, WarnTypes.ExplicitParams) =>
+          report.warning(UnusedSymbolMessage.explicitParams(treePos.sourcePos), namePos)
+        case UnusedSymbol(treePos, namePos, WarnTypes.ImplicitParams) =>
+          report.warning(UnusedSymbolMessage.implicitParams(treePos.sourcePos), namePos)
+        case UnusedSymbol(treePos, namePos, WarnTypes.PrivateMembers) =>
+          report.warning(UnusedSymbolMessage.privateMembers(treePos.sourcePos), namePos)
+        case UnusedSymbol(treePos, namePos, WarnTypes.PatVars) =>
+          report.warning(UnusedSymbolMessage.patVars(treePos.sourcePos), namePos)
+        case UnusedSymbol(_, namePos, WarnTypes.UnsetLocals) =>
+          report.warning("unset local variable, consider using an immutable val instead", namePos)
+        case UnusedSymbol(_, namePos, WarnTypes.UnsetPrivates) =>
+          report.warning("unset private variable, consider using an immutable val instead", namePos)
     }
 
 end CheckUnused
@@ -316,6 +315,7 @@ object CheckUnused:
     case Report
 
   enum WarnTypes:
+    case Imports
     case LocalDefs
     case ExplicitParams
     case ImplicitParams
@@ -513,7 +513,7 @@ object CheckUnused:
       popScope()
       val sortedImp =
         if ctx.settings.WunusedHas.imports || ctx.settings.WunusedHas.strictNoImplicitWarn then
-          unusedImport.map(d => UnusedSymbol.ImportSelector(d.srcPos, d.name)).toList
+          unusedImport.map(d => UnusedSymbol(d.srcPos, d.srcPos, WarnTypes.Imports)).toList
         else
           Nil
       // Partition to extract unset local variables from usedLocalDefs
@@ -526,8 +526,8 @@ object CheckUnused:
         unusedLocalDefs
           .filterNot(d => usedInPosition.exists { case (pos, name) => d.span.contains(pos.span) && name == d.symbol.name})
           .filterNot(d => containsSyntheticSuffix(d.symbol))
-          .map(d => UnusedSymbol.Symbol(d, WarnTypes.LocalDefs)).toList
-      val unsetLocalDefs = usedLocalDefs.filter(isUnsetVarDef).map(d => UnusedSymbol.Symbol(d, WarnTypes.UnsetLocals)).toList
+          .map(d => UnusedSymbol(d.sourcePos, d.namePos, WarnTypes.LocalDefs)).toList
+      val unsetLocalDefs = usedLocalDefs.filter(isUnsetVarDef).map(d => UnusedSymbol(d.sourcePos, d.namePos, WarnTypes.UnsetLocals)).toList
 
       val sortedExplicitParams =
         if ctx.settings.WunusedHas.explicits then
@@ -535,7 +535,7 @@ object CheckUnused:
             .filterNot(d => d.symbol.usedDefContains)
             .filterNot(d => usedInPosition.exists { case (pos, name) => d.span.contains(pos.span) && name == d.symbol.name})
             .filterNot(d => containsSyntheticSuffix(d.symbol))
-            .map(d => UnusedSymbol.Symbol(d, WarnTypes.ExplicitParams)).toList
+            .map(d => UnusedSymbol(d.sourcePos, d.namePos, WarnTypes.ExplicitParams)).toList
         else
           Nil
       val sortedImplicitParams =
@@ -543,7 +543,7 @@ object CheckUnused:
           implicitParamInScope
             .filterNot(d => d.symbol.usedDefContains)
             .filterNot(d => containsSyntheticSuffix(d.symbol))
-            .map(d => UnusedSymbol.Symbol(d, WarnTypes.ImplicitParams)).toList
+            .map(d => UnusedSymbol(d.sourcePos, d.namePos, WarnTypes.ImplicitParams)).toList
         else
           Nil
       // Partition to extract unset private variables from usedPrivates
@@ -552,15 +552,15 @@ object CheckUnused:
           privateDefInScope.partition(d => d.symbol.usedDefContains)
         else
           (Nil, Nil)
-      val sortedPrivateDefs = unusedPrivates.filterNot(d => containsSyntheticSuffix(d.symbol)).map(d => UnusedSymbol.Symbol(d, WarnTypes.PrivateMembers)).toList
-      val unsetPrivateDefs = usedPrivates.filter(isUnsetVarDef).map(d => UnusedSymbol.Symbol(d, WarnTypes.UnsetPrivates)).toList
+      val sortedPrivateDefs = unusedPrivates.filterNot(d => containsSyntheticSuffix(d.symbol)).map(d => UnusedSymbol(d.sourcePos, d.namePos, WarnTypes.PrivateMembers)).toList
+      val unsetPrivateDefs = usedPrivates.filter(isUnsetVarDef).map(d => UnusedSymbol(d.sourcePos, d.namePos, WarnTypes.UnsetPrivates)).toList
       val sortedPatVars =
         if ctx.settings.WunusedHas.patvars then
           patVarsInScope
             .filterNot(d => d.symbol.usedDefContains)
             .filterNot(d => containsSyntheticSuffix(d.symbol))
             .filterNot(d => usedInPosition.exists { case (pos, name) => d.span.contains(pos.span) && name == d.symbol.name})
-            .map(d => UnusedSymbol.Symbol(d, WarnTypes.PatVars)).toList
+            .map(d => UnusedSymbol(d.sourcePos, d.namePos, WarnTypes.PatVars)).toList
         else
           Nil
       val warnings =
@@ -573,13 +573,9 @@ object CheckUnused:
           sortedPatVars :::
           unsetLocalDefs :::
           unsetPrivateDefs
-        unsorted.sortBy { 
-            case s : UnusedSymbol.Symbol =>
-              val pos = s.tree.sourcePos
-              (pos.line, pos.column)
-          case s: UnusedSymbol.ImportSelector =>
-              val pos = s.pos.sourcePos
-              (pos.line, pos.column)
+        unsorted.sortBy { s => 
+          val pos = s.namePos.sourcePos
+          (pos.line, pos.column)
         }
       UnusedResult(warnings.toSet)
     end getUnused
@@ -810,9 +806,8 @@ object CheckUnused:
           case _:tpd.Block => Local
           case _ => Other
 
-      enum UnusedSymbol:
-          case Symbol(tree: tpd.NamedDefTree, warnType: WarnTypes)
-          case ImportSelector(pos: SrcPos, name: Name)
+      case class UnusedSymbol(defnTree: SrcPos, namePos: SrcPos, warnType: WarnTypes)
+
       /** A container for the results of the used elements analysis */
       case class UnusedResult(warnings: Set[UnusedSymbol])
       object UnusedResult:
