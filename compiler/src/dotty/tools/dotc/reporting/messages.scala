@@ -3170,15 +3170,16 @@ extends Message(UnusedSymbolID) {
 }
 
 object UnusedSymbol {
-    private def createRemoveLocalDefAction(tree: SourcePosition)(using Context): List[CodeAction] = {
-      val source = tree.source
-      val endLine = source.offsetToLine(tree.sourcePos.end - 1)
+    private def createRemoveLocalDefAction(treePos: SourcePosition)(using Context): List[CodeAction] = {
+      val source = treePos.source
+      val sourcePos = treePos.sourcePos
+      val endLine = source.offsetToLine(sourcePos.end - 1)
       val nextLineOffset = source.lineToOffset(endLine + 1)
-      val startOffset = source.lineToOffset(tree.sourcePos.startLine)
+      val startOffset = source.lineToOffset(sourcePos.startLine)
 
       val pathes = List(
         ActionPatch(
-          srcPos = tree.sourcePos.withSpan(tree.sourcePos.span.withStart(startOffset).withEnd(nextLineOffset)),
+          srcPos = sourcePos.withSpan(sourcePos.span.withStart(startOffset).withEnd(nextLineOffset)),
           replacement = ""
         ),
       )
@@ -3189,10 +3190,10 @@ object UnusedSymbol {
         )
       )
     }
-    def imports(pos: SourcePosition)(using Context): UnusedSymbol = new UnusedSymbol(pos, i"unused import", List.empty)
-    def localDefs(tree: SourcePosition)(using Context): UnusedSymbol = new UnusedSymbol(tree, i"unused local definition", createRemoveLocalDefAction(tree))
-    def explicitParams(tree: SourcePosition)(using Context): UnusedSymbol = new UnusedSymbol(tree, i"unused explicit parameter", List.empty)
-    def implicitParams(tree: SourcePosition)(using Context): UnusedSymbol = new UnusedSymbol(tree, i"unused implicit parameter", List.empty)
-    def privateMembers(tree: SourcePosition)(using Context): UnusedSymbol = new UnusedSymbol(tree, i"unused private member", List.empty)
-    def patVars(tree: SourcePosition)(using Context): UnusedSymbol = new UnusedSymbol(tree, i"unused pattern variable", List.empty)
+    def imports(treePos: SourcePosition)(using Context): UnusedSymbol = new UnusedSymbol(treePos, i"unused import", List.empty)
+    def localDefs(treePos: SourcePosition)(using Context): UnusedSymbol = new UnusedSymbol(treePos, i"unused local definition", createRemoveLocalDefAction(treePos))
+    def explicitParams(treePos: SourcePosition)(using Context): UnusedSymbol = new UnusedSymbol(treePos, i"unused explicit parameter", List.empty)
+    def implicitParams(treePos: SourcePosition)(using Context): UnusedSymbol = new UnusedSymbol(treePos, i"unused implicit parameter", List.empty)
+    def privateMembers(treePos: SourcePosition)(using Context): UnusedSymbol = new UnusedSymbol(treePos, i"unused private member", List.empty)
+    def patVars(treePos: SourcePosition)(using Context): UnusedSymbol = new UnusedSymbol(treePos, i"unused pattern variable", List.empty)
 }
