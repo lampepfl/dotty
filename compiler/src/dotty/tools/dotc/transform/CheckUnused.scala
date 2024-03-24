@@ -279,29 +279,27 @@ class CheckUnused private (phaseMode: CheckUnused.PhaseMode, suffix: String, _ke
   private def traverseAnnotations(sym: Symbol)(using Context): Unit =
     sym.denot.annotations.foreach(annot => traverser.traverse(annot.tree))
 
-
   /** Do the actual reporting given the result of the anaylsis */
   private def reportUnused(res: UnusedData.UnusedResult)(using Context): Unit =
-    res.warnings.toList.sortBy{
-      case us: UnusedSymbol => us.namePos.sourcePos.line
-      }(using Ordering[Int]).foreach { s =>
-      s match
-        case UnusedSymbol(_, namePos, WarnTypes.Imports) =>
-          report.warning(UnusedSymbolMessage.imports(namePos.sourcePos), namePos)
-        case UnusedSymbol(treePos, namePos, WarnTypes.LocalDefs) =>
-          report.warning(UnusedSymbolMessage.localDefs(treePos.sourcePos), namePos)
-        case UnusedSymbol(treePos, namePos, WarnTypes.ExplicitParams) =>
-          report.warning(UnusedSymbolMessage.explicitParams(treePos.sourcePos), namePos)
-        case UnusedSymbol(treePos, namePos, WarnTypes.ImplicitParams) =>
-          report.warning(UnusedSymbolMessage.implicitParams(treePos.sourcePos), namePos)
-        case UnusedSymbol(treePos, namePos, WarnTypes.PrivateMembers) =>
-          report.warning(UnusedSymbolMessage.privateMembers(treePos.sourcePos), namePos)
-        case UnusedSymbol(treePos, namePos, WarnTypes.PatVars) =>
-          report.warning(UnusedSymbolMessage.patVars(treePos.sourcePos), namePos)
-        case UnusedSymbol(_, namePos, WarnTypes.UnsetLocals) =>
-          report.warning("unset local variable, consider using an immutable val instead", namePos)
-        case UnusedSymbol(_, namePos, WarnTypes.UnsetPrivates) =>
-          report.warning("unset private variable, consider using an immutable val instead", namePos)
+    res.warnings.toList.sortBy(_.namePos.sourcePos.line)(using Ordering[Int])
+      .foreach { s =>
+        s match
+          case UnusedSymbol(_, namePos, WarnTypes.Imports) =>
+            report.warning(UnusedSymbolMessage.imports(namePos.sourcePos), namePos)
+          case UnusedSymbol(treePos, namePos, WarnTypes.LocalDefs) =>
+            report.warning(UnusedSymbolMessage.localDefs(treePos.sourcePos), namePos)
+          case UnusedSymbol(treePos, namePos, WarnTypes.ExplicitParams) =>
+            report.warning(UnusedSymbolMessage.explicitParams(treePos.sourcePos), namePos)
+          case UnusedSymbol(treePos, namePos, WarnTypes.ImplicitParams) =>
+            report.warning(UnusedSymbolMessage.implicitParams(treePos.sourcePos), namePos)
+          case UnusedSymbol(treePos, namePos, WarnTypes.PrivateMembers) =>
+            report.warning(UnusedSymbolMessage.privateMembers(treePos.sourcePos), namePos)
+          case UnusedSymbol(treePos, namePos, WarnTypes.PatVars) =>
+            report.warning(UnusedSymbolMessage.patVars(treePos.sourcePos), namePos)
+          case UnusedSymbol(_, namePos, WarnTypes.UnsetLocals) =>
+            report.warning("unset local variable, consider using an immutable val instead", namePos)
+          case UnusedSymbol(_, namePos, WarnTypes.UnsetPrivates) =>
+            report.warning("unset private variable, consider using an immutable val instead", namePos)
     }
 
 end CheckUnused
