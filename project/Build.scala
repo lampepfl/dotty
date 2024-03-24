@@ -83,7 +83,7 @@ object DottyJSPlugin extends AutoPlugin {
 object Build {
   import ScaladocConfigs._
 
-  val referenceVersion = "3.4.0"
+  val referenceVersion = "3.4.1-RC1"
 
   val baseVersion = "3.4.2-RC1"
 
