@@ -38,7 +38,8 @@ object Test {
     println("\nFunctions:")
     // FunctionN.getClass.toString has form of "class Test$$$Lambda$N/1349414238",
     // but "N/1349414238" depends on environment
-    println(f1.getClass.toString.take("class Test$$$Lambda$".length))
-    println(f2.getClass.toString.take("class Test$$$Lambda$".length))
+    // The above naming is a convention: See https://stackoverflow.com/questions/65870155/what-is-the-meaning-of-the-classname-from-a-lambda-class-in-java
+    println(f1.getClass.toString.take("class Test$$$Lambda".length))
+    println(f2.getClass.toString.take("class Test$$$Lambda".length))
   }
 }
