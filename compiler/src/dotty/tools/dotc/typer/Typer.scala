@@ -2568,17 +2568,17 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
     vdef1.setDefTree
   }
 
-  def typedDefDef(ddef: untpd.DefDef, sym: Symbol)(using Context): Tree = {
-    def canBeInvalidated(sym: Symbol): Boolean =
+  private def retractDefDef(sym: Symbol)(using Context): Tree =
+    // it's a discarded method (synthetic case class method or synthetic java record constructor or overridden member), drop it
+    val canBeInvalidated: Boolean =
       sym.is(Synthetic)
       && (desugar.isRetractableCaseClassMethodName(sym.name) ||
          (sym.owner.is(JavaDefined) && sym.owner.derivesFrom(defn.JavaRecordClass) && sym.is(Method)))
+    assert(canBeInvalidated)
+    sym.owner.info.decls.openForMutations.unlink(sym)
+    EmptyTree
 
-    if !sym.info.exists then
-      // it's a discarded method (synthetic case class method or synthetic java record constructor or overriden member), drop it
-      assert(canBeInvalidated(sym))
-      sym.owner.info.decls.openForMutations.unlink(sym)
-      return EmptyTree
+  def typedDefDef(ddef: untpd.DefDef, sym: Symbol)(using Context): Tree = if !sym.info.exists then retractDefDef(sym) else {
 
     // TODO: - Remove this when `scala.language.experimental.erasedDefinitions` is no longer experimental.
     //       - Modify signature to `erased def erasedValue[T]: T`

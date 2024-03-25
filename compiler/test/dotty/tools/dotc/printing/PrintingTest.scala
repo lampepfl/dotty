@@ -25,7 +25,7 @@ import java.io.File
 class PrintingTest {
 
   def options(phase: String, flags: List[String]) =
-    List(s"-Xprint:$phase", "-color:never", "-classpath", TestConfiguration.basicClasspath) ::: flags
+    List(s"-Xprint:$phase", "-color:never", "-nowarn", "-classpath", TestConfiguration.basicClasspath) ::: flags
 
   private def compileFile(path: JPath, phase: String): Boolean = {
     val baseFilePath  = path.toString.stripSuffix(".scala")

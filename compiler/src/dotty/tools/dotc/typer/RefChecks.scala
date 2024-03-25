@@ -1033,8 +1033,7 @@ object RefChecks {
    *  surprising names at runtime. E.g. in neg/i4564a.scala, a private
    *  case class `apply` method would have to be renamed to something else.
    */
-  def checkNoPrivateOverrides(tree: Tree)(using Context): Unit =
-    val sym = tree.symbol
+  def checkNoPrivateOverrides(sym: Symbol)(using Context): Unit =
     if sym.maybeOwner.isClass
        && sym.is(Private)
        && (sym.isOneOf(MethodOrLazyOrMutable) || !sym.is(Local)) // in these cases we'll produce a getter later
@@ -1099,6 +1098,55 @@ object RefChecks {
         checkParameters(sym.info)
 
   end checkUnaryMethods
+
+  /** Check that an extension method is not hidden, i.e., that it is callable as an extension method.
+   *
+   *  An extension method is hidden if it does not offer a parameter that is not subsumed
+   *  by the corresponding parameter of the member with the same name (or of all alternatives of an overload).
+   *
+   *  For example, it is not possible to define a type-safe extension `contains` for `Set`,
+   *  since for any parameter type, the existing `contains` method will compile and would be used.
+   *
+   *  If the member has a leading implicit parameter list, then the extension method must also have
+   *  a leading implicit parameter list. The reason is that if the implicit arguments are inferred,
+   *  either the member method is used or typechecking fails. If the implicit arguments are supplied
+   *  explicitly and the member method is not applicable, the extension is checked, and its parameters
+   *  must be implicit in order to be applicable.
+   *
+   *  If the member does not have a leading implicit parameter list, then the argument cannot be explicitly
+   *  supplied with `using`, as typechecking would fail. But the extension method may have leading implicit
+   *  parameters, which are necessarily supplied implicitly in the application. The first non-implicit
+   *  parameters of the extension method must be distinguishable from the member parameters, as described.
+   *
+   *  If the extension method is nullary, it is always hidden by a member of the same name.
+   *  (Either the member is nullary, or the reference is taken as the eta-expansion of the member.)
+   */
+  def checkExtensionMethods(sym: Symbol)(using Context): Unit = if sym.is(Extension) then
+    extension (tp: Type)
+      def strippedResultType = Applications.stripImplicit(tp.stripPoly, wildcardOnly = true).resultType
+      def firstExplicitParamTypes = Applications.stripImplicit(tp.stripPoly, wildcardOnly = true).firstParamTypes
+      def hasImplicitParams = tp.stripPoly match { case mt: MethodType => mt.isImplicitMethod case _ => false }
+    val target = sym.info.firstExplicitParamTypes.head // required for extension method, the putative receiver
+    val methTp = sym.info.strippedResultType // skip leading implicits and the "receiver" parameter
+    def hidden =
+      target.nonPrivateMember(sym.name)
+      .filterWithPredicate:
+        member =>
+        val memberIsImplicit = member.info.hasImplicitParams
+        val paramTps =
+          if memberIsImplicit then methTp.stripPoly.firstParamTypes
+          else methTp.firstExplicitParamTypes
+
+        paramTps.isEmpty || memberIsImplicit && !methTp.hasImplicitParams || {
+          val memberParamTps = member.info.stripPoly.firstParamTypes
+          !memberParamTps.isEmpty
+          && memberParamTps.lengthCompare(paramTps) == 0
+          && memberParamTps.lazyZip(paramTps).forall((m, x) => x frozen_<:< m)
+        }
+      .exists
+    if !target.typeSymbol.denot.isAliasType && !target.typeSymbol.denot.isOpaqueAlias && hidden
+    then report.warning(ExtensionNullifiedByMember(sym, target.typeSymbol), sym.srcPos)
+  end checkExtensionMethods
 
   /** Verify that references in the user-defined `@implicitNotFound` message are valid.
    *  (i.e. they refer to a type variable that really occurs in the signature of the annotated symbol.)
@@ -1233,8 +1281,8 @@ class RefChecks extends MiniPhase { thisPhase =>
 
   override def transformValDef(tree: ValDef)(using Context): ValDef = {
     if tree.symbol.exists then
-      checkNoPrivateOverrides(tree)
       val sym = tree.symbol
+      checkNoPrivateOverrides(sym)
       checkVolatile(sym)
       if (sym.exists && sym.owner.isTerm) {
         tree.rhs match {
@@ -1246,9 +1294,11 @@ class RefChecks extends MiniPhase { thisPhase =>
   }
 
   override def transformDefDef(tree: DefDef)(using Context): DefDef = {
-    checkNoPrivateOverrides(tree)
-    checkImplicitNotFoundAnnotation.defDef(tree.symbol.denot)
-    checkUnaryMethods(tree.symbol)
+    val sym = tree.symbol
+    checkNoPrivateOverrides(sym)
+    checkImplicitNotFoundAnnotation.defDef(sym.denot)
+    checkUnaryMethods(sym)
+    checkExtensionMethods(sym)
     tree
   }
 

@@ -2,6 +2,7 @@ package tests
 package inheritedMembers1
 
 
+/*<-*/@annotation.nowarn/*->*/
 class A
 {
     def A: String
