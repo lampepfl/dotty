@@ -11,7 +11,7 @@ scala> def f(thread: Thread) = thread.stop()
 -- Deprecation Warning: --------------------------------------------------------
 1 | def f(thread: Thread) = thread.stop()
   |                         ^^^^^^^^^^^
-  |method stop in class Thread is deprecated since : see corresponding Javadoc for more information.
+  |method stop in class Thread is deprecated: see corresponding Javadoc for more information.
 def f(thread: Thread): Unit
 
 scala>

@@ -1,3 +1,7 @@
+-- Deprecation Warning: tests/warn/i11022.scala:19:22 ------------------------------------------------------------------
+19 |  def usage(k: K) = k.k   // warn
+   |                    ^^^
+   |                    value k in class K is deprecated since 0.1: don't use k, ok?
 -- Deprecation Warning: tests/warn/i11022.scala:10:7 -------------------------------------------------------------------
 10 |val a: CaseClass = CaseClass(42)        // warn: deprecated type // warn: deprecated apply method
    |       ^^^^^^^^^
@@ -18,3 +22,7 @@
 12 |val c: Unit = CaseClass(42).magic()     // warn: deprecated apply method
    |              ^^^^^^^^^
    |              class CaseClass is deprecated: no CaseClass
+-- Deprecation Warning: tests/warn/i11022.scala:14:4 -------------------------------------------------------------------
+14 |val CaseClass(rgb) = b                  // warn
+   |    ^^^^^^^^^
+   |    class CaseClass is deprecated: no CaseClass
