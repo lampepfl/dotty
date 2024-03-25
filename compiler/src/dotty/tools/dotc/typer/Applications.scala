@@ -644,15 +644,14 @@ trait Applications extends Compatibility {
               missingArg(n)
           }
 
-          val formal1 = formal.stripFlexible
-          if (formal1.isRepeatedParam)
+          if formal.isRepeatedParam then
             args match {
               case arg :: Nil if isVarArg(arg) =>
                 addTyped(arg)
               case (arg @ Typed(Literal(Constant(null)), _)) :: Nil if ctx.isAfterTyper =>
                 addTyped(arg)
               case _ =>
-                val elemFormal = formal1.widenExpr.argTypesLo.head
+                val elemFormal = formal.widenExpr.argTypesLo.head
                 val typedArgs =
                   harmonic(harmonizeArgs, elemFormal) {
                     args.map { arg =>
