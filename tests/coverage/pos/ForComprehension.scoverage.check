@@ -1,0 +1,190 @@
+# Coverage data, format version: 3.0
+# Statement data:
+# - id
+# - source path
+# - package name
+# - class name
+# - class type (Class, Object or Trait)
+# - full class name
+# - method name
+# - start offset
+# - end offset
+# - line number
+# - symbol name
+# - tree name
+# - is branch
+# - invocations count
+# - is ignored
+# - description (can be multi-line)
+# '' sign
+# ------------------------------------------
+0
+ForComprehension.scala
+covtest
+ForComprehension$package$
+Object
+covtest.ForComprehension$package$
+testForComprehension
+52
+138
+3
+flatMap
+Apply
+false
+0
+false
+for {\n    a <- List(1)\n    b <- List(1)\n    if b > 1\n    c = a + b\n  } yield (a, b, c)
+
+1
+ForComprehension.scala
+covtest
+ForComprehension$package$
+Object
+covtest.ForComprehension$package$
+testForComprehension
+67
+74
+4
+apply
+Apply
+false
+0
+false
+List(1)
+
+2
+ForComprehension.scala
+covtest
+ForComprehension$package$
+Object
+covtest.ForComprehension$package$
+testForComprehension
+67
+71
+4
+List
+Ident
+false
+0
+false
+List
+
+3
+ForComprehension.scala
+covtest
+ForComprehension$package$
+Object
+covtest.ForComprehension$package$
+$anonfun
+79
+138
+5
+map
+Apply
+false
+0
+false
+b <- List(1)\n    if b > 1\n    c = a + b\n  } yield (a, b, c)
+
+4
+ForComprehension.scala
+covtest
+ForComprehension$package$
+Object
+covtest.ForComprehension$package$
+$anonfun
+79
+118
+5
+map
+Apply
+false
+0
+false
+b <- List(1)\n    if b > 1\n    c = a + b
+
+5
+ForComprehension.scala
+covtest
+ForComprehension$package$
+Object
+covtest.ForComprehension$package$
+$anonfun
+79
+104
+5
+withFilter
+Apply
+false
+0
+false
+b <- List(1)\n    if b > 1
+
+6
+ForComprehension.scala
+covtest
+ForComprehension$package$
+Object
+covtest.ForComprehension$package$
+$anonfun
+84
+91
+5
+apply
+Apply
+false
+0
+false
+List(1)
+
+7
+ForComprehension.scala
+covtest
+ForComprehension$package$
+Object
+covtest.ForComprehension$package$
+$anonfun
+84
+88
+5
+List
+Ident
+false
+0
+false
+List
+
+8
+ForComprehension.scala
+covtest
+ForComprehension$package$
+Object
+covtest.ForComprehension$package$
+$anonfun
+79
+110
+5
+apply
+Apply
+false
+0
+false
+b <- List(1)\n    if b > 1\n    c
+
+9
+ForComprehension.scala
+covtest
+ForComprehension$package$
+Object
+covtest.ForComprehension$package$
+testForComprehension
+17
+41
+2
+testForComprehension
+DefDef
+false
+0
+false
+def testForComprehension
+

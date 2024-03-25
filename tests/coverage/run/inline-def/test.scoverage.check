@@ -42,6 +42,23 @@ test$package
 Object
 <empty>.test$package
 Test
+225
+226
+12
+<init>
+Select
+false
+0
+false
+A
+
+2
+inline-def/test.scala
+<empty>
+test$package$
+Object
+<empty>.test$package$
+Test
 231
 243
 14
@@ -52,7 +69,24 @@ false
 false
 println(a.x)
 
-2
+3
+inline-def/test.scala
+<empty>
+test$package$
+Object
+<empty>.test$package$
+Test
+239
+242
+13
+x
+Select
+false
+0
+false
+a.x
+
+4
 inline-def/test.scala
 <empty>
 test$package
@@ -69,7 +103,7 @@ false
 false
 println(a.foo)
 
-3
+5
 inline-def/test.scala
 <empty>
 test$package
@@ -86,7 +120,24 @@ false
 false
 "foo".toString
 
-4
+6
+inline-def/test.scala
+<empty>
+test$package$
+Object
+<empty>.test$package$
+Test
+134
+148
+7
+toString
+Select
+false
+0
+false
+"foo".toString
+
+7
 inline-def/test.scala
 <empty>
 test$package
@@ -103,7 +154,7 @@ false
 false
 println(a.bar)
 
-5
+8
 inline-def/test.scala
 <empty>
 test$package
@@ -120,7 +171,24 @@ false
 false
 "bar".toString
 
-6
+9
+inline-def/test.scala
+<empty>
+test$package$
+Object
+<empty>.test$package$
+Test
+176
+190
+8
+toString
+Select
+false
+0
+false
+"bar".toString
+
+10
 inline-def/test.scala
 <empty>
 test$package
@@ -137,7 +205,7 @@ false
 false
 println(b.foo)
 
-7
+11
 inline-def/test.scala
 <empty>
 test$package
@@ -154,7 +222,7 @@ false
 false
 b.foo
 
-8
+12
 inline-def/test.scala
 <empty>
 test$package

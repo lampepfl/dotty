@@ -76,6 +76,23 @@ SomeFunctions
 Class
 covtest.SomeFunctions
 c
+83
+96
+5
+<init>
+Select
+false
+0
+false
+SomeFunctions
+
+4
+Lift.scala
+covtest
+SomeFunctions
+Class
+covtest.SomeFunctions
+c
 75
 80
 6
@@ -86,7 +103,7 @@ false
 false
 def c
 
-4
+5
 Lift.scala
 covtest
 SomeFunctions
@@ -103,7 +120,7 @@ false
 false
 c.f(g())
 
-5
+6
 Lift.scala
 covtest
 SomeFunctions
@@ -120,7 +137,24 @@ false
 false
 c
 
-6
+7
+Lift.scala
+covtest
+SomeFunctions
+Class
+covtest.SomeFunctions
+test
+113
+116
+7
+f
+Select
+false
+0
+false
+c.f
+
+8
 Lift.scala
 covtest
 SomeFunctions
@@ -137,7 +171,24 @@ false
 false
 g()
 
+9
+Lift.scala
+covtest
+SomeFunctions
+Class
+covtest.SomeFunctions
+test
+117
+118
 7
+g
+Select
+false
+0
+false
+g
+
+10
 Lift.scala
 covtest
 SomeFunctions

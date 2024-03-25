@@ -2,13 +2,13 @@ package dotty.tools.dotc
 package transform
 
 import java.io.File
-
 import ast.tpd.*
+
 import collection.mutable
 import core.Flags.*
 import core.Contexts.{Context, ctx, inContext}
 import core.DenotTransformers.IdentityDenotTransformer
-import core.Symbols.{defn, Symbol}
+import core.Symbols.{Symbol, defn}
 import core.Constants.Constant
 import core.NameOps.isContextFunction
 import core.StdNames.nme
@@ -16,7 +16,7 @@ import core.Types.*
 import core.Decorators.*
 import coverage.*
 import typer.LiftCoverage
-import util.{SourcePosition, SourceFile}
+import util.{SourceFile, SourcePosition}
 import util.Spans.Span
 import localopt.StringInterpolatorOpt
 import inlines.Inlines
@@ -144,6 +144,7 @@ class InstrumentCoverage extends MacroTransform with IdentityDenotTransformer:
       */
     private def createInvokeCall(tree: Tree, pos: SourcePosition, branch: Boolean = false)(using Context): Apply =
       val statementId = recordStatement(tree, pos, branch)
+      println(s"createInvokeCall: $statementId")
       val span = pos.span.toSynthetic
       invokeCall(statementId, span)
 
@@ -156,6 +157,8 @@ class InstrumentCoverage extends MacroTransform with IdentityDenotTransformer:
       * @return instrumentation result, with the preparation statement, coverage call and tree separated
       */
     private def tryInstrument(tree: Apply)(using Context): InstrumentedParts =
+      println(s"tryInstrument Tree: ${tree}")
+
       if canInstrumentApply(tree) then
         // Create a call to Invoker.invoked(coverageDirectory, newStatementId)
         val coverageCall = createInvokeCall(tree, tree.sourcePos)
@@ -180,25 +183,33 @@ class InstrumentCoverage extends MacroTransform with IdentityDenotTransformer:
         val transformed = cpy.Apply(tree)(transform(tree.fun), transform(tree.args))
         InstrumentedParts.notCovered(transformed)
 
-    private def tryInstrument(tree: Ident)(using Context): InstrumentedParts =
+    private def tryInstrument(tree: Ident)(using Context): InstrumentedParts = {
+      println(s"tryInstrument Ident: ${tree}")
+
+
       val sym = tree.symbol
-      if canInstrumentParameterless(sym) then
+
+      if (canInstrumentParameterless(sym)) {
         // call to a local parameterless method f
         val coverageCall = createInvokeCall(tree, tree.sourcePos)
         InstrumentedParts.singleExpr(coverageCall, tree)
-      else
-        InstrumentedParts.notCovered(tree)
+      } else {
+        println(s"tryInstrument Ident: ${tree} not instrumented")
+         InstrumentedParts.notCovered(tree)
+      }
+    }
 
-    private def tryInstrument(tree: Select)(using Context): InstrumentedParts =
+    private def tryInstrument(tree: Select)(using Context): InstrumentedParts = {
       val sym = tree.symbol
       val transformed = cpy.Select(tree)(transform(tree.qualifier), tree.name)
+      println(s"tryInstrument Select: ${tree}")
       if canInstrumentParameterless(sym) then
         // call to a parameterless method
         val coverageCall = createInvokeCall(tree, tree.sourcePos)
         InstrumentedParts.singleExpr(coverageCall, transformed)
       else
         InstrumentedParts.notCovered(transformed)
-
+    }
     /** Generic tryInstrument */
     private def tryInstrument(tree: Tree)(using Context): InstrumentedParts =
       tree match
@@ -255,6 +266,7 @@ class InstrumentCoverage extends MacroTransform with IdentityDenotTransformer:
           case TypeApply(fun, args) =>
             // Here is where `InstrumentedParts` becomes useful!
             // We extract its components and act carefully.
+            println(s"TypeApply: ${fun}")
             val InstrumentedParts(pre, coverageCall, expr) = tryInstrument(fun)
 
             if coverageCall.isEmpty then
@@ -472,6 +484,7 @@ class InstrumentCoverage extends MacroTransform with IdentityDenotTransformer:
      * should not be changed to {val $x = f(); T($x)}(1) but to {val $x = f(); val $y = 1; T($x)($y)}
      */
     private def needsLift(tree: Apply)(using Context): Boolean =
+      println(s"start needsLift: $tree")
       def isShortCircuitedOp(sym: Symbol) =
         sym == defn.Boolean_&& || sym == defn.Boolean_||
 
@@ -498,8 +511,10 @@ class InstrumentCoverage extends MacroTransform with IdentityDenotTransformer:
         case a: Apply => needsLift(a)
         case _ => false
 
-      nestedApplyNeedsLift ||
+      val liftMe = nestedApplyNeedsLift ||
       !isUnliftableFun(fun) && !tree.args.isEmpty && !tree.args.forall(LiftCoverage.noLift)
+      println(s"end needsLift: $tree, liftMe: $liftMe, nestedApplyNeedsLift: $nestedApplyNeedsLift, isUnliftableFun: ${isUnliftableFun(fun)}, tree.args.isEmpty: ${tree.args}, tree.args.forall(LiftCoverage.noLift): ${tree.args.forall(LiftCoverage.noLift)}")
+      liftMe
 
     private def isContextFunctionApply(fun: Tree)(using Context): Boolean =
       fun match
@@ -514,10 +529,10 @@ class InstrumentCoverage extends MacroTransform with IdentityDenotTransformer:
         case _                                => false
 
       val sym = tree.symbol
-      !sym.isOneOf(ExcludeMethodFlags)
+      val canI = !sym.isOneOf(ExcludeMethodFlags)
       && !isCompilerIntrinsicMethod(sym)
       && !(sym.isClassConstructor && isSecondaryCtorDelegateCall)
-      && (tree.typeOpt match
+      && (tree.typeOpt match {
         case AppliedType(tycon: NamedType, _) =>
           /* If the last expression in a block is a context function, we'll try to
              summon its arguments at the current point, even if the expected type
@@ -540,19 +555,25 @@ class InstrumentCoverage extends MacroTransform with IdentityDenotTransformer:
           */
           false
         case _ =>
-          true
-      )
+          false
+      })
+      println(s"canInstrumentApply ${tree.symbol}: $canI is ${sym.name} is method ${sym.is(Method)} is compiler intrinsic ${isCompilerIntrinsicMethod(sym)} typeOpt ${tree.typeOpt}")
+      canI
+
 
     /** Is this the symbol of a parameterless method that we can instrument?
       * Note: it is crucial that `asInstanceOf` and `isInstanceOf`, among others,
       * do NOT get instrumented, because that would generate invalid code and crash
       * in post-erasure checking.
       */
-    private def canInstrumentParameterless(sym: Symbol)(using Context): Boolean =
-      sym.is(Method, butNot = ExcludeMethodFlags)
+    private def canInstrumentParameterless(sym: Symbol)(using Context): Boolean = {
+      val isP =  (sym.is(Method, butNot = ExcludeMethodFlags)
       && sym.info.isParameterless
       && !isCompilerIntrinsicMethod(sym)
-      && !sym.info.typeSymbol.name.isContextFunction // exclude context functions like in canInstrumentApply
+      && !sym.info.typeSymbol.name.isContextFunction ) // exclude context functions like in canInstrumentApply)
+      println(s"canInstrumentParameterless $sym: $isP is ${sym.name} kind string ${sym.kindString} is method ${sym.is(Method)} is parameterless ${sym.info.isParameterless} is compiler intrinsic ${isCompilerIntrinsicMethod(sym)} typeSymbol ${sym.info.typeSymbol} is context function ${sym.info.typeSymbol.name.isContextFunction}")
+      isP
+    }
 
     /** Does sym refer to a "compiler intrinsic" method, which only exist during compilation,
       * like Any.isInstanceOf?

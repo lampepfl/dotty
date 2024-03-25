@@ -42,6 +42,23 @@ test$package
 Object
 <empty>.test$package
 Test
+61
+81
+4
+simple
+Select
+false
+0
+false
+StaticMethods.simple
+
+2
+java-methods/test.scala
+<empty>
+test$package$
+Object
+<empty>.test$package$
+Test
 86
 127
 6
@@ -52,7 +69,24 @@ false
 false
 StaticMethods.withTypeParam[Any](a => ())
 
-2
+3
+java-methods/test.scala
+<empty>
+test$package$
+Object
+<empty>.test$package$
+Test
+86
+113
+5
+withTypeParam
+Select
+false
+0
+false
+StaticMethods.withTypeParam
+
+4
 java-methods/test.scala
 <empty>
 test$package
@@ -69,7 +103,24 @@ false
 false
 JavaObject()
 
-3
+5
+java-methods/test.scala
+<empty>
+test$package$
+Object
+<empty>.test$package$
+Test
+140
+150
+6
+<init>
+Select
+false
+0
+false
+JavaObject
+
+6
 java-methods/test.scala
 <empty>
 test$package
@@ -86,7 +137,24 @@ false
 false
 obj.f()
 
-4
+7
+java-methods/test.scala
+<empty>
+test$package$
+Object
+<empty>.test$package$
+Test
+155
+160
+7
+f
+Select
+false
+0
+false
+obj.f
+
+8
 java-methods/test.scala
 <empty>
 test$package
@@ -103,7 +171,7 @@ false
 false
 println(obj.identity[Int](0))
 
-5
+9
 java-methods/test.scala
 <empty>
 test$package
@@ -120,7 +188,24 @@ false
 false
 obj.identity[Int](0)
 
-6
+10
+java-methods/test.scala
+<empty>
+test$package$
+Object
+<empty>.test$package$
+Test
+173
+185
+8
+identity
+Select
+false
+0
+false
+obj.identity
+
+11
 java-methods/test.scala
 <empty>
 test$package
@@ -137,7 +222,7 @@ false
 false
 println("ok!")
 
-7
+12
 java-methods/test.scala
 <empty>
 test$package
