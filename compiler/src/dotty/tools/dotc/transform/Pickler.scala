@@ -203,7 +203,7 @@ class Pickler extends Phase {
             if ctx.settings.YtestPickler.value then
               pickledBytes(cls) = (unit, pickled)
               if ctx.settings.YtestPicklerCheck.value then
-                printedTasty(cls) = TastyPrinter.showContents(pickled, noColor = true, testPickler = true)
+                printedTasty(cls) = TastyPrinter.showContents(pickled, noColor = true, isBestEffortTasty = false, testPickler = true)
             () => pickled
 
         unit.pickled += (cls -> demandPickled)

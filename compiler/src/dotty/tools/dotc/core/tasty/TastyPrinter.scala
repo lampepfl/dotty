@@ -22,12 +22,12 @@ import dotty.tools.dotc.core.Names.TermName
 object TastyPrinter:
 
   def showContents(bytes: Array[Byte], noColor: Boolean): String =
-    showContents(bytes, noColor, testPickler = false, isBestEffortTasty = false)
+    showContents(bytes, noColor, isBestEffortTasty = false, testPickler = false)
 
-  def showContents(bytes: Array[Byte], noColor: Boolean, testPickler: Boolean = false, isBestEffortTasty: Boolean = false): String =
+  def showContents(bytes: Array[Byte], noColor: Boolean, isBestEffortTasty: Boolean, testPickler: Boolean = false): String =
     val printer =
-      if noColor then new TastyPrinter(bytes, testPickler)
-      else new TastyAnsiiPrinter(bytes, testPickler)
+      if noColor then new TastyPrinter(bytes, isBestEffortTasty, testPickler)
+      else new TastyAnsiiPrinter(bytes, isBestEffortTasty, testPickler)
     printer.showContents()
 
   def main(args: Array[String]): Unit = {
@@ -42,7 +42,7 @@ object TastyPrinter:
       println(line)
       println(fileName)
       println(line)
-      println(showContents(bytes, noColor, isBestEffortTasty))
+      println(showContents(bytes, noColor, isBestEffortTasty, testPickler = false))
       println()
       printLastLine = true
     for arg <- args do
@@ -70,9 +70,9 @@ object TastyPrinter:
       println(line)
   }
 
-class TastyPrinter(bytes: Array[Byte], val testPickler: Boolean, isBestEffortTasty: Boolean = false) {
+class TastyPrinter(bytes: Array[Byte], isBestEffortTasty: Boolean, val testPickler: Boolean) {
 
-  def this(bytes: Array[Byte]) = this(bytes, testPickler = false, isBestEffortTasty = false)
+  def this(bytes: Array[Byte]) = this(bytes, isBestEffortTasty = false, testPickler = false)
 
   class TastyPrinterUnpickler extends TastyUnpickler(bytes, isBestEffortTasty) {
     var namesStart: Addr = uninitialized
@@ -132,7 +132,7 @@ class TastyPrinter(bytes: Array[Byte], val testPickler: Boolean, isBestEffortTas
     })
 
   class TreeSectionUnpickler(sb: StringBuilder) extends PrinterSectionUnpickler[Unit](ASTsSection) {
-    import dotty.tools.tasty.TastyFormat.*
+    import dotty.tools.tasty.besteffort.BestEffortTastyFormat.* // superset on TastyFormat
     def unpickle0(reader: TastyReader)(using refs: NameRefs): Unit = {
       import reader.*
       var indent = 0
