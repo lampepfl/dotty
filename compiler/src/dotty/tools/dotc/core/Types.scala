@@ -1619,10 +1619,11 @@ object Types extends TypeUtils {
 
     /** If this is a repeated type, its element type, otherwise the type itself */
     def repeatedToSingle(using Context): Type = this match {
+      case tp @ ExprType(tp1) => tp.derivedExprType(tp1.repeatedToSingle)
       case tp: FlexibleType =>
+        // The flexible type is handled here because the varargs from Java can be nullable.
         val underlyingSingle = tp.underlying.repeatedToSingle
         if underlyingSingle ne tp.underlying then underlyingSingle else tp
-      case tp @ ExprType(tp1) => tp.derivedExprType(tp1.repeatedToSingle)
       case _                  => if (isRepeatedParam) this.argTypesHi.head else this
     }
 
