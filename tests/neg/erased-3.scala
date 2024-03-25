@@ -8,36 +8,23 @@ object Test {
     )
     foo1(u()) // OK
     foo2( // error
-      u() // error
-    )
-    foo3( // error
-      u()
+      u() // Ok
     )
     u() // error
     u() // error
   }
-  erased def foo2(a: Int): Int = {
+  erased def foo2(erased a: Int): Int = {
     foo0(u()) // OK
     foo1(u()) // OK
     foo2(u()) // OK
-    foo3(u()) // OK
-    u() // warn
-    u() // OK
-  }
-  erased def foo3(erased a: Int): Int = {
-    foo0(u()) // OK
-    foo1(u()) // OK
-    foo2(u()) // OK
-    foo3(u()) // OK
     u() // warn
     u() // OK
   }
 
-  erased val foo4: Int = {
+  erased val foo3: Int = {
     foo0(u()) // OK
     foo1(u()) // OK
     foo2(u()) // OK
-    foo3(u()) // OK
     println()
     u() // warn
     u() // OK

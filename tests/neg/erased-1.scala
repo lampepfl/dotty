@@ -12,25 +12,14 @@ object Test {
     })
     foo1(a) // OK
     foo2( // error
-      a // error
-    )
-    foo3( // error
-      a
+      a // Ok
     )
     a // error
   }
-  erased def foo2(a: Int): Int = {
+  erased def foo2(erased a: Int): Int = {
     foo0(a) // OK
     foo1(a) // OK
     foo2(a) // OK
-    foo3(a) // OK
-    a // OK
-  }
-  erased def foo3(erased a: Int): Int = {
-    foo0(a) // OK
-    foo1(a) // OK
-    foo2(a) // OK
-    foo3(a) // OK
     a // OK
   }
 }

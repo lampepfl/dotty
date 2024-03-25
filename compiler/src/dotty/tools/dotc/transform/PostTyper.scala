@@ -537,7 +537,14 @@ class PostTyper extends MacroTransform with InfoTransformer { thisPhase =>
         report.error("classes that extend MacroAnnotation must not be inner/local classes", sym.srcPos)
 
     private def checkErasedDef(tree: ValOrDefDef)(using Context): Unit =
+      def checkOnlyErasedParams(): Unit = tree match
+        case tree: DefDef =>
+          for params <- tree.paramss; param <- params if !param.symbol.isType && !param.symbol.is(Erased) do
+            report.error("erased definition can only have erased parameters", param.srcPos)
+        case _ =>
+
       if tree.symbol.is(Erased, butNot = Macro) then
+        checkOnlyErasedParams()
         val tpe = tree.rhs.tpe
         if tpe.derivesFrom(defn.NothingClass) then
           report.error("`erased` definition cannot be implemented with en expression of type Nothing", tree.srcPos)
