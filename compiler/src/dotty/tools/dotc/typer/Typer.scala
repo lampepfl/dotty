@@ -1841,10 +1841,8 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
               case _ => false
             }
 
-        val result = pt match {
+        val result = pt.underlyingMatchType match {
           case mt: MatchType if isMatchTypeShaped(mt) =>
-            typedDependentMatchFinish(tree, sel1, selType, tree.cases, mt)
-          case MatchType.InDisguise(mt) if isMatchTypeShaped(mt) =>
             typedDependentMatchFinish(tree, sel1, selType, tree.cases, mt)
           case _ =>
             typedMatchFinish(tree, sel1, selType, tree.cases, pt)

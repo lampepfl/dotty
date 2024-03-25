@@ -461,7 +461,7 @@ class TypeApplications(val self: Type) extends AnyVal {
    */
   final def toBounds(using Context): TypeBounds = self match {
     case self: TypeBounds => self // this can happen for wildcard args
-    case _ => if (self.isMatch) MatchAlias(self) else TypeAlias(self)
+    case _ => AliasingBounds(self)
   }
 
   /** Translate a type of the form From[T] to either To[T] or To[? <: T] (if `wildcardArg` is set). Keep other types as they are.

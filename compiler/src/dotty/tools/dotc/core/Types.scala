@@ -458,7 +458,10 @@ object Types extends TypeUtils {
 
     /** Is this a match type or a higher-kinded abstraction of one?
      */
-    def isMatch(using Context): Boolean = underlyingMatchType.exists
+    def isMatch(using Context): Boolean = stripped match
+      case tp: MatchType => true
+      case tp: HKTypeLambda => tp.resType.isMatch
+      case _ => false
 
     def underlyingMatchType(using Context): Type = stripped match {
       case tp: MatchType => tp
@@ -4580,16 +4583,22 @@ object Types extends TypeUtils {
 
     override def tryNormalize(using Context): Type = tycon.stripTypeVar match {
       case tycon: TypeRef =>
-        def tryMatchAlias = tycon.info match {
-          case MatchAlias(alias) =>
+        def tryMatchAlias = tycon.info match
+          case AliasingBounds(alias) if isMatchAlias =>
             trace(i"normalize $this", typr, show = true) {
               MatchTypeTrace.recurseWith(this) {
                 alias.applyIfParameterized(args.map(_.normalized)).tryNormalize
+                /* `applyIfParameterized` may reduce several HKTypeLambda applications
+                 * before the underlying MatchType is reached.
+                 * Even if they do not involve any match type normalizations yet,
+                 * we still want to record these reductions in the MatchTypeTrace.
+                 * They should however only be attempted if they eventually expand
+                 * to a match type, which is ensured by the `isMatchAlias` guard.
+                 */
               }
             }
           case _ =>
             NoType
-        }
         tryCompiletimeConstantFold.orElse(tryMatchAlias)
       case _ =>
         NoType
@@ -4599,7 +4608,12 @@ object Types extends TypeUtils {
     def isMatchAlias(using Context): Boolean = tycon.stripTypeVar match
       case tycon: TypeRef =>
         tycon.info match
-          case _: MatchAlias => true
+          case AliasingBounds(alias) =>
+            alias.underlyingMatchType.exists
+            /* This is the only true case since anything other than
+             * a TypeRef of an alias with an underlying match type
+             * should have been already reduced by `appliedTo` in the TypeAssigner.
+             */
           case _ => false
       case _ => false
 
@@ -5130,20 +5144,9 @@ object Types extends TypeUtils {
     def apply(bound: Type, scrutinee: Type, cases: List[Type])(using Context): MatchType =
       unique(new CachedMatchType(bound, scrutinee, cases))
 
-    def thatReducesUsingGadt(tp: Type)(using Context): Boolean = tp match
-      case MatchType.InDisguise(mt) => mt.reducesUsingGadt
-      case mt: MatchType            => mt.reducesUsingGadt
-      case _                        => false
-
-    /** Extractor for match types hidden behind an AppliedType/MatchAlias. */
-    object InDisguise:
-      def unapply(tp: AppliedType)(using Context): Option[MatchType] = tp match
-        case AppliedType(tycon: TypeRef, args) => tycon.info match
-          case MatchAlias(alias) => alias.applyIfParameterized(args) match
-            case mt: MatchType => Some(mt)
-            case _ => None
-          case _ => None
-        case _ => None
+    def thatReducesUsingGadt(tp: Type)(using Context): Boolean = tp.underlyingMatchType match
+      case mt: MatchType => mt.reducesUsingGadt
+      case _ => false
   }
 
   enum MatchTypeCasePattern:
@@ -5628,6 +5631,14 @@ object Types extends TypeUtils {
     def upper(hi: Type)(using Context): TypeBounds = apply(defn.NothingType, hi)
     def lower(lo: Type)(using Context): TypeBounds = apply(lo, defn.AnyType)
   }
+
+  object AliasingBounds:
+    /** A MatchAlias if alias is a match type and a TypeAlias o.w.
+     *  Note that aliasing a MatchAlias returns a normal TypeAlias.
+     */
+    def apply(alias: Type)(using Context): AliasingBounds =
+      if alias.isMatch then MatchAlias(alias) else TypeAlias(alias)
+    def unapply(tp: AliasingBounds): Option[Type] = Some(tp.alias)
 
   object TypeAlias {
     def apply(alias: Type)(using Context): TypeAlias = unique(new TypeAlias(alias))
