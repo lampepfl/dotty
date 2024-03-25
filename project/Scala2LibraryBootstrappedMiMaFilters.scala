@@ -78,9 +78,8 @@ object Scala2LibraryBootstrappedMiMaFilters {
         "scala.collection.IterableOnceOps#Maximized.this", // New in 2.13.11: private inner class
         "scala.util.Properties.<clinit>",
         "scala.util.Sorting.scala$util$Sorting$$mergeSort$default$5",
-        // New in 2.13.12 -- can be removed once scala/scala#10549 lands in 2.13.13
-        // and we take the upgrade here
-        "scala.collection.immutable.MapNodeRemoveAllSetNodeIterator.next",
+        // New in 2.13.13
+        "scala.collection.mutable.ArrayBuffer.resizeUp",
       ).map(ProblemFilters.exclude[DirectMissingMethodProblem])
     }
   )
