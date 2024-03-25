@@ -3819,6 +3819,28 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
       wtp.paramInfos.foreach(instantiate)
       val saved = ctx.typerState.snapshot()
 
+      /** Ensures a correct position is set for code desugared from a for comprehension.
+       *  Otherwise, if simply using the endSpan of a tree, the implicit arguments position for
+       *  map, flatmap, filter and foreach would point ot the yield/do statements of a for.
+       */
+      def forComprehensionMethodSourcePos(tree: Tree): Option[SrcPos] = {
+        def isForComprehensionSyntheticName(select: Select): Boolean =
+          select.span.toSynthetic == select.qualifier.span.toSynthetic && (
+            select.name == nme.map ||
+            select.name == nme.flatMap ||
+            select.name == nme.withFilter ||
+            select.name == nme.foreach
+          )
+        tree match
+          case Apply(fun, _) => forComprehensionMethodSourcePos(fun)
+          case TypeApply(fun, _) => forComprehensionMethodSourcePos(fun)
+          case select @ Select(qualifier, name) =>
+            if isForComprehensionSyntheticName(select) then Some(qualifier.srcPos.endPos)
+            else None
+          case _ => None
+      }
+      val inferredArgSrcPos = forComprehensionMethodSourcePos(tree).getOrElse(tree.srcPos.endPos)
+
       def dummyArg(tp: Type) = untpd.Ident(nme.???).withTypeUnchecked(tp)
 
       def addImplicitArgs(using Context) = {
@@ -3836,7 +3858,8 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
                 else formals1
               implicitArgs(formals2, argIndex + 1, pt)
 
-            val arg = inferImplicitArg(formal, tree.span.endPos)
+            val arg = inferImplicitArg(formal, inferredArgSrcPos.span)
+
             arg.tpe match
               case failed: AmbiguousImplicits =>
                 val pt1 = pt.deepenProtoTrans
@@ -3906,7 +3929,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
               case failure: SearchFailureType =>
                 report.error(
                   missingArgMsg(arg, formal, implicitParamString(paramName, methodStr, tree), paramSymWithMethodTree(paramName)),
-                  tree.srcPos.endPos
+                  inferredArgSrcPos
                 )
               case _ =>
             }

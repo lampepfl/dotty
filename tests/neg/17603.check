@@ -1,0 +1,4 @@
+-- [E172] Type Error: tests/neg/17603.scala:7:20 -----------------------------------------------------------------------
+7 |    p <- Mappable(3) // error
+  |                    ^
+  |                    No given instance of type Int was found for parameter loc of method map in class Mappable
