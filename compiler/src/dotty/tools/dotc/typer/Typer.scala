@@ -2558,7 +2558,18 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
     completeAnnotations(vdef, sym)
     if (sym.isOneOf(GivenOrImplicit)) checkImplicitConversionDefOK(sym)
     if sym.is(Module) then checkNoModuleClash(sym)
-    val tpt1 = checkSimpleKinded(typedType(tpt))
+    val tpdType = typedType(tpt)
+    val tpt1: Tree = checkSimpleKinded(tpdType) match {
+      case inferred: InferredTypeTree =>
+//        println(i"inferred type = $inferred")
+         inferred.tpe match {
+          case or: OrType =>
+            inferred.overwriteType(or.deduplicatedAbsorbingNothingTypes)
+          case _ =>
+        }
+        inferred
+      case self => self
+    }
     val rhs1 = vdef.rhs match {
       case rhs @ Ident(nme.WILDCARD) => rhs withType tpt1.tpe
       case rhs => typedExpr(rhs, tpt1.tpe.widenExpr)
@@ -3101,17 +3112,24 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
   def typedUnadapted(initTree: untpd.Tree, pt: Type, locked: TypeVars)(using Context): Tree = {
     record("typedUnadapted")
     val xtree = expanded(initTree)
+//    println("> typing unadapted")
+//    println(i"initTree = $initTree")
+//    println(i"pt = $pt")
+
     xtree.removeAttachment(TypedAhead) match {
       case Some(ttree) => ttree
       case none =>
 
         def typedNamed(tree: untpd.NameTree, pt: Type)(using Context): Tree = {
           val sym = retrieveSym(xtree)
+//          println(i"sym = $sym")
           tree match {
             case tree: untpd.Ident => typedIdent(tree, pt)
             case tree: untpd.Select => typedSelect(tree, pt)
             case tree: untpd.Bind => typedBind(tree, pt)
             case tree: untpd.ValDef =>
+//              println("> typing val def")
+//              println(i"$tree")
               if (tree.isEmpty) tpd.EmptyValDef
               else typedValDef(tree, sym)(using ctx.localContext(tree, sym))
             case tree: untpd.DefDef =>
@@ -3217,8 +3235,15 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
             then
               makeContextualFunction(xtree, ifpt)
             else xtree match
-              case xtree: untpd.NameTree => typedNamed(xtree, pt)
-              case xtree => typedUnnamed(xtree)
+              case xtree: untpd.NameTree =>
+//                println(s"> typing named")
+//                println(i"xtree = $xtree")
+//                println(i"pt = $pt")
+                typedNamed(xtree, pt)
+              case xtree =>
+//                println(s"> typing unnamed")
+//                println(i"xtree = $xtree")
+                typedUnnamed(xtree)
 
           val unsimplifiedType = result.tpe
           simplify(result, pt, locked)
@@ -3286,6 +3311,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
 
   /** Typecheck and adapt tree, returning a typed tree. Parameters as for `typedUnadapted` */
   def typed(tree: untpd.Tree, pt: Type, locked: TypeVars)(using Context): Tree =
+//    println("> typing tree")
     trace(i"typing $tree, pt = $pt", typr, show = true) {
       record(s"typed $getClass")
       record("typed total")
@@ -3413,6 +3439,9 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
     withoutMode(Mode.PatternOrTypeBits)(typed(tree, pt))
 
   def typedType(tree: untpd.Tree, pt: Type = WildcardType, mapPatternBounds: Boolean = false)(using Context): Tree =
+//    println("> typing type")
+//    println(i"tree = $tree")
+//    println(i"pt = $pt")
     val tree1 = withMode(Mode.Type) { typed(tree, pt) }
     if mapPatternBounds && ctx.mode.is(Mode.Pattern) && !ctx.isAfterTyper then
       tree1 match

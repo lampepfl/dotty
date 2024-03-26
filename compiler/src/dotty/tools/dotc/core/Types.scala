@@ -40,6 +40,8 @@ import java.lang.ref.WeakReference
 import compiletime.uninitialized
 import cc.{CapturingType, CaptureSet, derivedCapturingType, isBoxedCapturing, isCaptureChecking, isRetains, isRetainsLike}
 import CaptureSet.{CompareResult, IdempotentCaptRefMap, IdentityCaptRefMap}
+import scala.collection.mutable.ListBuffer
+import dotty.tools.dotc.util._
 
 import scala.annotation.internal.sharable
 import scala.annotation.threadUnsafe
@@ -3649,6 +3651,55 @@ object Types extends TypeUtils {
     override def eql(that: Type): Boolean = that match {
       case that: OrType => tp1.eq(that.tp1) && tp2.eq(that.tp2) && isSoft == that.isSoft
       case _ => false
+    }
+
+    /** Returns the set of non-union (leaf) types composing this union tree.
+     * For example:<br>
+     *  `(A | B | A | B | (A & (B | C)))` returns `{A, B, (A & (B | C))}`.
+     */
+    private def gatherTreeUniqueMembersAbsorbingNothingTypes(using Context): MutableSet[Type] = {
+
+      var unvisitedSubtrees = List(this)
+      val uniqueTreeMembers = new EqLinkedHashSet[Type]
+
+      while (unvisitedSubtrees.nonEmpty) {
+        unvisitedSubtrees match
+          case head :: tail =>
+            head match
+              case OrType(l: OrType, r: OrType) =>
+                  unvisitedSubtrees = l :: r :: tail
+              case OrType(l, r: OrType) =>
+                unvisitedSubtrees = r :: tail
+                if !l.isNothingType then uniqueTreeMembers += l
+              case OrType(l: OrType, r) =>
+                unvisitedSubtrees = l :: tail
+                if !r.isNothingType then uniqueTreeMembers += r
+              case OrType(l, r) =>
+                unvisitedSubtrees = tail
+                uniqueTreeMembers += l
+                uniqueTreeMembers += r
+          case _ =>
+      }
+
+      uniqueTreeMembers
+    }
+
+    /** Returns an equivalent union tree without repeated members. Weaker than LUB.
+     */
+    def deduplicatedAbsorbingNothingTypes(using Context): Type = {
+      if tp1.isInstanceOf[OrType] || tp2.isInstanceOf[OrType] then
+        val uniqueTreeMembers = this.gatherTreeUniqueMembersAbsorbingNothingTypes
+
+        uniqueTreeMembers.size match {
+          case 1 =>
+            uniqueTreeMembers.iterator.next()
+          case _ =>
+            val members = uniqueTreeMembers.iterator
+            val startingUnion = OrType(members.next(), members.next(), soft = true)
+            members.foldLeft(startingUnion)(OrType(_, _, soft = true))
+        }
+      else if tp1 eq tp2 then tp1
+      else this
     }
   }
 
