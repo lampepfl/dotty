@@ -811,7 +811,11 @@ class TypeErasure(sourceLanguage: SourceLanguage, semiEraseVCs: Boolean, isConst
           MethodType(Nil, Nil,
             eraseResult(rt.translateFromRepeated(toArray = sourceLanguage.isJava)))
       case tp1: PolyType =>
-        eraseResult(tp1.resultType) match
+        val rt = eraseResult(tp1.resultType)
+        rt match
+          case rt: ErrorType => report.error(rt.msg, sym.srcPos)
+          case _ =>
+        rt match
           case rt: MethodType => rt
           case rt => MethodType(Nil, Nil, rt)
       case tp1 =>

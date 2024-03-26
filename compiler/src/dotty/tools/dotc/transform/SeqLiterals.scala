@@ -21,7 +21,7 @@ class SeqLiterals extends MiniPhase {
 
   override def description: String = SeqLiterals.description
 
-  override def runsAfter: Set[String] = Set(PatternMatcher.name)
+  override def runsAfter: Set[String] = Set(PatternMatcher.name, ElimOpaque.name) // after ElimOpaque to wrap seqs in primitive arrays
 
   override def checkPostCondition(tree: Tree)(using Context): Unit = tree match {
     case tpd: SeqLiteral => assert(tpd.isInstanceOf[JavaSeqLiteral])

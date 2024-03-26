@@ -5258,7 +5258,7 @@ object Types extends TypeUtils {
               else
                 MatchTypeCasePattern.CompileTimeS(argPattern)
             else
-              tycon.info match
+              atPhase(typerPhase)(tycon.info) match
                 case _: RealTypeBounds =>
                   recAbstractTypeConstructor(pat)
                 case TypeAlias(tl @ HKTypeLambda(onlyParam :: Nil, resType: RefinedType)) =>
