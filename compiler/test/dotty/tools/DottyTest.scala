@@ -13,7 +13,7 @@ import Types._, Symbols._, Decorators._
 import dotc.core.Decorators._
 import dotc.ast.tpd
 import dotc.Compiler
-
+import dotty.tools.dotc.config.Settings.Setting.ChoiceWithHelp
 import dotc.core.Phases.Phase
 
 trait DottyTest extends ContextEscapeDetection {
@@ -41,6 +41,7 @@ trait DottyTest extends ContextEscapeDetection {
     fc.setSetting(fc.settings.encoding, "UTF8")
     fc.setSetting(fc.settings.classpath, TestConfiguration.basicClasspath)
     fc.setSetting(fc.settings.language, List("experimental.erasedDefinitions"))
+    fc.setSetting(fc.settings.Wunused, List(ChoiceWithHelp("all","")))
     fc.setProperty(ContextDoc, new ContextDocstrings)
   }
 

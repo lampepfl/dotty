@@ -136,6 +136,24 @@ class CodeActionTest extends DottyTest:
          afterPhase = "patternMatcher"
       )
 
+  @Test def removeUnusedLocalDefinition =
+    checkCodeAction(
+      code = """object Test:
+         |  def foo(): Int = {
+         |    val a = 456
+         |    123
+         |  }
+         |""".stripMargin,
+      title = "Remove unused code",
+      expected = """object Test:
+         |  def foo(): Int = {
+         |    123
+         |  }
+         |""".stripMargin , 
+         afterPhase = "checkUnusedPostInlining"
+      )
+
+
   // Make sure we're not using the default reporter, which is the ConsoleReporter,
   // meaning they will get reported in the test run and that's it.
   private def newContext =

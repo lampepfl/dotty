@@ -3159,3 +3159,41 @@ class VolatileOnVal()(using Context)
 extends SyntaxMsg(VolatileOnValID):
   protected def msg(using Context): String = "values cannot be volatile"
   protected def explain(using Context): String = ""
+
+class UnusedSymbol(pos: SourcePosition, _msg: String, _actions: List[CodeAction])(using Context)
+extends Message(UnusedSymbolID) {
+  def kind = MessageKind.UnusedSymbol
+
+  override def actions(using Context) = _actions
+  override def msg(using Context) = _msg
+  override def explain(using Context) = ""
+}
+
+object UnusedSymbol {
+    private def removeLocalDefAction(treePos: SourcePosition)(using Context): List[CodeAction] = {
+      val source = treePos.source
+      val sourcePos = treePos.sourcePos
+      val endLine = source.offsetToLine(sourcePos.end - 1)
+      val nextLineOffset = source.lineToOffset(endLine + 1)
+      val startOffset = source.lineToOffset(sourcePos.startLine)
+
+      val pathes = List(
+        ActionPatch(
+          srcPos = sourcePos.withSpan(sourcePos.span.withStart(startOffset).withEnd(nextLineOffset)),
+          replacement = ""
+        ),
+      )
+      List(
+        CodeAction(title = s"Remove unused code",
+          description = None,
+          patches = pathes
+        )
+      )
+    }
+    def imports(treePos: SourcePosition)(using Context): UnusedSymbol = new UnusedSymbol(treePos, i"unused import", List.empty)
+    def localDefs(treePos: SourcePosition)(using Context): UnusedSymbol = new UnusedSymbol(treePos, i"unused local definition", removeLocalDefAction(treePos))
+    def explicitParams(treePos: SourcePosition)(using Context): UnusedSymbol = new UnusedSymbol(treePos, i"unused explicit parameter", List.empty)
+    def implicitParams(treePos: SourcePosition)(using Context): UnusedSymbol = new UnusedSymbol(treePos, i"unused implicit parameter", List.empty)
+    def privateMembers(treePos: SourcePosition)(using Context): UnusedSymbol = new UnusedSymbol(treePos, i"unused private member", List.empty)
+    def patVars(treePos: SourcePosition)(using Context): UnusedSymbol = new UnusedSymbol(treePos, i"unused pattern variable", List.empty)
+}
