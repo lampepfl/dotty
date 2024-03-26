@@ -25,7 +25,7 @@ methods with a dependent result type. Dependent function types desugar to
 refinement types of `scala.FunctionN`. A dependent function type
 `(x1: K1, ..., xN: KN) => R` of arity `N` translates to:
 
-```scala
+```scala sc:nocompile
 FunctionN[K1, ..., Kn, R']:
   def apply(x1: K1, ..., xN: KN): R
 ```

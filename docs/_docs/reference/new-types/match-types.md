@@ -16,7 +16,7 @@ type Elem[X] = X match
 
 This defines a type that reduces as follows:
 
-```scala
+```scala sc:nocompile
 Elem[String]       =:=  Char
 Elem[Array[Int]]   =:=  Int
 Elem[List[Float]]  =:=  Float
@@ -28,7 +28,7 @@ subtypes of each other.
 
 In general, a match type is of the form
 
-```scala
+```scala sc:nocompile
 S match { P1 => T1 ... Pn => Tn }
 ```
 
@@ -37,7 +37,7 @@ variables in patterns start with a lower case letter, as usual.
 
 Match types can form part of recursive type definitions. Example:
 
-```scala
+```scala sc-name:leafelm
 type LeafElem[X] = X match
   case String => Char
   case Array[t] => LeafElem[t]
@@ -64,7 +64,7 @@ Match types can be used to define dependently typed methods. For instance, here
 is the value level counterpart to the `LeafElem` type defined above (note the
 use of the match type as the return type):
 
-```scala
+```scala sc-compile-with:leafelm
 def leafElem[X](x: X): LeafElem[X] = x match
   case x: String      => x.charAt(0)
   case x: Array[t]    => leafElem(x(0))
@@ -198,14 +198,14 @@ Since reduction is linked to subtyping, we already have a cycle detection
 mechanism in place. As a result, the following will already give a reasonable
 error message:
 
-```scala
+```scala sc:nocompile
 type L[X] = X match
   case Int => L[X]
 
 def g[X]: L[X] = ???
 ```
 
-```scala
+```scala sc:nocompile
    |  val x: Int = g[Int]
    |                ^
    |Recursion limit exceeded.

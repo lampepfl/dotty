@@ -7,7 +7,7 @@ nightlyOf: https://docs.scala-lang.org/scala3/reference/new-types/dependent-func
 A dependent function type is a function type whose result depends
 on the function's parameters. For example:
 
-```scala
+```scala sc-name:entry
 trait Entry { type Key; val key: Key }
 
 def extractKey(e: Entry): e.Key = e.key          // a dependent method
@@ -28,7 +28,7 @@ because there was no type that could describe them.
 
 In Scala 3 this is now possible. The type of the `extractor` value above is
 
-```scala
+```scala sc:nocompile
 (e: Entry) => e.Key
 ```
 
@@ -41,7 +41,7 @@ instance of the [`Function1` trait](https://scala-lang.org/api/3.x/scala/Functio
 are also represented as instances of these traits, but they get an additional
 refinement. In fact, the dependent function type above is just syntactic sugar for
 
-```scala
+```scala sc:nocompile
 Function1[Entry, Entry#Key]:
   def apply(e: Entry): e.Key
 ```

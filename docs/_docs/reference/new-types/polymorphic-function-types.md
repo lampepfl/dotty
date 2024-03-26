@@ -26,7 +26,7 @@ which can be passed as parameters to other functions, or returned as results.
 
 In Scala 3 this is now possible. The type of the `bar` value above is
 
-```scala
+```scala sc:nocompile
 [A] => List[A] => List[A]
 ```
 
@@ -48,7 +48,7 @@ a data type to represent the expressions of a simple language
 (consisting only of variables and function applications)
 in a strongly-typed way:
 
-```scala
+```scala sc-name:expr
 enum Expr[A]:
   case Var(name: String)
   case Apply[A, B](fun: Expr[B => A], arg: Expr[B]) extends Expr[A]
@@ -60,7 +60,8 @@ This requires the given function to be polymorphic,
 since each subexpression may have a different type.
 Here is how to implement this using polymorphic function types:
 
-```scala
+```scala sc-compile-with:expr sc-name:mapsubexpr
+import Expr.*
 def mapSubexpressions[A](e: Expr[A])(f: [B] => Expr[B] => Expr[B]): Expr[A] =
   e match
     case Apply(fun, arg) => Apply(f(fun), f(arg))
@@ -71,7 +72,7 @@ And here is how to use this function to _wrap_ each subexpression
 in a given expression with a call to some `wrap` function,
 defined as a variable:
 
-```scala
+```scala sc-compile-with:mapsubexpr
 val e0 = Apply(Var("f"), Var("a"))
 val e1 = mapSubexpressions(e0)(
   [B] => (se: Expr[B]) => Apply(Var[B => B]("wrap"), se))

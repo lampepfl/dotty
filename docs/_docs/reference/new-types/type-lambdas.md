@@ -7,7 +7,7 @@ nightlyOf: https://docs.scala-lang.org/scala3/reference/new-types/type-lambdas.h
 A _type lambda_ lets one express a higher-kinded type directly, without
 a type definition.
 
-```scala
+```scala sc:nocompile
 [X, Y] =>> Map[Y, X]
 ```
 

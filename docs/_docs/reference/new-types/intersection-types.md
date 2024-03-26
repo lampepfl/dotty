@@ -34,7 +34,7 @@ has member methods `reset` and `add`.
 If a member appears in both `A` and `B`, its type in `A & B` is the intersection
 of its type in `A` and its type in `B`. For instance, assume the definitions:
 
-```scala
+```scala sc:nocompile
 trait A:
   def children: List[A]
 
@@ -59,7 +59,7 @@ must make sure that all inherited members are correctly defined.
 So if one defines a class `C` that inherits `A` and `B`, one needs
 to give at that point a definition of a `children` method with the required type.
 
-```scala
+```scala sc:nocompile
 class C extends A, B:
   def children: List[A & B] = ???
 ```

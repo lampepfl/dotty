@@ -22,7 +22,7 @@ Only the upper bound `U` can be F-bounded, i.e. `X` can appear in it.
 ## Subtyping Rules
 
 Assume two type lambdas
-```scala
+```scala sc:nocompile
 type TL1  =  [X >: L1 <: U1] =>> R1
 type TL2  =  [X >: L2 <: U2] =>> R2
 ```
@@ -40,11 +40,11 @@ its eta expansion. I.e, `List = [X] =>> List[X]`. This allows type constructors 
 ## Relationship with Parameterized Type Definitions
 
 A parameterized type definition
-```scala
+```scala sc:nocompile
 type T[X] = R
 ```
 is regarded as a shorthand for an unparameterized definition with a type lambda as right-hand side:
-```scala
+```scala sc:nocompile
 type T = [X] =>> R
 ```
 If the type definition carries `+` or `-` variance annotations,
@@ -60,15 +60,15 @@ type F2 = [A, B] =>> A => B
 and at the same time it is checked that the parameter `B` appears covariantly in `A => B`.
 
 A parameterized abstract type
-```scala
+```scala sc:nocompile
 type T[X] >: L <: U
 ```
 is regarded as shorthand for an unparameterized abstract type with type lambdas as bounds.
-```scala
+```scala sc:nocompile
 type T >: ([X] =>> L) <: ([X] =>> U)
 ```
 However, if `L` is `Nothing` it is not parameterized, since `Nothing` is treated as a bottom type for all kinds. For instance,
-```scala
+```scala sc:nocompile
 type T[X] <: X => X
 ```
 is expanded to
@@ -81,20 +81,20 @@ type T >: ([X] =>> Nothing) <: ([X] =>> X => X)
 ```
 
 The same expansions apply to type parameters. For instance,
-```scala
+```scala sc:nocompile
 [F[X] <: Coll[X]]
 ```
 is treated as a shorthand for
-```scala
+```scala sc:nocompile
 [F >: Nothing <: [X] =>> Coll[X]]
 ```
 Abstract types and opaque type aliases remember the variances they were created with. So the type
-```scala
+```scala sc:nocompile
 type F2[-A, +B]
 ```
 is known to be contravariant in `A` and covariant in `B` and can be instantiated only
 with types that satisfy these constraints. Likewise
-```scala
+```scala sc:nocompile
 opaque type O[X] = List[X]
 ```
 `O` is known to be invariant (and not covariant, as its right-hand side would suggest). On the other hand, a transparent alias
