@@ -2104,7 +2104,7 @@ object Build {
     // FIXME: we do not aggregate `bin` because its tests delete jars, thus breaking other tests
     def asDottyRoot(implicit mode: Mode): Project = project.withCommonSettings.
       aggregate(`scala3-interfaces`, dottyLibrary, dottyCompiler, tastyCore, `scala3-sbt-bridge`, scala3PresentationCompiler).
-      bootstrappedAggregate(`scala2-library-tasty`, `scala3-language-server`, `scala3-staging`,
+      bootstrappedAggregate(`scala2-library-tasty`, `scala2-library-cc-tasty`, `scala3-language-server`, `scala3-staging`,
         `scala3-tasty-inspector`, `scala3-library-bootstrappedJS`, scaladoc).
       dependsOn(tastyCore).
       dependsOn(dottyCompiler).
