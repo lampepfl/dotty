@@ -691,7 +691,7 @@ trait ParallelTesting extends RunnerOrchestration { self =>
       val reporter = mkReporter
       val driver = new Driver
 
-      val args = Array("-classpath", flags.defaultClassPath + ":" + bestEffortDir.toString) ++ flags.options
+      val args = Array("-classpath", flags.defaultClassPath + JFile.pathSeparator + bestEffortDir.toString) ++ flags.options
 
       driver.process(args ++ files0.map(_.toString), reporter = reporter)
 
