@@ -1,0 +1,244 @@
+-- Error: tests/neg/i18234.scala:40:7 ----------------------------------------------------------------------------------
+40 |  case $BadCaseStart // error
+   |       ^
+   |       identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:41:7 ----------------------------------------------------------------------------------
+41 |  case BadCase$Middle // error
+   |       ^
+   |       identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:42:7 ----------------------------------------------------------------------------------
+42 |  case BadCaseEnd$ // error
+   |       ^
+   |       identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:44:5 ----------------------------------------------------------------------------------
+44 |enum $BadEnumStart: // error
+   |     ^
+   |     identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:46:7 ----------------------------------------------------------------------------------
+46 |  case $BadCase // error
+   |       ^
+   |       identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:48:5 ----------------------------------------------------------------------------------
+48 |enum BadEnum$Middle: // error
+   |     ^
+   |     identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:50:7 ----------------------------------------------------------------------------------
+50 |  case Bad$Case // error
+   |       ^
+   |       identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:52:5 ----------------------------------------------------------------------------------
+52 |enum BadEnumEnd$: // error
+   |     ^
+   |     identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:54:7 ----------------------------------------------------------------------------------
+54 |  case BadCase$ // error
+   |       ^
+   |       identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:56:5 ----------------------------------------------------------------------------------
+56 |enum E$numWithEndKeyword: // error
+   |     ^
+   |     identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:68:6 ----------------------------------------------------------------------------------
+68 |  val $badVal = 2 // error
+   |      ^
+   |      identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:66:7 ----------------------------------------------------------------------------------
+66 |object $ObjectStart: // error
+   |       ^
+   |       identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:72:6 ----------------------------------------------------------------------------------
+72 |  val bad$Val = 2 // error
+   |      ^
+   |      identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:70:7 ----------------------------------------------------------------------------------
+70 |object Object$Middle: // error
+   |       ^
+   |       identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:76:6 ----------------------------------------------------------------------------------
+76 |  val badVal$ = 2 // error
+   |      ^
+   |      identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:74:7 ----------------------------------------------------------------------------------
+74 |object ObjectEnd$: // error
+   |       ^
+   |       identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:80:6 ----------------------------------------------------------------------------------
+80 |  val b$adVal = 2 // error
+   |      ^
+   |      identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:82:7 ----------------------------------------------------------------------------------
+82 |object Ob$jectWithEndKeyword: // error
+   |       ^
+   |       identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:89:11 ---------------------------------------------------------------------------------
+89 |case class $InlineCaseClassStart(someField: Int) // error
+   |           ^
+   |           identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:90:11 ---------------------------------------------------------------------------------
+90 |case class InlineCaseClass$Middle(someField: Int) // error
+   |           ^
+   |           identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:91:11 ---------------------------------------------------------------------------------
+91 |case class InlineCaseClassEnd$(someField: Int) // error
+   |           ^
+   |           identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:93:43 ---------------------------------------------------------------------------------
+93 |case class InlineCaseClass(goodField: Int, badFiel$d: Int) // error
+   |                                           ^
+   |                                           identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:97:2 ----------------------------------------------------------------------------------
+97 |  b$adfield: Int // error
+   |  ^
+   |  identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:95:11 ---------------------------------------------------------------------------------
+95 |case class $CaseClassStart( // error
+   |           ^
+   |           identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:102:2 ---------------------------------------------------------------------------------
+102 |  bad$Field: Int // error
+    |  ^
+    |  identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:100:11 --------------------------------------------------------------------------------
+100 |case class CaseClass$Middle( // error
+    |           ^
+    |           identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:107:2 ---------------------------------------------------------------------------------
+107 |  badField$: Int // error
+    |  ^
+    |  identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:105:11 --------------------------------------------------------------------------------
+105 |case class CaseClassEnd$( // error
+    |           ^
+    |           identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:111:7 ---------------------------------------------------------------------------------
+111 |object CaseClassEnd$: // error
+    |       ^
+    |       identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:118:6 ---------------------------------------------------------------------------------
+118 |class $StartClass // error
+    |      ^
+    |      identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:119:6 ---------------------------------------------------------------------------------
+119 |class Middle$Class // error
+    |      ^
+    |      identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:120:6 ---------------------------------------------------------------------------------
+120 |class EndClass$ // error
+    |      ^
+    |      identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:124:7 ---------------------------------------------------------------------------------
+124 |   var badM$ember: Int // error
+    |       ^
+    |       identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:127:6 ---------------------------------------------------------------------------------
+127 |  def bad$Method(y: Int) = goodMember // error
+    |      ^
+    |      identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:128:28 --------------------------------------------------------------------------------
+128 |  def methodWithBadArgNames(b$ad$arg: Int) = goodMember // error
+    |                            ^
+    |                            identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:129:6 ---------------------------------------------------------------------------------
+129 |  def method$WithEndKeyword() = // error
+    |      ^
+    |      identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:122:6 ---------------------------------------------------------------------------------
+122 |class Cla$$( // error
+    |      ^
+    |      identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:142:6 ---------------------------------------------------------------------------------
+142 |trait $BadTraitStart // error
+    |      ^
+    |      identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:143:6 ---------------------------------------------------------------------------------
+143 |trait BadTrait$Middle // error
+    |      ^
+    |      identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:144:6 ---------------------------------------------------------------------------------
+144 |trait BadTraitEnd$ // error
+    |      ^
+    |      identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:150:6 ---------------------------------------------------------------------------------
+150 |  val b$adVal = 2 // error
+    |      ^
+    |      identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:154:6 ---------------------------------------------------------------------------------
+154 |  val $badVal = 2 // error
+    |      ^
+    |      identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:152:8 ---------------------------------------------------------------------------------
+152 |package $BadPackageStart: // error
+    |        ^
+    |        identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:158:6 ---------------------------------------------------------------------------------
+158 |  val bad$Val = 2 // error
+    |      ^
+    |      identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:156:8 ---------------------------------------------------------------------------------
+156 |package BadPackage$Middle: // error
+    |        ^
+    |        identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:162:6 ---------------------------------------------------------------------------------
+162 |  val badVal$ = 2 // error
+    |      ^
+    |      identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:160:8 ---------------------------------------------------------------------------------
+160 |package BadPackageEnd$: // error
+    |        ^
+    |        identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:5:4 -----------------------------------------------------------------------------------
+5 |val $startVal = 1 // error
+  |    ^
+  |    identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:6:4 -----------------------------------------------------------------------------------
+6 |val mid$dleVal = 1 // error
+  |    ^
+  |    identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:7:4 -----------------------------------------------------------------------------------
+7 |val endVal$ = 1 // error
+  |    ^
+  |    identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:13:4 ----------------------------------------------------------------------------------
+13 |def $funcStart() = 3 // error
+   |    ^
+   |    identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:14:4 ----------------------------------------------------------------------------------
+14 |def func$Middle() = 3 // error
+   |    ^
+   |    identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:15:4 ----------------------------------------------------------------------------------
+15 |def funcEnd$() = 3 // error
+   |    ^
+   |    identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:17:30 ---------------------------------------------------------------------------------
+17 |def func1badArg(goodArg: Int, bad$Arg: Int) = 5 // error
+   |                              ^
+   |                              identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:18:57 ---------------------------------------------------------------------------------
+18 |def func1badArgAndUsageDoesNotThrowWarning(goodArg: Int, bad$Arg: Int) = bad$Arg // error
+   |                                                         ^
+   |                                                         identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:19:31 ---------------------------------------------------------------------------------
+19 |def func2badArgs(goodArg: Int, bad$Arg: Int, bad$arg2: String) = 5 // error // error
+   |                               ^
+   |                               identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:19:45 ---------------------------------------------------------------------------------
+19 |def func2badArgs(goodArg: Int, bad$Arg: Int, bad$arg2: String) = 5 // error // error
+   |                                             ^
+   |                                             identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:22:2 ----------------------------------------------------------------------------------
+22 |  badAr$g: Int // error
+   |  ^
+   |  identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:30:5 ----------------------------------------------------------------------------------
+30 |type $StartType = Int // error
+   |     ^
+   |     identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:31:5 ----------------------------------------------------------------------------------
+31 |type Middle$Type = Int // error
+   |     ^
+   |     identifiers should not include dollar sign
+-- Error: tests/neg/i18234.scala:32:5 ----------------------------------------------------------------------------------
+32 |type EndType$ = Int // error
+   |     ^
+   |     identifiers should not include dollar sign

@@ -34,7 +34,8 @@ class Compiler {
   protected def frontendPhases: List[List[Phase]] =
     List(new Parser) ::             // Compiler frontend: scanner, parser
     List(new TyperPhase) ::         // Compiler frontend: namer, typer
-    List(new CheckUnused.PostTyper) :: // Check for unused elements
+    List(new CheckUnused.PostTyper, // Check for unused elements
+         new CheckDollarInIdentifier) :: // Warn if identifier contains a dollar sign $
     List(new CheckShadowing) :: // Check shadowing elements
     List(new YCheckPositions) ::    // YCheck positions
     List(new sbt.ExtractDependencies) :: // Sends information on classes' dependencies to sbt via callbacks

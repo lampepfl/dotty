@@ -196,6 +196,7 @@ private sealed trait WarningSettings:
     ),
     default = Nil
   )
+  val WdollarCheck: Setting[Boolean] = BooleanSetting("-Wdollar-check", "Warn if identifier contains a dollar sign")
   object WunusedHas:
     def isChoiceSet(s: String)(using Context) = Wunused.value.pipe(us => us.contains(s))
     def allOr(s: String)(using Context) = Wunused.value.pipe(us => us.contains("all") || us.contains(s))
