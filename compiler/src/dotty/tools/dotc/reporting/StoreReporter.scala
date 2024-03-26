@@ -21,7 +21,7 @@ class StoreReporter(outer: Reporter | Null = Reporter.NoReporter, fromTyperState
 
   protected var infos: mutable.ListBuffer[Diagnostic] | Null = null
 
-  def doReport(dia: Diagnostic)(using Context): Unit = {
+  override def doReport(dia: Diagnostic)(using Context): Unit = {
     typr.println(s">>>> StoredError: ${dia.message}") // !!! DEBUG
     if (infos == null) infos = new mutable.ListBuffer
     infos.uncheckedNN += dia

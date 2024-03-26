@@ -23,6 +23,7 @@ import Inferencing.*
 import reporting.*
 import Nullables.*, NullOpsDecorator.*
 import config.Feature
+import printing.Texts.{stringToText, Text}
 
 import collection.mutable
 import config.Printers.{overload, typr, unapp}
@@ -1068,7 +1069,31 @@ trait Applications extends Compatibility {
               simpleApply(fun1, proto)
             } {
               (failedVal, failedState) =>
-                def fail = { failedState.commit(); failedVal }
+                def fail =
+                  insertedApplyNote()
+                  failedState.commit()
+                  failedVal
+
+                /** If the applied function is an automatically inserted `apply` method and one of its
+                 * arguments has a type mistmathc , append a note
+                  * to the error message that explains that the required type comes from a parameter
+                  * of the inserted `apply` method. See #19680 and associated test case.
+                  */
+                def insertedApplyNote() =
+                  if fun1.symbol.name == nme.apply && fun1.span.isSynthetic then
+                    failedState.reporter.mapBufferedMessages:
+                      case dia: Diagnostic.Error =>
+                        dia.msg match
+                          case msg: TypeMismatch =>
+                            msg.inTree match
+                              case Some(arg) if tree.args.exists(_.span == arg.span) =>
+                                val Select(prefix, _apply) = fun1: @unchecked
+                                val txt = ("\n\nThe required type comes from a parameter of the automatically inserted " ~ ("`" + ctx.printer.nameString(nme.apply ) + "`") ~ " method of " ~ prefix.tpe.show ~ ", which is the type of " ~ prefix.show ~ ".").show
+                                Diagnostic.Error(msg.append(txt), dia.pos)
+                              case _ => dia
+                          case msg => dia
+                      case dia => dia
+
                 // Try once with original prototype and once (if different) with tupled one.
                 // The reason we need to try both is that the decision whether to use tupled
                 // or not was already taken but might have to be revised when an implicit
