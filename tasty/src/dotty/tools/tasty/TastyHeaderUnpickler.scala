@@ -133,7 +133,7 @@ object TastyHeaderUnpickler {
     if (!cond) throw new UnpickleException(msg)
   }
 
-  private[tasty] def checkValidVersion(fileMajor: Int, fileMinor: Int, fileExperimental: Int, toolingVersion: String, config: UnpicklerConfig) = {
+  private def checkValidVersion(fileMajor: Int, fileMinor: Int, fileExperimental: Int, toolingVersion: String, config: UnpicklerConfig) = {
     val toolMajor: Int = config.majorVersion
     val toolMinor: Int = config.minorVersion
     val toolExperimental: Int = config.experimentalVersion
