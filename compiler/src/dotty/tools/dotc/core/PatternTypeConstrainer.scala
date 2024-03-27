@@ -200,8 +200,8 @@ trait PatternTypeConstrainer { self: TypeComparer =>
    *
    *  This function expects to receive two types (scrutinee and pattern), both
    *  of which have class symbols, one of which is derived from another. If the
-   *  type "being derived from" is an applied type, it will 1) "upcast" the
-   *  deriving type to an applied type with the same constructor and 2) infer
+   *  type "being derived from" is an applied type, it will 1) "upcast" both
+   *  types to an applied type with the same constructor and 2) infer
    *  constraints for the applied types' arguments that follow from both
    *  types being inhabited by one value (the scrutinee).
    *
@@ -252,11 +252,9 @@ trait PatternTypeConstrainer { self: TypeComparer =>
     val scrutineeCls = scrutineeTp.classSymbol
 
     // NOTE: we already know that there is a derives-from relationship in either direction
-    val upcastPattern =
-      patternCls.derivesFrom(scrutineeCls)
-
-    val pt = if upcastPattern then patternTp.baseType(scrutineeCls) else patternTp
-    val tp = if !upcastPattern then scrutineeTp.baseType(patternCls) else scrutineeTp
+    val base = if patternCls.derivesFrom(scrutineeCls) then scrutineeCls else patternCls
+    val pt = patternTp.baseType(base)
+    val tp = scrutineeTp.baseType(base)
 
     val assumeInvariantRefinement =
       migrateTo3 || forceInvariantRefinement || refinementIsInvariant(patternTp)
