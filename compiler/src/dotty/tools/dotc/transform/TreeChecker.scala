@@ -310,9 +310,11 @@ object TreeChecker {
     def assertDefined(tree: untpd.Tree)(using Context): Unit =
       if (tree.symbol.maybeOwner.isTerm) {
         val sym = tree.symbol
+        def isAllowed = // constructor proxies and context bound companions are flagged at PostTyper
+          isSymWithoutDef(sym) && ctx.phase.id < postTyperPhase.id
         assert(
-          nowDefinedSyms.contains(sym) || patBoundSyms.contains(sym),
-          i"undefined symbol ${sym} at line " + tree.srcPos.line
+          nowDefinedSyms.contains(sym) || patBoundSyms.contains(sym) || isAllowed,
+          i"undefined symbol ${sym} in ${sym.owner} at line " + tree.srcPos.line
         )
 
         if (!ctx.phase.patternTranslated)
@@ -382,6 +384,9 @@ object TreeChecker {
         assertIdentNotJavaClass(arg)
       case _ =>
     }
+
+    def isSymWithoutDef(sym: Symbol)(using Context): Boolean =
+      sym.is(ConstructorProxy) || sym.isContextBoundCompanion
 
     /** Exclude from double definition checks any erased symbols that were
      *  made `private` in phase `UnlinkErasedDecls`. These symbols will be removed
@@ -609,14 +614,12 @@ object TreeChecker {
       val decls   = cls.classInfo.decls.toList.toSet.filter(isNonMagicalMember)
       val defined = impl.body.map(_.symbol)
 
-      def isAllowed(sym: Symbol): Boolean = sym.is(ConstructorProxy)
+      val symbolsMissingDefs = (decls -- defined - constr.symbol).filterNot(isSymWithoutDef)
 
-      val symbolsNotDefined = (decls -- defined - constr.symbol).filterNot(isAllowed)
-
-      assert(symbolsNotDefined.isEmpty,
-        i" $cls tree does not define members: ${symbolsNotDefined.toList}%, %\n" +
-        i"expected: ${decls.toList}%, %\n" +
-        i"defined: ${defined}%, %")
+      assert(symbolsMissingDefs.isEmpty,
+        i"""$cls tree does not define members: ${symbolsMissingDefs.toList}%, %
+           |expected: ${decls.toList}%, %
+           |defined: ${defined}%, %""")
 
       super.typedClassDef(cdef, cls)
     }

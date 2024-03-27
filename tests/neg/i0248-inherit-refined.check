@@ -1,0 +1,12 @@
+-- [E170] Type Error: tests/neg/i0248-inherit-refined.scala:8:18 -------------------------------------------------------
+8 |  class C extends Y                                   // error
+  |                  ^
+  |                  test.A & test.B is not a class type
+  |
+  | longer explanation available when compiling with `-explain`
+-- [E170] Type Error: tests/neg/i0248-inherit-refined.scala:10:18 ------------------------------------------------------
+10 |  class D extends Z                                   // error
+   |                  ^
+   |                  test.A | test.B is not a class type
+   |
+   | longer explanation available when compiling with `-explain`

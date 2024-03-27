@@ -42,6 +42,19 @@ def erasedValue[T]: T = erasedValue[T]
 @compileTimeOnly("`uninitialized` can only be used as the right hand side of a mutable field definition")
 def uninitialized: Nothing = ???
 
+/** Used as the right hand side of a given in a trait, like this
+ *
+ *  ```
+ *  given T = deferred
+ *  ```
+ *
+ *  This signifies that the given will get a synthesized definition in all classes
+ *  that implement the enclosing trait and that do not contain an explicit overriding
+ *  definition of that given.
+ */
+@compileTimeOnly("`deferred` can only be used as the right hand side of a given definition in a trait")
+def deferred: Nothing = ???
+
 /** The error method is used to produce user-defined compile errors during inline expansion.
  *  If an inline expansion results in a call error(msgStr) the compiler produces an error message containing the given msgStr.
  *

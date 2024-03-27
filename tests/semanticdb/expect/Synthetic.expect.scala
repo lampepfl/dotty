@@ -30,7 +30,7 @@ class Synthetic/*<-example::Synthetic#*/ {
     null.asInstanceOf/*->scala::Any#asInstanceOf().*/[Int/*->scala::Int#*/ => Int/*->scala::Int#*/](2)
   }
 
-  class J/*<-example::Synthetic#J#*/[T/*<-example::Synthetic#J#[T]*//*<-example::Synthetic#J#evidence$1.*/: Manifest/*->scala::Predef.Manifest#*/] { val arr/*<-example::Synthetic#J#arr.*/ = Array/*->scala::Array.*/.empty/*->scala::Array.empty().*/[T/*->example::Synthetic#J#[T]*/] }
+  class J/*<-example::Synthetic#J#*/[T/*<-example::Synthetic#J#[T]*/: /*<-example::Synthetic#J#evidence$1.*/Manifest/*->scala::Predef.Manifest#*//*->example::Synthetic#J#[T]*/] { val arr/*<-example::Synthetic#J#arr.*/ = Array/*->scala::Array.*/.empty/*->scala::Array.empty().*/[T/*->example::Synthetic#J#[T]*/] }
 
   class F/*<-example::Synthetic#F#*/
   implicit val ordering/*<-example::Synthetic#ordering.*/: Ordering/*->scala::package.Ordering#*/[F/*->example::Synthetic#F#*/] = ???/*->scala::Predef.`???`().*/

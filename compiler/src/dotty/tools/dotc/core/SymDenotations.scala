@@ -1190,21 +1190,25 @@ object SymDenotations {
     final def isExtensibleClass(using Context): Boolean =
       isClass && !isOneOf(FinalOrModuleClass) && !isAnonymousClass
 
-    /** A symbol is effectively final if it cannot be overridden in a subclass */
+    /** A symbol is effectively final if it cannot be overridden */
     final def isEffectivelyFinal(using Context): Boolean =
       isOneOf(EffectivelyFinalFlags)
       || is(Inline, butNot = Deferred)
       || is(JavaDefinedVal, butNot = Method)
       || isConstructor
-      || !owner.isExtensibleClass
+      || !owner.isExtensibleClass && !is(Deferred)
+      	// Deferred symbols can arise through parent refinements.
+      	// For them, the overriding relationship reverses anyway, so
+      	// being in a final class does not mean the symbol cannot be
+      	// implemented concretely in a superclass.
 
     /** A class is effectively sealed if has the `final` or `sealed` modifier, or it
      *  is defined in Scala 3 and is neither abstract nor open.
      */
     final def isEffectivelySealed(using Context): Boolean =
       isOneOf(FinalOrSealed)
-      || isClass && (!isOneOf(EffectivelyOpenFlags)
-      || isLocalToCompilationUnit)
+      || isClass
+        && (!isOneOf(EffectivelyOpenFlags) || isLocalToCompilationUnit)
 
     final def isLocalToCompilationUnit(using Context): Boolean =
       is(Private)

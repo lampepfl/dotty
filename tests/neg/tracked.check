@@ -1,0 +1,50 @@
+-- Error: tests/neg/tracked.scala:2:16 ---------------------------------------------------------------------------------
+2 |class C(tracked x: Int) // error
+  |                ^
+  |                `val` or `var` expected
+-- [E040] Syntax Error: tests/neg/tracked.scala:7:18 -------------------------------------------------------------------
+7 |  def foo(tracked a: Int) = // error
+  |                  ^
+  |                  ':' expected, but identifier found
+-- Error: tests/neg/tracked.scala:8:12 ---------------------------------------------------------------------------------
+8 |    tracked val b: Int = 2 // error
+  |            ^^^
+  |            end of statement expected but 'val' found
+-- Error: tests/neg/tracked.scala:11:10 --------------------------------------------------------------------------------
+11 |  tracked object Foo // error // error
+   |          ^^^^^^
+   |          end of statement expected but 'object' found
+-- Error: tests/neg/tracked.scala:14:10 --------------------------------------------------------------------------------
+14 |  tracked class D // error // error
+   |          ^^^^^
+   |          end of statement expected but 'class' found
+-- Error: tests/neg/tracked.scala:17:10 --------------------------------------------------------------------------------
+17 |  tracked type T = Int // error // error
+   |          ^^^^
+   |          end of statement expected but 'type' found
+-- Error: tests/neg/tracked.scala:20:29 --------------------------------------------------------------------------------
+20 |  given g2(using tracked val x: Int): C = C(x) // error
+   |                 ^^^^^^^^^^^^^^^^^^
+   |                 method parameter x may not be a `val`
+-- Error: tests/neg/tracked.scala:4:21 ---------------------------------------------------------------------------------
+4 |class C2(tracked var x: Int) // error
+  |                     ^
+  |                     mutable variables may not be `tracked`
+-- [E006] Not Found Error: tests/neg/tracked.scala:11:2 ----------------------------------------------------------------
+11 |  tracked object Foo // error // error
+   |  ^^^^^^^
+   |  Not found: tracked
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E006] Not Found Error: tests/neg/tracked.scala:14:2 ----------------------------------------------------------------
+14 |  tracked class D // error // error
+   |  ^^^^^^^
+   |  Not found: tracked
+   |
+   | longer explanation available when compiling with `-explain`
+-- [E006] Not Found Error: tests/neg/tracked.scala:17:2 ----------------------------------------------------------------
+17 |  tracked type T = Int // error // error
+   |  ^^^^^^^
+   |  Not found: tracked
+   |
+   | longer explanation available when compiling with `-explain`

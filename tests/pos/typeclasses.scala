@@ -1,66 +1,45 @@
+//> using options -source future -language:experimental.modularity
+
 class Common:
 
-  // this should go in Predef
-  infix type at [A <: { type This}, B] = A { type This = B }
-
   trait Ord:
-    type This
-    extension (x: This)
-      def compareTo(y: This): Int
-      def < (y: This): Boolean = compareTo(y) < 0
-      def > (y: This): Boolean = compareTo(y) > 0
+    type Self
+    extension (x: Self)
+      def compareTo(y: Self): Int
+      def < (y: Self): Boolean = compareTo(y) < 0
+      def > (y: Self): Boolean = compareTo(y) > 0
 
   trait SemiGroup:
-    type This
-    extension (x: This) def combine(y: This): This
+    type Self
+    extension (x: Self) def combine(y: Self): Self
 
   trait Monoid extends SemiGroup:
-    def unit: This
+    def unit: Self
 
   trait Functor:
-    type This[A]
-    extension [A](x: This[A]) def map[B](f: A => B): This[B]
+    type Self[A]
+    extension [A](x: Self[A]) def map[B](f: A => B): Self[B]
 
   trait Monad extends Functor:
-    def pure[A](x: A): This[A]
-    extension [A](x: This[A])
-      def flatMap[B](f: A => This[B]): This[B]
+    def pure[A](x: A): Self[A]
+    extension [A](x: Self[A])
+      def flatMap[B](f: A => Self[B]): Self[B]
       def map[B](f: A => B) = x.flatMap(f `andThen` pure)
+
 end Common
 
 
 object Instances extends Common:
 
-/*
-  instance Int: Ord as intOrd with
+  given intOrd: (Int forms Ord) with
+    type Self = Int
     extension (x: Int)
       def compareTo(y: Int) =
         if x < y then -1
         else if x > y then +1
         else 0
-*/
-  given intOrd: Ord with
-    type This = Int
-    extension (x: Int)
-      def compareTo(y: Int) =
-        if x < y then -1
-        else if x > y then +1
-        else 0
-/*
-  instance List[T: Ord]: Ord as listOrd with
-    extension (xs: List[T]) def compareTo(ys: List[T]): Int = (xs, ys) match
-      case (Nil, Nil) => 0
-      case (Nil, _) => -1
-      case (_, Nil) => +1
-      case (x :: xs1, y :: ys1) =>
-        val fst = x.compareTo(y)
-        if (fst != 0) fst else xs1.compareTo(ys1)
-*/
 
-  // Proposed short syntax:
-  // given listOrd[T: Ord as ord]: Ord at T with
-  given listOrd[T](using ord: Ord { type This = T}): Ord with
-    type This = List[T]
+  given listOrd[T](using ord: T forms Ord): (List[T] forms Ord) with
     extension (xs: List[T]) def compareTo(ys: List[T]): Int = (xs, ys) match
       case (Nil, Nil) => 0
       case (Nil, _) => -1
@@ -70,32 +49,18 @@ object Instances extends Common:
         if (fst != 0) fst else xs1.compareTo(ys1)
   end listOrd
 
-/*
-  instance List: Monad as listMonad with
-    extension [A](xs: List[A]) def flatMap[B](f: A => List[B]): List[B] =
-      xs.flatMap(f)
-    def pure[A](x: A): List[A] =
-      List(x)
-*/
-
-  given listMonad: Monad with
-    type This[A] = List[A]
+  given listMonad: (List forms Monad) with
     extension [A](xs: List[A]) def flatMap[B](f: A => List[B]): List[B] =
       xs.flatMap(f)
     def pure[A](x: A): List[A] =
       List(x)
 
-/*
-  type Reader[Ctx] = X =>> Ctx => X
-  instance Reader[Ctx: _]: Monad as readerMonad with
-    extension [A](r: Ctx => A) def flatMap[B](f: A => Ctx => B): Ctx => B =
-      ctx => f(r(ctx))(ctx)
-    def pure[A](x: A): Ctx => A =
-      ctx => x
-*/
 
-  given readerMonad[Ctx]: Monad with
-    type This[X] = Ctx => X
+  type Reader[Ctx] = [X] =>> Ctx => X
+
+  //given [Ctx] => Reader[Ctx] forms Monad as readerMonad:
+
+  given readerMonad[Ctx]: (Reader[Ctx] forms Monad) with
     extension [A](r: Ctx => A) def flatMap[B](f: A => Ctx => B): Ctx => B =
       ctx => f(r(ctx))(ctx)
     def pure[A](x: A): Ctx => A =
@@ -110,29 +75,17 @@ object Instances extends Common:
     def second = xs.tail.head
     def third = xs.tail.tail.head
 
-  //Proposed short syntax:
-  //extension [M: Monad as m, A](xss: M[M[A]])
-  //  def flatten: M[A] =
-  //    xs.flatMap(identity)
-
-  extension [M, A](using m: Monad)(xss: m.This[m.This[A]])
-    def flatten: m.This[A] =
+  extension [M, A](using m: Monad)(xss: m.Self[m.Self[A]])
+    def flatten: m.Self[A] =
       xss.flatMap(identity)
 
-  // Proposed short syntax:
-  //def maximum[T: Ord](xs: List[T]: T =
-  def maximum[T](xs: List[T])(using Ord at T): T =
+  def maximum[T](xs: List[T])(using T forms Ord): T =
     xs.reduceLeft((x, y) => if (x < y) y else x)
 
-  // Proposed short syntax:
-  // def descending[T: Ord as asc]: Ord at T = new Ord:
-  def descending[T](using asc: Ord at T): Ord at T = new Ord:
-    type This = T
+  def descending[T](using asc: T forms Ord): T forms Ord = new:
     extension (x: T) def compareTo(y: T) = asc.compareTo(y)(x)
 
-  // Proposed short syntax:
-  // def minimum[T: Ord](xs: List[T]) =
-  def minimum[T](xs: List[T])(using Ord at T) =
+  def minimum[T](xs: List[T])(using T forms Ord) =
     maximum(xs)(using descending)
 
   def test(): Unit =
@@ -148,12 +101,12 @@ object Instances extends Common:
 // wc Scala: 30     115     853
 // wc Rust : 57     193    1466
 trait Animal:
-  type This
-  // Associated function signature; `This` refers to the implementor type.
-  def apply(name: String): This
+  type Self
+  // Associated function signature; `Self` refers to the implementor type.
+  def apply(name: String): Self
 
   // Method signatures; these will return a string.
-  extension (self: This)
+  extension (self: Self)
     def name: String
     def noise: String
     def talk(): Unit = println(s"$name, $noise")
@@ -171,7 +124,7 @@ class Sheep(val name: String):
 /*
 instance Sheep: Animal with
   def apply(name: String) = Sheep(name)
-  extension (self: This)
+  extension (self: Self)
     def name: String = self.name
     def noise: String = if self.isNaked then "baaaaah?" else "baaaaah!"
     override def talk(): Unit =
@@ -179,10 +132,9 @@ instance Sheep: Animal with
 */
 
 // Implement the `Animal` trait for `Sheep`.
-given Animal with
-  type This = Sheep
+given (Sheep forms Animal) with
   def apply(name: String) = Sheep(name)
-  extension (self: This)
+  extension (self: Self)
     def name: String = self.name
     def noise: String = if self.isNaked then "baaaaah?" else "baaaaah!"
     override def talk(): Unit =

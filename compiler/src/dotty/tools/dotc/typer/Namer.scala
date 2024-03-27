@@ -7,7 +7,7 @@ import ast.*
 import Trees.*, StdNames.*, Scopes.*, Denotations.*, NamerOps.*, ContextOps.*
 import Contexts.*, Symbols.*, Types.*, SymDenotations.*, Names.*, NameOps.*, Flags.*
 import Decorators.*, Comments.{_, given}
-import NameKinds.DefaultGetterName
+import NameKinds.{DefaultGetterName, ContextBoundParamName}
 import ast.desugar, ast.desugar.*
 import ProtoTypes.*
 import util.Spans.*
@@ -26,7 +26,7 @@ import Nullables.*
 import transform.ValueClasses.*
 import TypeErasure.erasure
 import reporting.*
-import config.Feature.sourceVersion
+import config.Feature.{sourceVersion, modularity}
 import config.SourceVersion.*
 
 import scala.compiletime.uninitialized
@@ -55,11 +55,12 @@ class Namer { typer: Typer =>
 
   import untpd.*
 
-  val TypedAhead      : Property.Key[tpd.Tree]            = new Property.Key
-  val ExpandedTree    : Property.Key[untpd.Tree]          = new Property.Key
-  val ExportForwarders: Property.Key[List[tpd.MemberDef]] = new Property.Key
-  val SymOfTree       : Property.Key[Symbol]              = new Property.Key
-  val AttachedDeriver : Property.Key[Deriver]             = new Property.Key
+  val TypedAhead       : Property.Key[tpd.Tree]            = new Property.Key
+  val ExpandedTree     : Property.Key[untpd.Tree]          = new Property.Key
+  val ExportForwarders : Property.Key[List[tpd.MemberDef]] = new Property.Key
+  val ParentRefinements: Property.Key[List[Symbol]]        = new Property.Key
+  val SymOfTree        : Property.Key[Symbol]              = new Property.Key
+  val AttachedDeriver  : Property.Key[Deriver]             = new Property.Key
     // was `val Deriver`, but that gave shadowing problems with constructor proxies
 
   /** A partial map from unexpanded member and pattern defs and to their expansions.
@@ -121,7 +122,8 @@ class Namer { typer: Typer =>
 
   /** Record `sym` as the symbol defined by `tree` */
   def recordSym(sym: Symbol, tree: Tree)(using Context): Symbol = {
-    for (refs <- tree.removeAttachment(References); ref <- refs) ref.watching(sym)
+    for refs <- tree.removeAttachment(References); ref <- refs do
+      ref.watching(sym)
     tree.pushAttachment(SymOfTree, sym)
     sym
   }
@@ -294,11 +296,14 @@ class Namer { typer: Typer =>
         createOrRefine[Symbol](tree, name, flags, ctx.owner, _ => info,
           (fs, _, pwithin) => newSymbol(ctx.owner, name, fs, info, pwithin, tree.nameSpan))
       case tree: Import =>
-        recordSym(newImportSymbol(ctx.owner, Completer(tree)(ctx), tree.span), tree)
+        recordSym(newImportSym(tree), tree)
       case _ =>
         NoSymbol
     }
   }
+
+  private def newImportSym(imp: Import)(using Context): Symbol =
+    newImportSymbol(ctx.owner, Completer(imp)(ctx), imp.span)
 
    /** If `sym` exists, enter it in effective scope. Check that
     *  package members are not entered twice in the same run.
@@ -401,6 +406,11 @@ class Namer { typer: Typer =>
         enterSymbol(sym)
         setDocstring(sym, origStat)
         addEnumConstants(mdef, sym)
+        mdef match
+          case tdef: TypeDef if ctx.owner.isClass =>
+            for case WitnessNamesAnnot(witnessNames) <- tdef.mods.annotations do
+              addContextBoundCompanionFor(symbolOfTree(tdef), witnessNames, Nil)
+          case _ =>
         ctx
       case stats: Thicket =>
         stats.toList.foreach(recur)
@@ -524,11 +534,9 @@ class Namer { typer: Typer =>
     }
 
     /** Transfer all references to `from` to `to` */
-    def transferReferences(from: ValDef, to: ValDef): Unit = {
-      val fromRefs = from.removeAttachment(References).getOrElse(Nil)
-      val toRefs = to.removeAttachment(References).getOrElse(Nil)
-      to.putAttachment(References, fromRefs ++ toRefs)
-    }
+    def transferReferences(from: ValDef, to: ValDef): Unit =
+      for ref <- from.removeAttachment(References).getOrElse(Nil) do
+        ref.watching(to)
 
     /** Merge the module class `modCls` in the expanded tree of `mdef` with the
      *  body and derived clause of the synthetic module class `fromCls`.
@@ -706,7 +714,18 @@ class Namer { typer: Typer =>
                   enterSymbol(companion)
     end addAbsentCompanions
 
-    stats.foreach(expand)
+    /** Expand each statement, keeping track of language imports in the context. This is
+     *  necessary since desugaring might depend on language imports.
+     */
+    def expandTopLevel(stats: List[Tree])(using Context): Unit = stats match
+      case (imp @ Import(qual, _)) :: stats1 if untpd.languageImport(qual).isDefined =>
+        expandTopLevel(stats1)(using ctx.importContext(imp, newImportSym(imp)))
+      case stat :: stats1 =>
+        expand(stat)
+        expandTopLevel(stats1)
+      case Nil =>
+
+    expandTopLevel(stats)
     mergeCompanionDefs()
     val ctxWithStats = stats.foldLeft(ctx)((ctx, stat) => indexExpanded(stat)(using ctx))
     inContext(ctxWithStats) {
@@ -1203,7 +1222,9 @@ class Namer { typer: Typer =>
                 target = target.etaExpand
               newSymbol(
                 cls, forwarderName,
-                MandatoryExportTypeFlags | (sym.flags & RetainedExportTypeFlags),
+                Exported
+                  | (sym.flags & RetainedExportTypeFlags)
+                  | (if Feature.enabled(modularity) then EmptyFlags else Final),
                 TypeAlias(target),
                 coord = span)
               // Note: This will always create unparameterzied aliases. So even if the original type is
@@ -1500,6 +1521,7 @@ class Namer { typer: Typer =>
     /** The type signature of a ClassDef with given symbol */
     override def completeInCreationContext(denot: SymDenotation): Unit = {
       val parents = impl.parents
+      val parentRefinements = new mutable.LinkedHashMap[Name, Type]
 
       /* The type of a parent constructor. Types constructor arguments
        * only if parent type contains uninstantiated type parameters.
@@ -1513,8 +1535,9 @@ class Namer { typer: Typer =>
           core match
             case Select(New(tpt), nme.CONSTRUCTOR) =>
               val targs1 = targs map (typedAheadType(_))
-              val ptype = typedAheadType(tpt).tpe appliedTo targs1.tpes
-              if (ptype.typeParams.isEmpty) ptype
+              val ptype = typedAheadType(tpt).tpe.appliedTo(targs1.tpes)
+              if ptype.typeParams.isEmpty && !ptype.dealias.typeSymbol.is(Dependent) then
+                ptype
               else
                 if (denot.is(ModuleClass) && denot.sourceModule.isOneOf(GivenOrImplicit))
                   missingType(denot.symbol, "parent ")(using creationContext)
@@ -1554,8 +1577,13 @@ class Namer { typer: Typer =>
         val ptype = parentType(parent)(using completerCtx.superCallContext).dealiasKeepAnnots
         if (cls.isRefinementClass) ptype
         else {
-          val pt = checkClassType(ptype, parent.srcPos,
-              traitReq = parent ne parents.head, stablePrefixReq = !isJava)
+          val pt = checkClassType(
+              if Feature.enabled(modularity)
+              then ptype.separateRefinements(cls, parentRefinements)
+              else ptype,
+              parent.srcPos,
+              traitReq = parent ne parents.head,
+              stablePrefixReq = !isJava)
           if (pt.derivesFrom(cls)) {
             val addendum = parent match {
               case Select(qual: Super, _) if Feature.migrateTo3 =>
@@ -1581,6 +1609,22 @@ class Namer { typer: Typer =>
           }
         }
       }
+
+      /** Enter all parent refinements as public class members, unless a definition
+       *  with the same name already exists in the class.
+       */
+      def enterParentRefinementSyms(refinements: List[(Name, Type)]) =
+        val refinedSyms = mutable.ListBuffer[Symbol]()
+        for (name, tp) <- refinements do
+          if decls.lookupEntry(name) == null then
+            val flags = tp match
+              case tp: MethodOrPoly => Method | Synthetic | Deferred | Tracked
+              case _ if name.isTermName => Synthetic | Deferred | Tracked
+              case _ => Synthetic | Deferred
+            refinedSyms += newSymbol(cls, name, flags, tp, coord = original.rhs.span.startPos).entered
+        if refinedSyms.nonEmpty then
+          typr.println(i"parent refinement symbols: ${refinedSyms.toList}")
+          original.pushAttachment(ParentRefinements, refinedSyms.toList)
 
       /** If `parents` contains references to traits that have supertraits with implicit parameters
        *  add those supertraits in linearization order unless they are already covered by other
@@ -1623,11 +1667,9 @@ class Namer { typer: Typer =>
 
       val parentTypes = defn.adjustForTuple(cls, cls.typeParams,
         defn.adjustForBoxedUnit(cls,
-          addUsingTraits(
-            locally:
-              val isJava = ctx.isJava
-              ensureFirstIsClass(cls, parents.map(checkedParentType(_, isJava)))
-          )
+          addUsingTraits:
+            val isJava = ctx.isJava
+            ensureFirstIsClass(cls, parents.map(checkedParentType(_, isJava)))
         )
       )
       typr.println(i"completing $denot, parents = $parents%, %, parentTypes = $parentTypes%, %")
@@ -1652,6 +1694,7 @@ class Namer { typer: Typer =>
       cls.invalidateMemberCaches() // we might have checked for a member when parents were not known yet.
       cls.setNoInitsFlags(parentsKind(parents), untpd.bodyKind(rest))
       cls.setStableConstructor()
+      enterParentRefinementSyms(parentRefinements.toList)
       processExports(using localCtx)
       defn.patchStdLibClass(cls)
       addConstructorProxies(cls)
@@ -1697,12 +1740,6 @@ class Namer { typer: Typer =>
     case TypedSplice(_) =>
       val sym = tree.symbol
       if sym.isConstructor then sym.owner else sym
-
-  /** Enter and typecheck parameter list */
-  def completeParams(params: List[MemberDef])(using Context): Unit = {
-    index(params)
-    for (param <- params) typedAheadExpr(param)
-  }
 
   /** The signature of a module valdef.
    *  This will compute the corresponding module class TypeRef immediately
@@ -1779,6 +1816,18 @@ class Namer { typer: Typer =>
       case _ =>
         WildcardType
     }
+
+    // translate `given T = deferred` to an abstract given with HasDefault flag
+    if sym.is(Given) then
+      mdef.rhs match
+        case rhs: RefTree
+        if rhs.name == nme.deferred
+            && typedAheadExpr(rhs).symbol == defn.Compiletime_deferred
+            && sym.maybeOwner.is(Trait) =>
+          sym.resetFlag(Final)
+          sym.setFlag(Deferred | HasDefault)
+        case _ =>
+
     val mbrTpe = paramFn(checkSimpleKinded(typedAheadType(mdef.tpt, tptProto)).tpe)
     if (ctx.explicitNulls && mdef.mods.is(JavaDefined))
       JavaNullInterop.nullifyMember(sym, mbrTpe, mdef.mods.isAllOf(JavaEnumValue))
@@ -1786,9 +1835,33 @@ class Namer { typer: Typer =>
   }
 
   /** The type signature of a DefDef with given symbol */
-  def defDefSig(ddef: DefDef, sym: Symbol, completer: Namer#Completer)(using Context): Type = {
+  def defDefSig(ddef: DefDef, sym: Symbol, completer: Namer#Completer)(using Context): Type =
     // Beware: ddef.name need not match sym.name if sym was freshened!
     val isConstructor = sym.name == nme.CONSTRUCTOR
+
+    val witnessNamesOfParam = mutable.Map[TypeDef, List[TermName]]()
+    if !ddef.name.is(DefaultGetterName) && !sym.is(Synthetic) then
+      for params <- ddef.paramss; case tdef: TypeDef <- params do
+        for case WitnessNamesAnnot(ws) <- tdef.mods.annotations do
+          witnessNamesOfParam(tdef) = ws
+
+    /** Are all names in `wnames` defined by the longest prefix of all `params`
+     *  that have been typed ahead (i.e. that carry the TypedAhead attachment)?
+     */
+    def allParamsSeen(wnames: List[TermName], params: List[MemberDef]) =
+      (wnames.toSet[Name] -- params.takeWhile(_.hasAttachment(TypedAhead)).map(_.name)).isEmpty
+
+    /** Enter and typecheck parameter list, add context companions as.
+     *  Once all witness parameters for a context bound are seen, create a
+     *  context bound companion for it.
+     */
+    def completeParams(params: List[MemberDef])(using Context): Unit =
+      index(params)
+      for param <- params do
+        typedAheadExpr(param)
+        for (tdef, wnames) <- witnessNamesOfParam do
+          if wnames.contains(param.name) && allParamsSeen(wnames, params) then
+            addContextBoundCompanionFor(symbolOfTree(tdef), wnames, params.map(symbolOfTree))
 
     // The following 3 lines replace what was previously just completeParams(tparams).
     // But that can cause bad bounds being computed, as witnessed by
@@ -1822,16 +1895,45 @@ class Namer { typer: Typer =>
     ddef.trailingParamss.foreach(completeParams)
     val paramSymss = normalizeIfConstructor(ddef.paramss.nestedMap(symbolOfTree), isConstructor)
     sym.setParamss(paramSymss)
+
+
+    /** Set every context bound evidence parameter of a class to be tracked,
+     *  provided it has a type that has an abstract type member and the parameter's
+     *  name is not a synthetic, unaddressable name. Reset private and local flags
+     *  so that the parameter becomes a `val`. Do the same for all context bound
+     *  evidence parameters of a `given` class. This is because in Desugar.addParamRefinements
+     *  we create refinements for these parameters in the result type of the implicit
+     *  access method.
+     */
+    def setTracked(param: ValDef): Unit =
+      val sym = symbolOfTree(param)
+      sym.maybeOwner.maybeOwner.infoOrCompleter match
+        case info: TempClassInfo =>
+          if !sym.is(Tracked)
+              && param.hasAttachment(ContextBoundParam)
+              && (sym.info.memberNames(abstractTypeNameFilter).nonEmpty
+                  || sym.maybeOwner.maybeOwner.is(Given))
+          then
+            typr.println(i"set tracked $param, $sym: ${sym.info} containing ${sym.info.memberNames(abstractTypeNameFilter).toList}")
+            for acc <- info.decls.lookupAll(sym.name) if acc.is(ParamAccessor) do
+              acc.resetFlag(PrivateLocal)
+              acc.setFlag(Tracked)
+              sym.setFlag(Tracked)
+        case _ =>
+
     def wrapMethType(restpe: Type): Type =
       instantiateDependent(restpe, paramSymss)
       methodType(paramSymss, restpe, ddef.mods.is(JavaDefined))
+
     if isConstructor then
+      if sym.isPrimaryConstructor && Feature.enabled(modularity) then
+        ddef.termParamss.foreach(_.foreach(setTracked))
       // set result type tree to unit, but take the current class as result type of the symbol
       typedAheadType(ddef.tpt, defn.UnitType)
       wrapMethType(effectiveResultType(sym, paramSymss))
     else
       valOrDefDefSig(ddef, sym, paramSymss, wrapMethType)
-  }
+  end defDefSig
 
   def inferredResultType(
       mdef: ValOrDefDef,

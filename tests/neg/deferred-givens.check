@@ -1,0 +1,13 @@
+-- [E172] Type Error: tests/neg/deferred-givens.scala:11:6 -------------------------------------------------------------
+11 |class B extends A // error
+   |^^^^^^^^^^^^^^^^^
+   |No given instance of type Ctx was found for inferring the implementation of the deferred given instance ctx in trait A
+-- [E172] Type Error: tests/neg/deferred-givens.scala:13:15 ------------------------------------------------------------
+13 |abstract class C extends A // error
+   |^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |No given instance of type Ctx was found for inferring the implementation of the deferred given instance ctx in trait A
+-- Error: tests/neg/deferred-givens.scala:26:8 -------------------------------------------------------------------------
+26 |  class E extends A2  // error, can't summon polymorphic given
+   |  ^^^^^^^^^^^^^^^^^^
+   |  Cannnot infer the implementation of the deferred given instance given_Ctx3_T in trait A2
+   |  since that given is parameterized. An implementing given needs to be written explicitly.

@@ -1,3 +1,5 @@
+import language.`3.5`
+
 case class Show[T](val i: Int)
 object Show {
   def apply[T](implicit st: Show[T]): Int = st.i
@@ -38,5 +40,5 @@ object Test extends App {
   assert(Show[Int] == 0)
   assert(Show[String] == 1)
   assert(Show[Generic] == 1)   // showGen loses against fallback due to longer argument list
-  assert(Show[Generic2] == 2)  // ... but the opaque type intersection trick works.
+  assert(Show[Generic2] == 1)  // ... and the opaque type intersection trick no longer works with new resolution rules.
 }

@@ -32,6 +32,7 @@ object Feature:
   val pureFunctions = experimental("pureFunctions")
   val captureChecking = experimental("captureChecking")
   val into = experimental("into")
+  val modularity = experimental("modularity")
 
   /** Is `feature` enabled by by a command-line setting? The enabling setting is
    *

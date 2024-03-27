@@ -3159,3 +3159,39 @@ class VolatileOnVal()(using Context)
 extends SyntaxMsg(VolatileOnValID):
   protected def msg(using Context): String = "values cannot be volatile"
   protected def explain(using Context): String = ""
+
+class ConstructorProxyNotValue(sym: Symbol)(using Context)
+extends TypeMsg(ConstructorProxyNotValueID):
+  protected def msg(using Context): String =
+    i"constructor proxy $sym cannot be used as a value"
+  protected def explain(using Context): String =
+    i"""A constructor proxy is a symbol made up by the compiler to represent a non-existent
+       |factory method of a class. For instance, in
+       |
+       |   class C(x: Int)
+       |
+       |C does not have an apply method since it is not a case class. Yet one can
+       |still create instances with applications like `C(3)` which expand to `new C(3)`.
+       |The `C` in this call is a constructor proxy. It can only be used as applications
+       |but not as a stand-alone value."""
+
+class ContextBoundCompanionNotValue(sym: Symbol)(using Context)
+extends TypeMsg(ConstructorProxyNotValueID):
+  protected def msg(using Context): String =
+    i"context bound companion $sym cannot be used as a value"
+  protected def explain(using Context): String =
+    i"""A context bound companion is a symbol made up by the compiler to represent the
+       |witness or witnesses generated for the context bound(s) of a type parameter or type.
+       |For instance, in
+       |
+       |   class Monoid extends SemiGroup:
+       |     type Self
+       |     def unit: Self
+       |
+       |   type A: Monoid
+       |
+       |there is just a type `A` declared but not a value `A`. Nevertheless, one can write
+       |the selection `A.unit`, which works because the compiler created a context bound
+       |companion value with the (term-)name `A`. However, these context bound companions
+       |are not values themselves, they can only be referred to in selections."""
+

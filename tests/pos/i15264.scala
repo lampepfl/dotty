@@ -30,6 +30,7 @@ object repro:
     // if you import these don't import from 'context' above
     object qcontext:
         // base defs, like what you would get from cats
+        given ga: A[Int] = new B[Int] // added so that we don't get an ambiguity in test2
         given gb: B[Int] = new B[Int]
         given gc: C[Int] = new C[Int]
 
@@ -45,9 +46,9 @@ object test1:
     // these will work
     val a = summon[A[Int]]
 
+
 object test2:
     import repro.*
     import repro.qcontext.given
 
-    // this one will fail as ambiguous - prios aren't having an effect
     val a = summon[A[Q[Int]]]

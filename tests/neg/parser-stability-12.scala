@@ -1,4 +1,4 @@
 trait x0[]:  // error
-     trait x1[x1 <:x0] // error: type x0 takes type parameters
+     trait x1[x1 <:x0]
      extends x1[  // error
 // error

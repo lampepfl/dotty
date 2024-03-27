@@ -189,4 +189,5 @@ class ReTyper(nestingLevel: Int = 0) extends Typer(nestingLevel) with ReChecking
   override protected def checkEqualityEvidence(tree: tpd.Tree, pt: Type)(using Context): Unit = ()
   override protected def matchingApply(methType: MethodOrPoly, pt: FunProto)(using Context): Boolean = true
   override protected def typedScala2MacroBody(call: untpd.Tree)(using Context): Tree = promote(call)
+  override protected def migrate[T](migration: => T, disabled: => T = ()): T = disabled
 }

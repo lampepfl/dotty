@@ -3,7 +3,7 @@ package a
 import scala.quoted.*
 
 
-object A:
+object O:
 
   inline def transform[A](inline expr: A): A = ${
     transformImplExpr('expr)
@@ -15,7 +15,7 @@ object A:
      import quotes.reflect.*
      expr.asTerm match {
          case Inlined(x,y,z) => transformImplExpr(z.asExpr.asInstanceOf[Expr[A]])
-         case Apply(fun,args) =>  '{  A.pure(${Apply(fun,args).asExpr.asInstanceOf[Expr[A]]}) }
+         case Apply(fun,args) =>  '{  O.pure(${Apply(fun,args).asExpr.asInstanceOf[Expr[A]]}) }
          case other => expr
      }
   }

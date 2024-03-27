@@ -3,7 +3,7 @@ type Id[T] = T match {
   case _ => T
 }
 
-class Foo2[T <: Id[T]] // error // error
+class Foo2[T <: Id[T]] // error
 
 object Foo { // error
   object Foo { }
