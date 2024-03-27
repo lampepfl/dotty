@@ -165,7 +165,22 @@ Condition (*) is new. It is necessary to ensure that the defined relation is tra
 
 [//]: # todo: expand with precise rules
 
-**9.** The following change is currently enabled in `-source future`:
+
+**9.** Given disambiguation has changed. When comparing two givens that both match an expected type, we used to pick the most specific one, in alignment with
+overloading resolution. From Scala 3.5 on, we pick the most general one instead. Compiling with Scala 3.5-migration will print a warning in all cases where the preference has changed. Example:
+```scala
+class A
+class B extends A
+class C extends A
+
+given A = A()
+given B = B()
+given C = C()
+
+summon[A]  // was ambiguous, will now return `given_A`
+```
+
+**10.** The following change is currently enabled in `-source future`:
 
 Implicit resolution now avoids generating recursive givens that can lead to an infinite loop at runtime. Here is an example:
 

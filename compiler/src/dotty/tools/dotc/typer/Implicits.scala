@@ -1105,8 +1105,8 @@ trait Implicits:
           case result: SearchFailure if result.isAmbiguous =>
             val deepPt = pt.deepenProto
             if (deepPt ne pt) inferImplicit(deepPt, argument, span)
-            else if (migrateTo3 && !ctx.mode.is(Mode.OldOverloadingResolution))
-              withMode(Mode.OldOverloadingResolution)(inferImplicit(pt, argument, span)) match {
+            else if (migrateTo3 && !ctx.mode.is(Mode.OldImplicitResolution))
+              withMode(Mode.OldImplicitResolution)(inferImplicit(pt, argument, span)) match {
                 case altResult: SearchSuccess =>
                   report.migrationWarning(
                     result.reason.msg
@@ -1221,7 +1221,7 @@ trait Implicits:
     assert(argument.isEmpty || argument.tpe.isValueType || argument.tpe.isInstanceOf[ExprType],
         em"found: $argument: ${argument.tpe}, expected: $pt")
 
-    private def nestedContext() =
+    private def searchContext() =
       ctx.fresh.setMode(ctx.mode &~ Mode.ImplicitsEnabled)
 
     private def isCoherent = pt.isRef(defn.CanEqualClass)
@@ -1265,7 +1265,7 @@ trait Implicits:
       else
         val history = ctx.searchHistory.nest(cand, pt)
         val typingCtx =
-          nestedContext().setNewTyperState().setFreshGADTBounds.setSearchHistory(history)
+          searchContext().setNewTyperState().setFreshGADTBounds.setSearchHistory(history)
         val result = typedImplicit(cand, pt, argument, span)(using typingCtx)
         result match
           case res: SearchSuccess =>
@@ -1290,9 +1290,24 @@ trait Implicits:
        *           0              if neither alternative is preferred over the other
        */
       def compareAlternatives(alt1: RefAndLevel, alt2: RefAndLevel): Int =
+        def comp(using Context) = explore(compare(alt1.ref, alt2.ref, preferGeneral = true))
         if alt1.ref eq alt2.ref then 0
         else if alt1.level != alt2.level then alt1.level - alt2.level
-        else explore(compare(alt1.ref, alt2.ref))(using nestedContext())
+        else
+          val cmp = comp(using searchContext())
+          if Feature.sourceVersion == SourceVersion.`3.5-migration` then
+            val prev = comp(using searchContext().addMode(Mode.OldImplicitResolution))
+            if cmp != prev then
+              def choice(c: Int) = c match
+                case -1 => "the second alternative"
+                case  1 => "the first alternative"
+                case _  => "none - it's ambiguous"
+              report.warning(
+                em"""Change in given search preference for $pt between alternatives ${alt1.ref} and ${alt2.ref}
+                    |Previous choice: ${choice(prev)}
+                    |New choice     : ${choice(cmp)}""", srcPos)
+          cmp
+      end compareAlternatives
 
       /** If `alt1` is also a search success, try to disambiguate as follows:
        *    - If alt2 is preferred over alt1, pick alt2, otherwise return an
@@ -1328,8 +1343,8 @@ trait Implicits:
                     else
                       ctx.typerState
 
-                  diff = inContext(ctx.withTyperState(comparisonState)):
-                    compare(ref1, ref2)
+                  diff = inContext(searchContext().withTyperState(comparisonState)):
+                    compare(ref1, ref2, preferGeneral = true)
             else // alt1 is a conversion, prefer extension alt2 over it
               diff = -1
           if diff < 0 then alt2

@@ -41,6 +41,8 @@ object Mode {
   val Pattern: Mode = newMode(0, "Pattern")
   val Type: Mode = newMode(1, "Type")
 
+  val PatternOrTypeBits: Mode = Pattern | Type
+
   val ImplicitsEnabled: Mode = newMode(2, "ImplicitsEnabled")
   val InferringReturnType: Mode = newMode(3, "InferringReturnType")
 
@@ -101,16 +103,19 @@ object Mode {
    */
   val CheckBoundsOrSelfType: Mode = newMode(14, "CheckBoundsOrSelfType")
 
-  /** Use Scala2 scheme for overloading and implicit resolution */
-  val OldOverloadingResolution: Mode = newMode(15, "OldOverloadingResolution")
+  /** Use previous Scheme for implicit resolution. Currently significant
+   *  in 3.0-migration where we use Scala-2's scheme instead and in 3.5-migration
+   *  where we use the previous scheme up to 3.4 instead.
+   */
+  val OldImplicitResolution: Mode = newMode(15, "OldImplicitResolution")
 
   /** Treat CapturingTypes as plain AnnotatedTypes even in phase CheckCaptures.
-   *  Reuses the value of OldOverloadingResolution to save Mode bits.
-   *  This is OK since OldOverloadingResolution only affects implicit search, which
+   *  Reuses the value of OldImplicitResolution to save Mode bits.
+   *  This is OK since OldImplicitResolution only affects implicit search, which
    *  is done during phases Typer and Inlinig, and IgnoreCaptures only has an
    *  effect during phase CheckCaptures.
    */
-  val IgnoreCaptures = OldOverloadingResolution
+  val IgnoreCaptures = OldImplicitResolution
 
   /** Allow hk applications of type lambdas to wildcard arguments;
    *  used for checking that such applications do not normally arise
@@ -119,8 +124,6 @@ object Mode {
 
   /** Read original positions when unpickling from TASTY */
   val ReadPositions: Mode = newMode(17, "ReadPositions")
-
-  val PatternOrTypeBits: Mode = Pattern | Type
 
   /** We are elaborating the fully qualified name of a package clause.
    *  In this case, identifiers should never be imported.
