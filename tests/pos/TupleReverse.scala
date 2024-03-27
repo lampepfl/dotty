@@ -12,5 +12,6 @@ def test[T1, T2, T3, T4] =
 def test2[Tup <: Tuple] =
   summon[Reverse[Tup] =:= Reverse[Tup]]
 
-def test3[T1, T2, T3, T4](tup1: (T1, T2, T3, T4)) =
-  summon[Reverse[tup1.type] =:= (T4, T3, T2, T1)]
+def test3[T1, T2, T3, T4](tup1: (T1, T2, T3, T4)): Unit =
+  val tup11: (T1, T2, T3, T4) = tup1
+  summon[Reverse[tup11.type] =:= (T4, T3, T2, T1)]

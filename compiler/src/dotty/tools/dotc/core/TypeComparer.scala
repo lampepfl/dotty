@@ -3400,37 +3400,44 @@ class MatchReducer(initctx: Context) extends TypeComparer(initctx) {
        *
        * See notably neg/wildcard-match.scala for examples of this.
        *
-       * See neg/i13780.scala and neg/i13780-1.scala for ClassCastException
-       * reproducers if we disable this check.
+       * See neg/i13780.scala, neg/i13780-1.scala and neg/i19746.scala for
+       * ClassCastException reproducers if we disable this check.
        */
 
-      def followEverythingConcrete(tp: Type): Type =
-        val widenedTp = tp.widenDealias
-        val tp1 = widenedTp.normalized
-
-        def followTp1: Type =
-          // If both widenDealias and normalized did something, start again
-          if (tp1 ne widenedTp) && (widenedTp ne tp) then followEverythingConcrete(tp1)
-          else tp1
+      def isConcrete(tp: Type): Boolean =
+        val tp1 = tp.normalized
 
         tp1 match
           case tp1: TypeRef =>
-            tp1.info match
-              case TypeAlias(tl: HKTypeLambda)  => tl
-              case MatchAlias(tl: HKTypeLambda) => tl
-              case _                            => followTp1
-          case tp1 @ AppliedType(tycon, args) =>
-            val concreteTycon = followEverythingConcrete(tycon)
-            if concreteTycon eq tycon then followTp1
-            else followEverythingConcrete(concreteTycon.applyIfParameterized(args))
+            if tp1.symbol.isClass then true
+            else
+              tp1.info match
+                case info: AliasingBounds => isConcrete(info.alias)
+                case _                    => false
+          case tp1: AppliedType =>
+            isConcrete(tp1.tycon) && isConcrete(tp1.superType)
+          case tp1: HKTypeLambda =>
+            true
+          case tp1: TermRef =>
+            !tp1.symbol.is(Param) && isConcrete(tp1.underlying)
+          case tp1: TermParamRef =>
+            false
+          case tp1: SingletonType =>
+            isConcrete(tp1.underlying)
+          case tp1: ExprType =>
+            isConcrete(tp1.underlying)
+          case tp1: AnnotatedType =>
+            isConcrete(tp1.parent)
+          case tp1: RefinedType =>
+            isConcrete(tp1.underlying)
+          case tp1: RecType =>
+            isConcrete(tp1.underlying)
+          case tp1: AndOrType =>
+            isConcrete(tp1.tp1) && isConcrete(tp1.tp2)
           case _ =>
-            followTp1
-      end followEverythingConcrete
-
-      def isConcrete(tp: Type): Boolean =
-        followEverythingConcrete(tp) match
-          case tp1: AndOrType => isConcrete(tp1.tp1) && isConcrete(tp1.tp2)
-          case tp1            => tp1.underlyingClassRef(refinementOK = true).exists
+            val tp2 = tp1.stripped.stripLazyRef
+            (tp2 ne tp) && isConcrete(tp2)
+      end isConcrete
 
       // Actual matching logic
 

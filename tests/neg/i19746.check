@@ -1,0 +1,7 @@
+-- [E007] Type Mismatch Error: tests/neg/i19746.scala:9:30 -------------------------------------------------------------
+9 |    def asX(w: W[Any]): w.X = self // error: Type Mismatch
+  |                              ^^^^
+  |                              Found:    (self : Any)
+  |                              Required: w.X
+  |
+  | longer explanation available when compiling with `-explain`

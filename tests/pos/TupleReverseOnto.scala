@@ -13,6 +13,7 @@ def test2[Tup1 <: Tuple, Tup2 <: Tuple] =
   summon[ReverseOnto[EmptyTuple, Tup1] =:= Tup1]
   summon[ReverseOnto[Tup1, EmptyTuple] =:= Reverse[Tup1]]
 
-def test3[T1, T2, T3, T4](tup1: (T1, T2), tup2: (T3, T4)) =
-  summon[ReverseOnto[tup1.type, tup2.type] <:< (T2, T1, T3, T4)]
-  summon[ReverseOnto[tup1.type, tup2.type] =:= T2 *: T1 *: tup2.type]
+def test3[T1, T2, T3, T4](tup1: (T1, T2), tup2: (T3, T4)): Unit =
+  val tup11: (T1, T2) = tup1
+  summon[ReverseOnto[tup11.type, tup2.type] <:< (T2, T1, T3, T4)]
+  summon[ReverseOnto[tup11.type, tup2.type] =:= T2 *: T1 *: tup2.type]
