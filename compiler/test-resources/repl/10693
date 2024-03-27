@@ -1,0 +1,16 @@
+scala> def test[A, B](a: A, b: B): A | B = a
+def test[A, B](a: A, b: B): A | B
+scala>   def d0 = test("string", 1)
+def d0: String | Int
+scala> def d1 = test(1, "string")
+def d1: Int | String
+scala> def d2 = test(d0, d1)
+def d2: String | Int
+scala> def d3 = test(d1, d0)
+def d3: Int | String
+scala> def d4 = test(d2, d3)
+def d4: String | Int
+scala> def d5 = test(d3, d2)
+def d5: Int | String
+scala> def d6 = test(d4, d5)
+def d6: String | Int
