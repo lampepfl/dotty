@@ -32,14 +32,14 @@ are missing them. Rules (7) to (9) define how such cases with `extends` clauses
 map into `case class`es or `val`s.
 
 1. An `enum` definition
-   ```scala
+   ```scala sc:nocompile
    enum E ... { <defs> <cases> }
    ```
    expands to a `sealed abstract` class that extends the `scala.reflect.Enum` trait and
    an associated companion object that contains the defined cases, expanded according
    to rules (2 - 8). The enum class starts with a compiler-generated import that imports
    the names `<caseIds>` of all cases so that they can be used without prefix in the class.
-   ```scala
+   ```scala sc:nocompile
    sealed abstract class E ... extends <parents> with scala.reflect.Enum {
      import E.{ <caseIds> }
      <defs>
@@ -48,37 +48,37 @@ map into `case class`es or `val`s.
    ```
 
 2. A simple case consisting of a comma-separated list of enum names
-   ```scala
+   ```scala sc:nocompile
    case C_1, ..., C_n
    ```
    expands to
-   ```scala
+   ```scala sc:nocompile
    case C_1; ...; case C_n
    ```
    Any modifiers or annotations on the original case extend to all expanded
    cases.
 
 3. A simple case
-   ```scala
+   ```scala sc:nocompile
    case C
    ```
    of an enum `E` that does not take type parameters expands to
-   ```scala
+   ```scala sc:nocompile
    val C = $new(n, "C")
    ```
    Here, `$new` is a private method that creates an instance of `E` (see
    below).
 
 4. If `E` is an enum with type parameters
-   ```scala
+   ```scala sc:nocompile
    V1 T1 >: L1 <: U1 ,   ... ,    Vn Tn >: Ln <: Un      (n > 0)
    ```
    where each of the variances `Vi` is either `'+'` or `'-'`, then a simple case
-   ```scala
+   ```scala sc:nocompile
    case C
    ```
    expands to
-   ```scala
+   ```scala sc:nocompile
    case C extends E[B1, ..., Bn]
    ```
    where `Bi` is `Li` if `Vi = '+'` and `Ui` if `Vi = '-'`. This result is then further
@@ -86,42 +86,42 @@ map into `case class`es or `val`s.
    parameters are not permitted (however value cases with explicit `extends` clause are)
 
 5. A class case without an extends clause
-   ```scala
+   ```scala sc:nocompile
    case C <type-params> <value-params>
    ```
    of an enum `E` that does not take type parameters expands to
-   ```scala
+   ```scala sc:nocompile
    case C <type-params> <value-params> extends E
    ```
    This result is then further rewritten with rule (9).
 
 6. If `E` is an enum with type parameters `Ts`, a class case with neither type parameters nor an extends clause
-   ```scala
+   ```scala sc:nocompile
    case C <value-params>
    ```
    expands to
-   ```scala
+   ```scala sc:nocompile
    case C[Ts] <value-params> extends E[Ts]
    ```
    This result is then further rewritten with rule (9). For class cases that have type parameters themselves, an extends clause needs to be given explicitly.
 
 7. If `E` is an enum with type parameters `Ts`, a class case without type parameters but with an extends clause
-   ```scala
+   ```scala sc:nocompile
    case C <value-params> extends <parents>
    ```
    expands to
-   ```scala
+   ```scala sc:nocompile
    case C[Ts] <value-params> extends <parents>
    ```
    provided at least one of the parameters `Ts` is mentioned in a parameter type in
    `<value-params>` or in a type argument in `<parents>`.
 
 8. A value case
-   ```scala
+   ```scala sc:nocompile
    case C extends <parents>
    ```
    expands to a value definition in `E`'s companion object:
-   ```scala
+   ```scala sc:nocompile
    val C = new <parents> { <body>; def ordinal = n }
    ```
    where `n` is the ordinal number of the case in the companion object,
@@ -132,15 +132,15 @@ map into `case class`es or `val`s.
    in a type argument of `<parents>`.
 
 9. A class case
-   ```scala
+   ```scala sc:nocompile
    case C <params> extends <parents>
    ```
    expands analogous to a final case class in `E`'s companion object:
-   ```scala
+   ```scala sc:nocompile
    final case class C <params> extends <parents>
    ```
    The enum case defines an `ordinal` method of the form
-   ```scala
+   ```scala sc:nocompile
    def ordinal = n
    ```
    where `n` is the ordinal number of the case in the companion object,
@@ -151,7 +151,7 @@ map into `case class`es or `val`s.
    a type parameter of the case, i.e. the parameter name is defined in `<params>`.
 
    The compiler-generated `apply` and `copy` methods of an enum case
-   ```scala
+   ```scala sc:nocompile
    case C(ps) extends P1, ..., Pn
    ```
    are treated specially. A call `C(ts)` of the apply method is ascribed the underlying type
@@ -175,7 +175,7 @@ If `E` contains at least one simple case, its companion object will define in ad
      ordinal number and name. This method can be thought as being defined as
      follows.
 
-     ```scala
+     ```scala sc:nocompile
      private def $new(_$ordinal: Int, $name: String) =
        new E with runtime.EnumValue:
          def ordinal = _$ordinal

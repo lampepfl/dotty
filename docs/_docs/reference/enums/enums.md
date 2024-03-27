@@ -19,7 +19,7 @@ companion object.
 
 Enums can be parameterized.
 
-```scala
+```scala sc-name:color
 enum Color(val rgb: Int):
   case Red   extends Color(0xFF0000)
   case Green extends Color(0x00FF00)
@@ -34,11 +34,10 @@ explicit extends clause.
 The values of an enum correspond to unique integers. The integer
 associated with an enum value is returned by its `ordinal` method:
 
-```scala
-scala> val red = Color.Red
-val red: Color = Red
-scala> red.ordinal
-val res0: Int = 0
+```scala sc-compile-with:color
+val red = Color.Red
+val ord = red.ordinal
+assert(ord == 0)
 ```
 
 The companion object of an enum also defines three utility methods.
@@ -47,20 +46,20 @@ by its name. The `values` method returns all enum values
 defined in an enumeration in an `Array`. The `fromOrdinal`
 method obtains an enum value from its ordinal (`Int`) value.
 
-```scala
-scala> Color.valueOf("Blue")
-val res0: Color = Blue
-scala> Color.values
-val res1: Array[Color] = Array(Red, Green, Blue)
-scala> Color.fromOrdinal(0)
-val res2: Color = Red
+```scala sc-compile-with:color
+val blue = Color.valueOf("Blue")
+// blue: Color = Blue
+val values = Color.values
+// values: Array[Color] = Array(Red, Green, Blue)
+val red = Color.fromOrdinal(0)
+// red: Color = Red
 ```
 
 ## User-defined members of enums
 
 It is possible to add your own definitions to an enum. Example:
 
-```scala
+```scala sc-name:planet
 enum Planet(mass: Double, radius: Double):
   private final val G = 6.67300E-11
   def surfaceGravity = G * mass / (radius * radius)
@@ -80,7 +79,7 @@ end Planet
 ## User-defined companion object of enums
 It is also possible to define an explicit companion object for an enum:
 
-```scala
+```scala sc-compile-with:planet
 object Planet:
   def main(args: Array[String]) =
     val earthWeight = args(0).toDouble
@@ -100,7 +99,7 @@ enum class.
 Similarly, enum case declarations may not directly reference members of the enum's companion object,
 even if they are imported (directly, or by renaming). For example:
 
-```scala
+```scala sc:nocompile
 import Planet.*
 enum Planet(mass: Double, radius: Double):
   private final val (mercuryMass, mercuryRadius) = (3.303e+23, 2.4397e6)
@@ -146,7 +145,7 @@ We now want to deprecate the `Pluto` case. First we add the `scala.deprecated` a
 
 Outside the lexical scopes of `enum Planet` or `object Planet`, references to `Planet.Pluto` will produce a deprecation warning, but within those scopes we can still reference it to implement introspection over the deprecated cases:
 
-```scala
+```scala sc:nocompile
 trait Deprecations[T <: reflect.Enum] {
   extension (t: T) def isDeprecatedCase: Boolean
 }
@@ -166,7 +165,7 @@ We could imagine that a library may use [type class derivation](../contextual/de
 If you want to use the Scala-defined enums as [Java enums](https://docs.oracle.com/javase/tutorial/java/javaOO/enum.html), you can do so by extending
 the class `java.lang.Enum`, which is imported by default, as follows:
 
-```scala
+```scala sc-name:jcolor
 enum Color extends Enum[Color] { case Red, Green, Blue }
 ```
 
@@ -175,9 +174,9 @@ There is no need to provide constructor arguments (as defined in the Java API do
 
 After defining `Color` like that, you can use it like you would a Java enum:
 
-```scala
-scala> Color.Red.compareTo(Color.Green)
-val res15: Int = -1
+```scala sc-compile-with:jcolor
+val cmp = Color.Red.compareTo(Color.Green)
+assert(cmp == -1)
 ```
 
 For a more in-depth example of using Scala 3 enums from Java, see [this test](https://github.com/scala/scala3/tree/main/tests/run/enum-java). In the test, the enums are defined in the `MainScala.scala` file and used from a Java source, `Test.java`.
@@ -187,7 +186,7 @@ For a more in-depth example of using Scala 3 enums from Java, see [this test](ht
 Enums are represented as `sealed` classes that extend the `scala.reflect.Enum` trait.
 This trait defines a single public method, `ordinal`:
 
-```scala
+```scala sc:nocompile
 package scala.reflect
 
 /** A base trait of all Scala enum definitions */
@@ -200,7 +199,7 @@ transparent trait Enum extends Any, Product, Serializable:
 Enum values with `extends` clauses get expanded to anonymous class instances.
 For instance, the `Venus` value above would be defined like this:
 
-```scala
+```scala sc:nocompile
 val Venus: Planet = new Planet(4.869E24, 6051800.0):
   def ordinal: Int = 1
   override def productPrefix: String = "Venus"
@@ -212,7 +211,7 @@ that can be instantiated using a private method that takes a tag and a name as a
 For instance, the first
 definition of value `Color.Red` above would expand to:
 
-```scala
+```scala sc:nocompile
 val Red: Color = $new(0, "Red")
 ```
 
