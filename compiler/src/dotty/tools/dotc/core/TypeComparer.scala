@@ -580,12 +580,9 @@ class TypeComparer(@constructorOnly initctx: Context) extends ConstraintHandling
           if (cls2.typeParams.isEmpty) {
             if (cls2 eq AnyKindClass) return true
             if (isBottom(tp1)) return true
-            if (tp1.isLambdaSub) return false
-              // Note: We would like to replace this by `if (tp1.hasHigherKind)`
-              // but right now we cannot since some parts of the standard library rely on the
-              // idiom that e.g. `List <: Any`. We have to bootstrap without scalac first.
-            if cls2 eq AnyClass then return true
-            if cls2 == defn.SingletonClass && tp1.isStable then return true
+            if tp1.hasSimpleKind then
+              if cls2 eq AnyClass then return true
+              if cls2 == defn.SingletonClass && tp1.isStable then return true
             return tryBaseType(cls2)
           }
           else if (cls2.is(JavaDefined)) {
