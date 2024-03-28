@@ -42,7 +42,7 @@ extends ReplDriver(options, new PrintStream(out, true, StandardCharsets.UTF_8.na
 
   /** Returns the `(<instance completions>, <companion completions>)`*/
   def tabComplete(src: String)(implicit state: State): List[String] =
-    completions(src.length, src, state).map(_.label).sorted.distinct
+    completionsWithSignatures(src.length, src, state).map(_.label).sorted.distinct
 
   extension [A](state: State)
     infix def andThen(op: State ?=> A): A = op(using state)
