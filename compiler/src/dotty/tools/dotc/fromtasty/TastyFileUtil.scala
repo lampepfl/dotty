@@ -6,6 +6,7 @@ import scala.language.unsafeNulls
 import dotty.tools.dotc.core.tasty.TastyClassName
 import dotty.tools.dotc.core.StdNames.nme.EMPTY_PACKAGE
 import dotty.tools.io.AbstractFile
+import dotty.tools.dotc.classpath.FileUtils.hasTastyExtension
 
 object TastyFileUtil {
   /** Get the class path of a tasty file
@@ -34,7 +35,7 @@ object TastyFileUtil {
    */
   def getClassName(file: AbstractFile): Option[String] = {
     assert(file.exists)
-    assert(file.extension == "tasty")
+    assert(file.hasTastyExtension)
     val bytes = file.toByteArray
     val names = new TastyClassName(bytes).readName()
     names.map { case (packageName, className) =>

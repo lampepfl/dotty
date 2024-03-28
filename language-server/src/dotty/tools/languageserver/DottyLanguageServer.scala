@@ -753,7 +753,7 @@ object DottyLanguageServer {
 
   /** Does this sourcefile represent a worksheet? */
   private def isWorksheet(sourcefile: SourceFile): Boolean =
-    sourcefile.file.extension == "sc"
+    sourcefile.file.ext.isScalaScript
 
   /** Wrap the source of a worksheet inside an `object`. */
   private def wrapWorksheet(source: String): String =

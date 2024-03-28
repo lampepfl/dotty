@@ -98,7 +98,7 @@ class CommentPicklingTest {
       Main.process(options.all, reporter)
       assertFalse("Compilation failed.", reporter.hasErrors)
 
-      val tastyFiles = Path.onlyFiles(out.walkFilter(_.extension == "tasty")).toList
+      val tastyFiles = Path.onlyFiles(out.walkFilter(_.ext.isTasty)).toList
       val unpicklingOptions = unpickleOptions
         .withClasspath(out.toAbsolute.toString)
         .and("dummy") // Need to pass a dummy source file name

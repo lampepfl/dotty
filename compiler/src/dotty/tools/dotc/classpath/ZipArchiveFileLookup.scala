@@ -43,15 +43,6 @@ trait ZipArchiveFileLookup[FileEntryType <: ClassRepresentation] extends Efficie
     }
     yield createFileEntry(entry)
 
-  protected def files(inPackage: PackageName, names: String*): Seq[FileEntryType] =
-    for {
-      dirEntry <- findDirEntry(inPackage).toSeq
-      name <- names
-      entry <- Option(dirEntry.lookupName(name, directory = false))
-      if isRequiredFileType(entry)
-    }
-    yield createFileEntry(entry)
-
   protected def file(inPackage: PackageName, name: String): Option[FileEntryType] =
     for {
       dirEntry <- findDirEntry(inPackage)

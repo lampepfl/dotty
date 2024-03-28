@@ -1,0 +1,7 @@
+# test the interaction of incremental compilation and pipelining
+> compile
+> recordPreviousIterations
+$ copy-file changes/A1.scala src/main/scala/a/A.scala
+# A recompilation should trigger recompilation of App.scala, otherwise test assert will fail
+> run
+> checkIterations 2

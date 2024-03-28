@@ -6,6 +6,7 @@ package dotty.tools.dotc.classpath
 import dotty.tools.dotc.classpath.FileUtils.isTasty
 import dotty.tools.io.AbstractFile
 import dotty.tools.io.ClassRepresentation
+import dotty.tools.io.FileExtension
 
 case class ClassPathEntries(packages: scala.collection.Seq[PackageEntry], classesAndSources: scala.collection.Seq[ClassRepresentation]) {
   def toTuple: (scala.collection.Seq[PackageEntry], scala.collection.Seq[ClassRepresentation]) = (packages, classesAndSources)
@@ -52,7 +53,7 @@ sealed trait BinaryFileEntry extends ClassRepresentation {
 object BinaryFileEntry {
   def apply(file: AbstractFile): BinaryFileEntry =
     if file.isTasty then
-      if file.resolveSiblingWithExtension("class") != null then TastyWithClassFileEntry(file)
+      if file.resolveSiblingWithExtension(FileExtension.Class) != null then TastyWithClassFileEntry(file)
       else StandaloneTastyFileEntry(file)
     else
       ClassFileEntry(file)

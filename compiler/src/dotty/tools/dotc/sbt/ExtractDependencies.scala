@@ -8,7 +8,7 @@ import java.nio.file.Path
 import java.util.{Arrays, EnumSet}
 
 import dotty.tools.dotc.ast.tpd
-import dotty.tools.dotc.classpath.FileUtils.{isTasty, hasClassExtension, hasTastyExtension}
+import dotty.tools.dotc.classpath.FileUtils.{hasClassExtension, hasTastyExtension}
 import dotty.tools.dotc.core.Contexts.*
 import dotty.tools.dotc.core.Decorators.*
 import dotty.tools.dotc.core.Flags.*
@@ -21,7 +21,7 @@ import dotty.tools.dotc.core.Types.*
 
 import dotty.tools.dotc.util.{SrcPos, NoSourcePosition}
 import dotty.tools.io
-import dotty.tools.io.{AbstractFile, PlainFile, ZipArchive, NoAbstractFile}
+import dotty.tools.io.{AbstractFile, PlainFile, ZipArchive, NoAbstractFile, FileExtension}
 import xsbti.UseScope
 import xsbti.api.DependencyContext
 import xsbti.api.DependencyContext.*
@@ -84,7 +84,7 @@ class ExtractDependencies extends Phase {
       Arrays.sort(deps)
       Arrays.sort(names)
 
-      val pw = io.File(unit.source.file.jpath).changeExtension("inc").toFile.printWriter()
+      val pw = io.File(unit.source.file.jpath).changeExtension(FileExtension.Inc).toFile.printWriter()
       // val pw = Console.out
       try {
         pw.println("Used Names:")
@@ -495,7 +495,7 @@ class DependencyRecorder {
     if depFile != null then {
       // Cannot ignore inheritance relationship coming from the same source (see sbt/zinc#417)
       def allowLocal = depCtx == DependencyByInheritance || depCtx == LocalDependencyByInheritance
-      val isTasty = depFile.hasTastyExtension
+      val isTastyOrSig = depFile.hasTastyExtension
 
       def processExternalDependency() = {
         val binaryClassName = depClass.binaryClassName
@@ -506,13 +506,13 @@ class DependencyRecorder {
                 binaryDependency(zip.jpath, binaryClassName)
               case _ =>
           case pf: PlainFile => // The dependency comes from a class file, Zinc handles JRT filesystem
-            binaryDependency(if isTasty then cachedSiblingClass(pf) else pf.jpath, binaryClassName)
+            binaryDependency(if isTastyOrSig then cachedSiblingClass(pf) else pf.jpath, binaryClassName)
           case _ =>
             internalError(s"Ignoring dependency $depFile of unknown class ${depFile.getClass}}", fromClass.srcPos)
         }
       }
 
-      if isTasty || depFile.hasClassExtension then
+      if isTastyOrSig || depFile.hasClassExtension then
         processExternalDependency()
       else if allowLocal || depFile != sourceFile.file then
         // We cannot ignore dependencies coming from the same source file because

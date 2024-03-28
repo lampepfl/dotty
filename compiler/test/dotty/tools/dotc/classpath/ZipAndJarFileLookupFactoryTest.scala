@@ -27,7 +27,7 @@ class ZipAndJarFileLookupFactoryTest {
       createZip(f, Array(), "p2/X.class")
       createZip(f, Array(), "p3/Y.class")
       val cp1 = createCp
-      assert(cp1.findClass("p1.C").isDefined)
+      assert(cp1.findClassFile("p1.C").isDefined)
 
       // We expect get a cache hit as the underlying zip hasn't changed
       val cp2 = createCp
@@ -46,8 +46,8 @@ class ZipAndJarFileLookupFactoryTest {
       val cp3 = createCp
       assert(cp1 ne cp3, (System.identityHashCode(cp1), System.identityHashCode(cp3)))
       // And that instance should see D, not C, in package p1.
-      assert(cp3.findClass("p1.C").isEmpty)
-      assert(cp3.findClass("p1.D").isDefined)
+      assert(cp3.findClassFile("p1.C").isEmpty)
+      assert(cp3.findClassFile("p1.D").isDefined)
     } finally Files.delete(f)
   }
 

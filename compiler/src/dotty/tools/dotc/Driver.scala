@@ -6,7 +6,7 @@ import core.Comments.{ContextDoc, ContextDocstrings}
 import core.Contexts.*
 import core.{MacroClassLoader, TypeError}
 import dotty.tools.dotc.ast.Positioned
-import dotty.tools.io.AbstractFile
+import dotty.tools.io.{AbstractFile, FileExtension}
 import reporting.*
 import core.Decorators.*
 import config.Feature
@@ -97,9 +97,9 @@ class Driver {
           if !file.exists then
             report.error(em"File does not exist: ${file.path}")
             None
-          else file.extension match
-            case "jar" => Some(file.path)
-            case "tasty" =>
+          else file.ext match
+            case FileExtension.Jar => Some(file.path)
+            case FileExtension.Tasty =>
               TastyFileUtil.getClassPath(file) match
                 case Some(classpath) => Some(classpath)
                 case _ =>

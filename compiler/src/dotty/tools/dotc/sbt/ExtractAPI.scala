@@ -15,12 +15,16 @@ import Trees.*
 import Types.*
 import Symbols.*
 import Names.*
+import StdNames.str
 import NameOps.*
 import inlines.Inlines
 import transform.ValueClasses
-import dotty.tools.io.File
+import transform.Pickler
+import dotty.tools.io.{File, FileExtension, JarArchive}
+import util.{Property, SourceFile}
 import java.io.PrintWriter
 
+import ExtractAPI.NonLocalClassSymbolsInCurrentUnits
 
 import scala.collection.mutable
 import scala.util.hashing.MurmurHash3
@@ -48,7 +52,7 @@ class ExtractAPI extends Phase {
   override def description: String = ExtractAPI.description
 
   override def isRunnable(using Context): Boolean = {
-    super.isRunnable && ctx.runZincPhases
+    super.isRunnable && (ctx.runZincPhases || ctx.settings.YjavaTasty.value)
   }
 
   // Check no needed. Does not transform trees
@@ -62,7 +66,114 @@ class ExtractAPI extends Phase {
   // after `PostTyper` (unlike `ExtractDependencies`, the simplication to trees
   // done by `PostTyper` do not affect this phase because it only cares about
   // definitions, and `PostTyper` does not change definitions).
-  override def runsAfter: Set[String] = Set(transform.PostTyper.name)
+  override def runsAfter: Set[String] = Set(transform.Pickler.name)
+
+  override def runOn(units: List[CompilationUnit])(using Context): List[CompilationUnit] =
+    val doZincCallback = ctx.runZincPhases
+    val sigWriter: Option[Pickler.EarlyFileWriter] = ctx.settings.YearlyTastyOutput.value match
+      case earlyOut if earlyOut.isDirectory && earlyOut.exists =>
+        Some(Pickler.EarlyFileWriter(earlyOut))
+      case _ =>
+        None
+    val nonLocalClassSymbols = new mutable.HashSet[Symbol]
+    val units0 =
+      if doZincCallback then
+        val ctx0 = ctx.withProperty(NonLocalClassSymbolsInCurrentUnits, Some(nonLocalClassSymbols))
+        super.runOn(units)(using ctx0)
+      else
+        units // still run the phase for the side effects (writing TASTy files to -Yearly-tasty-output)
+    sigWriter.foreach(writeSigFiles(units0, _))
+    if doZincCallback then
+      ctx.withIncCallback(recordNonLocalClasses(nonLocalClassSymbols, _))
+    if ctx.settings.YjavaTasty.value then
+      units0.filterNot(_.typedAsJava) // remove java sources, this is the terminal phase when `-Yjava-tasty` is set
+    else
+      units0
+  end runOn
+
+  // Why we only write to early output in the first run?
+  // ===================================================
+  // TL;DR the point of pipeline compilation is to start downstream projects early,
+  // so we don't want to wait for suspended units to be compiled.
+  //
+  // But why is it safe to ignore suspended units?
+  // If this project contains a transparent macro that is called in the same project,
+  // the compilation unit of that call will be suspended (if the macro implementation
+  // is also in this project), causing a second run.
+  // However before we do that run, we will have already requested sbt to begin
+  // early downstream compilation. This means that the suspended definitions will not
+  // be visible in *early* downstream compilation.
+  //
+  // However, sbt will by default prevent downstream compilation happening in this scenario,
+  // due to the existence of macro definitions. So we are protected from failure if user tries
+  // to use the suspended definitions.
+  //
+  // Additionally, it is recommended for the user to move macro implementations to another project
+  // if they want to force early output. In this scenario the suspensions will no longer occur, so now
+  // they will become visible in the early-output.
+  //
+  // See `sbt-test/pipelining/pipelining-scala-macro` and `sbt-test/pipelining/pipelining-scala-macro-force`
+  // for examples of this in action.
+  //
+  // Therefore we only need to write to early output in the first run. We also provide the option
+  // to diagnose suspensions with the `-Yno-suspended-units` flag.
+  private def writeSigFiles(units: List[CompilationUnit], writer: Pickler.EarlyFileWriter)(using Context): Unit = {
+    try
+      for
+        unit <- units
+        (cls, pickled) <- unit.pickled
+        if cls.isDefinedInCurrentRun
+      do
+        val internalName =
+          if cls.is(Module) then cls.binaryClassName.stripSuffix(str.MODULE_SUFFIX).nn
+          else cls.binaryClassName
+        val _ = writer.writeTasty(internalName, pickled())
+    finally
+      writer.close()
+      if ctx.settings.verbose.value then
+        report.echo("[sig files written]")
+    end try
+  }
+
+  private def recordNonLocalClasses(nonLocalClassSymbols: mutable.HashSet[Symbol], cb: interfaces.IncrementalCallback)(using Context): Unit =
+    for cls <- nonLocalClassSymbols do
+      val sourceFile = cls.source
+      if sourceFile.exists && cls.isDefinedInCurrentRun then
+        recordNonLocalClass(cls, sourceFile, cb)
+    cb.apiPhaseCompleted()
+    cb.dependencyPhaseCompleted()
+
+  private def recordNonLocalClass(cls: Symbol, sourceFile: SourceFile, cb: interfaces.IncrementalCallback)(using Context): Unit =
+    def registerProductNames(fullClassName: String, binaryClassName: String) =
+      val pathToClassFile = s"${binaryClassName.replace('.', java.io.File.separatorChar)}.class"
+
+      val classFile = {
+        ctx.settings.outputDir.value match {
+          case jar: JarArchive =>
+            // important detail here, even on Windows, Zinc expects the separator within the jar
+            // to be the system default, (even if in the actual jar file the entry always uses '/').
+            // see https://github.com/sbt/zinc/blob/dcddc1f9cfe542d738582c43f4840e17c053ce81/internal/compiler-bridge/src/main/scala/xsbt/JarUtils.scala#L47
+            new java.io.File(s"$jar!$pathToClassFile")
+          case outputDir =>
+            new java.io.File(outputDir.file, pathToClassFile)
+        }
+      }
+
+      cb.generatedNonLocalClass(sourceFile, classFile.toPath(), binaryClassName, fullClassName)
+    end registerProductNames
+
+    val fullClassName = atPhase(sbtExtractDependenciesPhase) {
+      ExtractDependencies.classNameAsString(cls)
+    }
+    val binaryClassName = cls.binaryClassName
+    registerProductNames(fullClassName, binaryClassName)
+
+    // Register the names of top-level module symbols that emit two class files
+    val isTopLevelUniqueModule =
+      cls.owner.is(PackageClass) && cls.is(ModuleClass) && cls.companionClass == NoSymbol
+    if isTopLevelUniqueModule then
+      registerProductNames(fullClassName, binaryClassName.stripSuffix(str.MODULE_SUFFIX))
+  end recordNonLocalClass
 
   override def run(using Context): Unit = {
     val unit = ctx.compilationUnit
@@ -70,13 +181,14 @@ class ExtractAPI extends Phase {
     ctx.withIncCallback: cb =>
       cb.startSource(sourceFile)
 
-    val apiTraverser = new ExtractAPICollector
+    val nonLocalClassSymbols = ctx.property(NonLocalClassSymbolsInCurrentUnits).get
+    val apiTraverser = ExtractAPICollector(nonLocalClassSymbols)
     val classes = apiTraverser.apiSource(unit.tpdTree)
     val mainClasses = apiTraverser.mainClasses
 
     if (ctx.settings.YdumpSbtInc.value) {
       // Append to existing file that should have been created by ExtractDependencies
-      val pw = new PrintWriter(File(sourceFile.file.jpath).changeExtension("inc").toFile
+      val pw = new PrintWriter(File(sourceFile.file.jpath).changeExtension(FileExtension.Inc).toFile
         .bufferedWriter(append = true), true)
       try {
         classes.foreach(source => pw.println(DefaultShowAPI(source)))
@@ -93,6 +205,8 @@ class ExtractAPI extends Phase {
 object ExtractAPI:
   val name: String = "sbt-api"
   val description: String = "sends a representation of the API of classes to sbt"
+
+  private val NonLocalClassSymbolsInCurrentUnits: Property.Key[mutable.HashSet[Symbol]] = Property.Key()
 
 /** Extracts full (including private members) API representation out of Symbols and Types.
  *
@@ -136,7 +250,7 @@ object ExtractAPI:
  *  without going through an intermediate representation, see
  *  http://www.scala-sbt.org/0.13/docs/Understanding-Recompilation.html#Hashing+an+API+representation
  */
-private class ExtractAPICollector(using Context) extends ThunkHolder {
+private class ExtractAPICollector(nonLocalClassSymbols: mutable.HashSet[Symbol])(using Context) extends ThunkHolder {
   import tpd.*
   import xsbti.api
 
@@ -254,6 +368,8 @@ private class ExtractAPICollector(using Context) extends ThunkHolder {
       childrenOfSealedClass, topLevel, tparams)
 
     allNonLocalClassesInSrc += cl
+    if !sym.isLocal then
+      nonLocalClassSymbols += sym
 
     if (sym.isStatic && !sym.is(Trait) && ctx.platform.hasMainMethod(sym)) {
        // If sym is an object, all main methods count, otherwise only @static ones count.

@@ -64,7 +64,7 @@ object Settings:
 
   @unshared
   val settingCharacters = "[a-zA-Z0-9_\\-]*".r
-  def validateSettingString(name: String): Unit = 
+  def validateSettingString(name: String): Unit =
     assert(settingCharacters.matches(name), s"Setting string $name contains invalid characters")
 
 
@@ -79,11 +79,12 @@ object Settings:
     aliases: List[String] = Nil,
     depends: List[(Setting[?], Any)] = Nil,
     ignoreInvalidArgs: Boolean = false,
+    preferPrevious: Boolean = false,
     propertyClass: Option[Class[?]] = None,
     deprecationMsg: Option[String] = None,
     // kept only for -Ykind-projector option compatibility
     legacyArgs: Boolean = false)(private[Settings] val idx: Int) {
-  
+
     validateSettingString(prefix.getOrElse(name))
     aliases.foreach(validateSettingString)
     assert(name.startsWith(s"-${category.prefixLetter}"), s"Setting $name does not start with category -$category")
@@ -92,7 +93,7 @@ object Settings:
     // Example: -opt Main.scala would be interpreted as -opt:Main.scala, and the source file would be ignored.
     assert(!(summon[ClassTag[T]] == ListTag && ignoreInvalidArgs), s"Ignoring invalid args is not supported for multivalue settings: $name")
 
-    val allFullNames: List[String] = s"$name" :: s"-$name" :: aliases  
+    val allFullNames: List[String] = s"$name" :: s"-$name" :: aliases
 
     def valueIn(state: SettingsState): T = state.value(idx).asInstanceOf[T]
 
@@ -105,7 +106,7 @@ object Settings:
     def isMultivalue: Boolean = summon[ClassTag[T]] == ListTag
 
     def acceptsNoArg: Boolean = summon[ClassTag[T]] == BooleanTag || summon[ClassTag[T]] == OptionTag || choices.exists(_.contains(""))
-    
+
     def legalChoices: String =
       choices match {
         case Some(xs) if xs.isEmpty => ""
@@ -125,10 +126,15 @@ object Settings:
             valueList.filter(current.contains).foreach(s => dangers :+= s"Setting $name set to $s redundantly")
             current ++ valueList
           else
-            if sstate.wasChanged(idx) then dangers :+= s"Flag $name set repeatedly"
+            if sstate.wasChanged(idx) then
+              assert(!preferPrevious, "should have shortcutted with ignoreValue, side-effect may be present!")
+              dangers :+= s"Flag $name set repeatedly"
             value
         ArgsSummary(updateIn(sstate, valueNew), args, errors, dangers)
       end update
+
+      def ignoreValue(args: List[String]): ArgsSummary =
+        ArgsSummary(sstate, args, errors, warnings)
 
       def fail(msg: String, args: List[String]) =
         ArgsSummary(sstate, args, errors :+ msg, warnings)
@@ -168,17 +174,17 @@ object Settings:
               update(x, args)
         catch case _: NumberFormatException =>
           fail(s"$argValue is not an integer argument for $name", args)
-        
-      def setOutput(argValue: String, args: List[String]) = 
+
+      def setOutput(argValue: String, args: List[String]) =
         val path = Directory(argValue)
-        val isJar = path.extension == "jar"
+        val isJar = path.ext.isJar
         if (!isJar && !path.isDirectory)
           fail(s"'$argValue' does not exist or is not a directory or .jar file", args)
         else {
           val output = if (isJar) JarArchive.create(path) else new PlainDirectory(path)
           update(output, args)
         }
-      
+
       def setVersion(argValue: String, args: List[String]) =
         ScalaVersion.parse(argValue) match {
           case Success(v) => update(v, args)
@@ -193,10 +199,11 @@ object Settings:
           case _ => update(strings, args)
 
 
-      def doSet(argRest: String) = 
+      def doSet(argRest: String) =
         ((summon[ClassTag[T]], args): @unchecked) match {
           case (BooleanTag, _) =>
-            setBoolean(argRest, args)
+            if sstate.wasChanged(idx) && preferPrevious then ignoreValue(args)
+            else setBoolean(argRest, args)
           case (OptionTag, _) =>
             update(Some(propertyClass.get.getConstructor().newInstance()), args)
           case (ct, args) =>
@@ -216,7 +223,10 @@ object Settings:
           case StringTag =>
             setString(arg, argsLeft)
           case OutputTag =>
-            setOutput(arg, argsLeft)
+            if sstate.wasChanged(idx) && preferPrevious then
+              ignoreValue(argsLeft) // do not risk side effects e.g. overwriting a jar
+            else
+              setOutput(arg, argsLeft)
           case IntTag =>
             setInt(arg, argsLeft)
           case VersionTag =>
@@ -224,16 +234,16 @@ object Settings:
           case _ =>
             missingArg
 
-      def matches(argName: String): Boolean = 
+      def matches(argName: String): Boolean =
         (allFullNames).exists(_ == argName.takeWhile(_ != ':')) || prefix.exists(arg.startsWith)
 
-      def argValRest: String = 
+      def argValRest: String =
         if(prefix.isEmpty) arg.dropWhile(_ != ':').drop(1) else arg.drop(prefix.get.length)
-      
-      if matches(arg) then 
+
+      if matches(arg) then
         if deprecationMsg.isDefined then
           warn(s"Option $name is deprecated: ${deprecationMsg.get}", args)
-        else 
+        else
           doSet(argValRest)
       else
         state
@@ -333,8 +343,8 @@ object Settings:
       assert(!name.startsWith("-"), s"Setting $name cannot start with -")
       "-" + name
 
-    def BooleanSetting(category: SettingCategory, name: String, descr: String, initialValue: Boolean = false, aliases: List[String] = Nil): Setting[Boolean] =
-      publish(Setting(category, prependName(name), descr, initialValue, aliases = aliases))
+    def BooleanSetting(category: SettingCategory, name: String, descr: String, initialValue: Boolean = false, aliases: List[String] = Nil, preferPrevious: Boolean = false): Setting[Boolean] =
+      publish(Setting(category, prependName(name), descr, initialValue, aliases = aliases, preferPrevious = preferPrevious))
 
     def StringSetting(category: SettingCategory, name: String, helpArg: String, descr: String, default: String, aliases: List[String] = Nil): Setting[String] =
       publish(Setting(category, prependName(name), descr, default, helpArg, aliases = aliases))
@@ -357,8 +367,8 @@ object Settings:
     def MultiStringSetting(category: SettingCategory, name: String, helpArg: String, descr: String, default: List[String] = Nil, aliases: List[String] = Nil): Setting[List[String]] =
       publish(Setting(category, prependName(name), descr, default, helpArg, aliases = aliases))
 
-    def OutputSetting(category: SettingCategory, name: String, helpArg: String, descr: String, default: AbstractFile): Setting[AbstractFile] =
-      publish(Setting(category, prependName(name), descr, default, helpArg))
+    def OutputSetting(category: SettingCategory, name: String, helpArg: String, descr: String, default: AbstractFile, aliases: List[String] = Nil, preferPrevious: Boolean = false): Setting[AbstractFile] =
+      publish(Setting(category, prependName(name), descr, default, helpArg, aliases = aliases, preferPrevious = preferPrevious))
 
     def PathSetting(category: SettingCategory, name: String, descr: String, default: String, aliases: List[String] = Nil): Setting[String] =
       publish(Setting(category, prependName(name), descr, default, aliases = aliases))
@@ -375,7 +385,7 @@ object Settings:
 
     def OptionSetting[T: ClassTag](category: SettingCategory, name: String, descr: String, aliases: List[String] = Nil): Setting[Option[T]] =
       publish(Setting(category, prependName(name), descr, None, propertyClass = Some(summon[ClassTag[T]].runtimeClass), aliases = aliases))
-    
+
     def DeprecatedSetting(category: SettingCategory, name: String, descr: String, deprecationMsg: String): Setting[Boolean] =
       publish(Setting(category, prependName(name), descr, false, deprecationMsg = Some(deprecationMsg)))
   }

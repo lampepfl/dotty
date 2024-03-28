@@ -7,7 +7,7 @@ import java.nio.channels.ClosedByInterruptException
 
 import scala.util.control.NonFatal
 
-import dotty.tools.dotc.classpath.FileUtils.isTasty
+import dotty.tools.dotc.classpath.FileUtils.hasTastyExtension
 import dotty.tools.io.{ ClassPath, ClassRepresentation, AbstractFile }
 import dotty.tools.backend.jvm.DottyBackendInterface.symExtensions
 
@@ -198,7 +198,7 @@ object SymbolLoaders {
         enterToplevelsFromSource(owner, nameOf(classRep), src)
       case (Some(bin), _) =>
         val completer =
-          if bin.isTasty then ctx.platform.newTastyLoader(bin)
+          if bin.hasTastyExtension then ctx.platform.newTastyLoader(bin)
           else ctx.platform.newClassLoader(bin)
         enterClassAndModule(owner, nameOf(classRep), completer)
     }
@@ -456,7 +456,8 @@ class TastyLoader(val tastyFile: AbstractFile) extends SymbolLoader {
       val tastyUUID = unpickler.unpickler.header.uuid
       new ClassfileTastyUUIDParser(classfile)(ctx).checkTastyUUID(tastyUUID)
     else
-      // This will be the case in any of our tests that compile with `-Youtput-only-tasty`
+      // This will be the case in any of our tests that compile with `-Youtput-only-tasty`, or when
+      // tasty file compiled by `-Yearly-tasty-output-write` comes from an early output jar.
       report.inform(s"No classfiles found for $tastyFile when checking TASTy UUID")
 
   private def mayLoadTreesFromTasty(using Context): Boolean =

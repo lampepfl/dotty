@@ -31,7 +31,7 @@ object ScalaSettings extends ScalaSettings
 
 // Kept as seperate type to avoid breaking backward compatibility
 abstract class ScalaSettings extends SettingGroup, AllScalaSettings:
-  val settingsByCategory: Map[SettingCategory, List[Setting[_]]] = 
+  val settingsByCategory: Map[SettingCategory, List[Setting[_]]] =
     allSettings.groupBy(_.category)
       .view.mapValues(_.toList).toMap
       .withDefaultValue(Nil)
@@ -43,7 +43,7 @@ abstract class ScalaSettings extends SettingGroup, AllScalaSettings:
   val verboseSettings: List[Setting[_]] = settingsByCategory(VerboseSetting).sortBy(_.name)
   val settingsByAliases: Map[String, Setting[_]] = allSettings.flatMap(s => s.aliases.map(_ -> s)).toMap
 
-  
+
 trait AllScalaSettings extends CommonScalaSettings, PluginSettings, VerboseSettings, WarningSettings, XSettings, YSettings:
   self: SettingGroup =>
 
@@ -380,6 +380,7 @@ private sealed trait YSettings:
   val YprintPos: Setting[Boolean] = BooleanSetting(ForkSetting, "Yprint-pos", "Show tree positions.")
   val YprintPosSyms: Setting[Boolean] = BooleanSetting(ForkSetting, "Yprint-pos-syms", "Show symbol definitions positions.")
   val YnoDeepSubtypes: Setting[Boolean] = BooleanSetting(ForkSetting, "Yno-deep-subtypes", "Throw an exception on deep subtyping call stacks.")
+  val YnoSuspendedUnits: Setting[Boolean] = BooleanSetting(ForkSetting, "Yno-suspended-units", "Do not suspend units, e.g. when calling a macro defined in the same run. This will error instead of suspending.")
   val YnoPatmatOpt: Setting[Boolean] = BooleanSetting(ForkSetting, "Yno-patmat-opt", "Disable all pattern matching optimizations.")
   val YplainPrinter: Setting[Boolean] = BooleanSetting(ForkSetting, "Yplain-printer", "Pretty-print using a plain printer.")
   val YprintSyms: Setting[Boolean] = BooleanSetting(ForkSetting, "Yprint-syms", "When printing trees print info in symbols instead of corresponding info in trees.")
@@ -439,7 +440,7 @@ private sealed trait YSettings:
   val YdebugMacros: Setting[Boolean] = BooleanSetting(ForkSetting, "Ydebug-macros", "Show debug info when quote pattern match fails")
 
   // Pipeline compilation options
-  val YjavaTasty: Setting[Boolean] = BooleanSetting(ForkSetting, "Yjava-tasty", "Pickler phase should compute pickles for .java defined symbols for use by build tools")
-  val YjavaTastyOutput: Setting[AbstractFile] = OutputSetting(ForkSetting, "Yjava-tasty-output", "directory|jar", "(Internal use only!) destination for generated .tasty files containing Java type signatures.", NoAbstractFile)
+  val YjavaTasty: Setting[Boolean] = BooleanSetting(ForkSetting, "Yjava-tasty", "Pickler phase should compute TASTy for .java defined symbols for use by build tools", aliases = List("-Ypickle-java"), preferPrevious = true)
+  val YearlyTastyOutput: Setting[AbstractFile] = OutputSetting(ForkSetting, "Yearly-tasty-output", "directory|jar", "Destination to write generated .tasty files to for use in pipelined compilation.", NoAbstractFile, aliases = List("-Ypickle-write"), preferPrevious = true)
   val YallowOutlineFromTasty: Setting[Boolean] = BooleanSetting(ForkSetting, "Yallow-outline-from-tasty", "Allow outline TASTy to be loaded with the -from-tasty option.")
 end YSettings

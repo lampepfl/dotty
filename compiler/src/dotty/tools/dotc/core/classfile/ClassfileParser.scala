@@ -23,7 +23,7 @@ import scala.annotation.switch
 import typer.Checking.checkNonCyclic
 import io.{AbstractFile, ZipArchive}
 import scala.util.control.NonFatal
-import dotty.tools.dotc.classpath.FileUtils.classToTasty
+import dotty.tools.dotc.classpath.FileUtils.hasSiblingTasty
 
 import scala.compiletime.uninitialized
 
@@ -1143,7 +1143,7 @@ class ClassfileParser(
 
       if (scan(tpnme.TASTYATTR)) {
         val hint =
-          if classfile.classToTasty.isDefined then "This is likely a bug in the compiler. Please report."
+          if classfile.hasSiblingTasty then "This is likely a bug in the compiler. Please report."
           else "This `.tasty` file is missing. Try cleaning the project to fix this issue."
         report.error(s"Loading Scala 3 binary from $classfile. It should have been loaded from `.tasty` file. $hint", NoSourcePosition)
         return None

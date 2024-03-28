@@ -2,7 +2,7 @@ lazy val a = project.in(file("a"))
   .settings(
     compileOrder := CompileOrder.Mixed, // ensure we send java sources to Scala compiler
     scalacOptions += "-Yjava-tasty", // enable pickling of java signatures
-    scalacOptions ++= Seq("-Yjava-tasty-output", ((ThisBuild / baseDirectory).value / "a-enum-java-tasty.jar").toString),
+    scalacOptions ++= Seq("-Yearly-tasty-output", ((ThisBuild / baseDirectory).value / "a-enum-java-tasty.jar").toString),
     scalacOptions += "-Ycheck:all",
     Compile / classDirectory := ((ThisBuild / baseDirectory).value / "a-enum-classes"), // send classfiles to a different directory
   )
@@ -14,7 +14,7 @@ lazy val aCheck = project.in(file("a-check"))
     Compile / sources := (a / Compile / sources).value, // use the same sources as a
     compileOrder := CompileOrder.Mixed, // ensure we send java sources to Scala compiler
     scalacOptions += "-Yjava-tasty", // enable pickling of java signatures
-    scalacOptions ++= Seq("-Yjava-tasty-output", ((ThisBuild / baseDirectory).value / "a-enum-java-tasty-2.jar").toString),
+    scalacOptions ++= Seq("-Yearly-tasty-output", ((ThisBuild / baseDirectory).value / "a-enum-java-tasty-2.jar").toString),
     Compile / classDirectory := ((ThisBuild / baseDirectory).value / "a-enum-classes-2"), // send classfiles to a different directory
   )
 

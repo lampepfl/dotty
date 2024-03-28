@@ -56,7 +56,7 @@ class Pickler extends Phase {
 
   // No need to repickle trees coming from TASTY
   override def isRunnable(using Context): Boolean =
-    super.isRunnable && (!ctx.settings.fromTasty.value || ctx.settings.YjavaTasty.value)
+    super.isRunnable && !ctx.settings.fromTasty.value
 
   // when `-Yjava-tasty` is set we actually want to run this phase on Java sources
   override def skipIfJava(using Context): Boolean = false
@@ -94,9 +94,7 @@ class Pickler extends Phase {
 
   private val executor = Executor[Array[Byte]]()
 
-  private def useExecutor(using Context) =
-    Pickler.ParallelPickling && !ctx.settings.YtestPickler.value &&
-    !ctx.settings.YjavaTasty.value // disable parallel pickling when `-Yjava-tasty` is set (internal testing only)
+  private def useExecutor(using Context) = Pickler.ParallelPickling && !ctx.settings.YtestPickler.value
 
   private def printerContext(isOutline: Boolean)(using Context): Context =
     if isOutline then ctx.fresh.setPrinterFn(OutlinePrinter(_))
@@ -196,22 +194,13 @@ class Pickler extends Phase {
   }
 
   override def runOn(units: List[CompilationUnit])(using Context): List[CompilationUnit] = {
-    val sigWriter: Option[Pickler.EarlyFileWriter] = ctx.settings.YjavaTastyOutput.value match
-      case jar: JarArchive if jar.exists =>
-        Some(Pickler.EarlyFileWriter(jar))
-      case _ =>
-        None
-    val units0 =
-      if ctx.settings.fromTasty.value then
-        // we still run the phase for the side effect of writing the pipeline tasty files
-        units
+    val result =
+      if useExecutor then
+        executor.start()
+        try super.runOn(units)
+        finally executor.close()
       else
-        if useExecutor then
-          executor.start()
-          try super.runOn(units)
-          finally executor.close()
-        else
-          super.runOn(units)
+        super.runOn(units)
     if ctx.settings.YtestPickler.value then
       val ctx2 = ctx.fresh
         .setSetting(ctx.settings.YreadComments, true)
@@ -222,34 +211,7 @@ class Pickler extends Phase {
           .setReporter(new ThrowingReporter(ctx.reporter))
           .addMode(Mode.ReadPositions)
       )
-    val result =
-      if ctx.settings.YjavaTasty.value then
-        sigWriter.foreach(writeJavaSigFiles(units0, _))
-        units0.filterNot(_.typedAsJava) // remove java sources, this is the terminal phase when `-Yjava-tasty` is set
-      else
-        units0
     result
-  }
-
-  private def writeJavaSigFiles(units: List[CompilationUnit], writer: Pickler.EarlyFileWriter)(using Context): Unit = {
-    var count = 0
-    try
-      for
-        unit <- units if unit.typedAsJava
-        (cls, pickled) <- unit.pickled
-        if cls.isDefinedInCurrentRun
-      do
-        val binaryClassName = cls.binaryClassName
-        val internalName =
-          if (cls.is(Module)) binaryClassName.stripSuffix(str.MODULE_SUFFIX).nn
-          else binaryClassName
-        val _ = writer.writeTasty(internalName, pickled())
-        count += 1
-    finally
-      writer.close()
-      if ctx.settings.verbose.value then
-        report.echo(s"[$count java sig files written]")
-    end try
   }
 
   private def testUnpickler(using Context): Unit =

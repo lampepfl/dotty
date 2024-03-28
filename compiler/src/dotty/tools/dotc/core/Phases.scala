@@ -210,6 +210,7 @@ object Phases {
     private var myTyperPhase: Phase = uninitialized
     private var myPostTyperPhase: Phase = uninitialized
     private var mySbtExtractDependenciesPhase: Phase = uninitialized
+    private var mySbtExtractAPIPhase: Phase = uninitialized
     private var myPicklerPhase: Phase = uninitialized
     private var myInliningPhase: Phase = uninitialized
     private var myStagingPhase: Phase = uninitialized
@@ -236,6 +237,7 @@ object Phases {
     final def typerPhase: Phase = myTyperPhase
     final def postTyperPhase: Phase = myPostTyperPhase
     final def sbtExtractDependenciesPhase: Phase = mySbtExtractDependenciesPhase
+    final def sbtExtractAPIPhase: Phase = mySbtExtractAPIPhase
     final def picklerPhase: Phase = myPicklerPhase
     final def inliningPhase: Phase = myInliningPhase
     final def stagingPhase: Phase = myStagingPhase
@@ -265,6 +267,7 @@ object Phases {
       myTyperPhase = phaseOfClass(classOf[TyperPhase])
       myPostTyperPhase = phaseOfClass(classOf[PostTyper])
       mySbtExtractDependenciesPhase = phaseOfClass(classOf[sbt.ExtractDependencies])
+      mySbtExtractAPIPhase = phaseOfClass(classOf[sbt.ExtractAPI])
       myPicklerPhase = phaseOfClass(classOf[Pickler])
       myInliningPhase = phaseOfClass(classOf[Inlining])
       myStagingPhase = phaseOfClass(classOf[Staging])
@@ -339,19 +342,29 @@ object Phases {
     /** skip the phase for a Java compilation unit, may depend on -Yjava-tasty */
     def skipIfJava(using Context): Boolean = true
 
+    final def isAfterLastJavaPhase(using Context): Boolean =
+      // With `-Yjava-tasty` nominally the final phase is expected be ExtractAPI,
+      // otherwise drop Java sources at the end of TyperPhase.
+      // Checks if the last Java phase is before this phase,
+      // which always fails if the terminal phase is before lastJavaPhase.
+      val lastJavaPhase = if ctx.settings.YjavaTasty.value then sbtExtractAPIPhase else typerPhase
+      lastJavaPhase <= this
+
     /** @pre `isRunnable` returns true */
     def run(using Context): Unit
 
     /** @pre `isRunnable` returns true */
     def runOn(units: List[CompilationUnit])(using runCtx: Context): List[CompilationUnit] =
       val buf = List.newBuilder[CompilationUnit]
-      // factor out typedAsJava check when not needed
-      val doSkipJava = ctx.settings.YjavaTasty.value && this <= picklerPhase && skipIfJava
+
+      // Test that we are in a state where we need to check if the phase should be skipped for a java file,
+      // this prevents checking the expensive `unit.typedAsJava` unnecessarily.
+      val doCheckJava = skipIfJava && !isAfterLastJavaPhase
       for unit <- units do
         given unitCtx: Context = runCtx.fresh.setPhase(this.start).setCompilationUnit(unit).withRootImports
         if ctx.run.enterUnit(unit) then
           try
-            if doSkipJava && unit.typedAsJava then
+            if doCheckJava && unit.typedAsJava then
               ()
             else
               run
@@ -506,6 +519,7 @@ object Phases {
   def typerPhase(using Context): Phase                  = ctx.base.typerPhase
   def postTyperPhase(using Context): Phase              = ctx.base.postTyperPhase
   def sbtExtractDependenciesPhase(using Context): Phase = ctx.base.sbtExtractDependenciesPhase
+  def sbtExtractAPIPhase(using Context): Phase          = ctx.base.sbtExtractAPIPhase
   def picklerPhase(using Context): Phase                = ctx.base.picklerPhase
   def inliningPhase(using Context): Phase               = ctx.base.inliningPhase
   def stagingPhase(using Context): Phase               = ctx.base.stagingPhase

@@ -4,7 +4,7 @@ package fromtasty
 
 import scala.language.unsafeNulls
 
-import io.{JarArchive, AbstractFile, Path}
+import io.{JarArchive, AbstractFile, Path, FileExtension}
 import core.Contexts.*
 import core.Decorators.em
 import java.io.File
@@ -19,14 +19,14 @@ class TASTYRun(comp: Compiler, ictx: Context) extends Run(comp, ictx) {
     val fromTastyIgnoreList = ctx.settings.YfromTastyIgnoreList.value.toSet
     // Resolve class names of tasty and jar files
     val classNames = files.flatMap { file =>
-      file.extension match
-        case "jar" =>
+      file.ext match
+        case FileExtension.Jar =>
           JarArchive.open(Path(file.path), create = false).allFileNames()
             .map(_.stripPrefix("/")) // change paths from absolute to relative
-            .filter(e => Path.extension(e) == "tasty" && !fromTastyIgnoreList(e.replace("/", File.separator)))
+            .filter(e => Path.fileExtension(e).isTasty && !fromTastyIgnoreList(e.replace("/", File.separator)))
             .map(e => e.stripSuffix(".tasty").replace("/", "."))
             .toList
-        case "tasty" => TastyFileUtil.getClassName(file)
+        case FileExtension.Tasty => TastyFileUtil.getClassName(file)
         case _ =>
           report.error(em"File extension is not `tasty` or `jar`: ${file.path}")
           Nil

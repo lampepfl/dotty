@@ -97,11 +97,16 @@ abstract class AbstractFile extends Iterable[AbstractFile] {
   /** Returns the path of this abstract file in a canonical form. */
   def canonicalPath: String = if (jpath == null) path else jpath.normalize.toString
 
-  /** Checks extension case insensitively. TODO: change to enum */
-  def hasExtension(other: String): Boolean = extension == other.toLowerCase
+  /** Checks extension case insensitively. */
+  @deprecated("prefer queries on ext")
+  def hasExtension(other: String): Boolean = ext.toLowerCase.equalsIgnoreCase(other)
 
-  /** Returns the extension of this abstract file. TODO: store as an enum to avoid costly comparisons */
-  val extension: String = Path.extension(name)
+  /** Returns the extension of this abstract file. */
+  val ext: FileExtension = Path.fileExtension(name)
+
+  /** Returns the extension of this abstract file as a String. */
+  @deprecated("use ext instead.")
+  def extension: String = ext.toLowerCase
 
   /** The absolute file, if this is a relative file. */
   def absolute: AbstractFile
@@ -129,7 +134,7 @@ abstract class AbstractFile extends Iterable[AbstractFile] {
   }
 
   /** Does this abstract file represent something which can contain classfiles? */
-  def isClassContainer: Boolean = isDirectory || (jpath != null && (extension == "jar" || extension == "zip"))
+  def isClassContainer: Boolean = isDirectory || (jpath != null && ext.isJarOrZip)
 
   /** Create a file on disk, if one does not exist already. */
   def create(): Unit
@@ -258,8 +263,8 @@ abstract class AbstractFile extends Iterable[AbstractFile] {
   final def resolveSibling(name: String): AbstractFile | Null =
     container.lookupName(name, directory = false)
 
-  final def resolveSiblingWithExtension(extension: String): AbstractFile | Null =
-    resolveSibling(name.stripSuffix(this.extension) + extension)
+  final def resolveSiblingWithExtension(extension: FileExtension): AbstractFile | Null =
+    resolveSibling(Path.fileName(name) + "." + extension)
 
   private def fileOrSubdirectoryNamed(name: String, isDir: Boolean): AbstractFile =
     lookupName(name, isDir) match {

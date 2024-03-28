@@ -32,7 +32,7 @@ def scalaLibClassesPath =
 
 lazy val scalaLibTastyPaths =
   new Directory(scalaLibClassesPath).deepFiles
-    .filter(_.`extension` == "tasty")
+    .filter(_.ext.isTasty)
     .map(_.normalize.path.stripPrefix(scalaLibClassesPath.toString + separator))
     .toList
 

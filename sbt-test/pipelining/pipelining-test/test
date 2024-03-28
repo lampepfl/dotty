@@ -1,0 +1,12 @@
+# run the tests on a project with pipelining
+# exercises the fact that -Ypickle-java and -Ypickle-write
+# flags are set twice.
+# steps:
+# - Compile scope is compiled with flags `-Ypickle-java -Ypickle-write early/a-early-7423784.jar`
+# - sbt copies `early/a-early-7423784.jar` to `early/a-early.jar`
+# - Test scope is compiled with flags `-Ypickle-java -Ypickle-write early-test/a-early-963232.jar -Ypickle-java -Ypickle-write early/a-early.jar -classpath early/a-early.jar`
+# e.g. for some reason the classpath has the same `a-early.jar` that
+# is passed with `Ypickle-write`.
+# Therefore we MUST avoid even reading the second `-Ypickle-write` setting,
+# otherwise we will zero-out `a-early.jar`, causing type errors because its contents are blank.
+> a/test

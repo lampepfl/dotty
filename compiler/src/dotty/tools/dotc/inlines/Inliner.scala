@@ -1042,6 +1042,9 @@ class Inliner(val call: tpd.Tree)(using Context):
       for sym <- dependencies do
         if ctx.compilationUnit.source.file == sym.associatedFile then
           report.error(em"Cannot call macro $sym defined in the same source file", call.srcPos)
+        else if ctx.settings.YnoSuspendedUnits.value then
+          val addendum = ", suspension prevented by -Yno-suspended-units"
+          report.error(em"Cannot call macro $sym defined in the same compilation run$addendum", call.srcPos)
         if (suspendable && ctx.settings.XprintSuspension.value)
           report.echo(i"suspension triggered by macro call to ${sym.showLocated} in ${sym.associatedFile}", call.srcPos)
       if suspendable then
