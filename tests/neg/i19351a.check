@@ -1,12 +1,4 @@
 -- Error: tests/neg/i19351a/Test.scala:8:34 ----------------------------------------------------------------------------
-8 |inline def not(b: Bool): Bool = ${notMacro('b)} // error // error
+8 |inline def not(b: Bool): Bool = ${notMacro('b)} // error
   |                                  ^
   |Cyclic macro dependency; macro refers to a toplevel symbol in tests/neg/i19351a/Test.scala from which the macro is called
--- [E046] Cyclic Error: tests/neg/i19351a/Test.scala:8:46 --------------------------------------------------------------
-8 |inline def not(b: Bool): Bool = ${notMacro('b)} // error // error
-  |                                              ^
-  |                                              Cyclic reference involving method $anonfun
-  |
-  |                                               Run with -explain-cyclic for more details.
-  |
-  | longer explanation available when compiling with `-explain`

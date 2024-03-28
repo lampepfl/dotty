@@ -1785,6 +1785,64 @@ class DottyBytecodeTests extends DottyBytecodeTest {
     }
   }
 
+
+  @Test def i15098 = {
+    val source =
+      """object Main {
+        |  def main(args: Array[String]): Unit = {
+        |    Array(1).foreach { n =>
+        |      val x = 123
+        |      println(n)
+        |    }
+        |  }
+        |}
+        """.stripMargin
+
+    checkBCode(source) { dir =>
+      val clsIn   = dir.lookupName("Main$.class", directory = false).input
+      val clsNode = loadClassNode(clsIn, skipDebugInfo = false)
+      val method  = getMethod(clsNode, "main")
+      val instructions = instructionsFromMethod(method).filter(_.isInstanceOf[LineNumber])
+
+      val expected = List(
+        LineNumber(3, Label(0)),
+      )
+
+      assertSameCode(instructions, expected)
+    }
+  }
+
+  @Test def i15098_2 = {
+    val source =
+      """object Main {
+        |  def main(args: Array[String]): Unit = {
+        |    Array(1).map { n =>
+        |      val x = 123
+        |      x + n
+        |    }.foreach { n =>
+        |      println(n)
+        |      println(n)
+        |    }
+        |  }
+        |}
+        """.stripMargin
+
+    checkBCode(source) { dir =>
+      val clsIn   = dir.lookupName("Main$.class", directory = false).input
+      val clsNode = loadClassNode(clsIn, skipDebugInfo = false)
+      val method  = getMethod(clsNode, "main")
+      val instructions = instructionsFromMethod(method).filter(_.isInstanceOf[LineNumber])
+
+      val expected = List(
+        LineNumber(3, Label(0)),
+        LineNumber(6, Label(15)),
+        LineNumber(3, Label(24)),
+        LineNumber(6, Label(27)),
+      )
+
+      assertSameCode(instructions, expected)
+    }
+  }
 }
 
 object invocationReceiversTestCode {

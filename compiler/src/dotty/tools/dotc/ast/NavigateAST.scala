@@ -4,7 +4,7 @@ package ast
 import core.Contexts.*
 import core.Decorators.*
 import util.Spans.*
-import Trees.{MemberDef, DefTree, WithLazyFields}
+import Trees.{Closure, MemberDef, DefTree, WithLazyFields}
 import dotty.tools.dotc.core.Types.AnnotatedType
 import dotty.tools.dotc.core.Types.ImportType
 import dotty.tools.dotc.core.Types.Type
@@ -76,7 +76,7 @@ object NavigateAST {
       var bestFit: List[Positioned] = path
       while (it.hasNext) {
         val path1 = it.next() match {
-          case p: Positioned => singlePath(p, path)
+          case p: Positioned if !p.isInstanceOf[Closure[?]] => singlePath(p, path)
           case m: untpd.Modifiers => childPath(m.productIterator, path)
           case xs: List[?] => childPath(xs.iterator, path)
           case _ => path
