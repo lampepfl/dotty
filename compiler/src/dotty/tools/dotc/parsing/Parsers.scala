@@ -814,6 +814,8 @@ object Parsers {
      *   6. the opening brace does not follow a `=>`. The reason for this condition is that
      *      rewriting back to braces does not work after `=>` (since in most cases braces are omitted
      *      after a `=>` it would be annoying if braces were inserted).
+     *   7. not a code block being the input to a direct function call `inst method {\n expr \n}` cannot become
+     *      `inst method :\n expr`
      */
     def bracesToIndented[T](body: => T, rewriteWithColon: Boolean): T = {
       val underColonSyntax = possibleColonOffset == in.lastOffset
@@ -827,10 +829,20 @@ object Parsers {
       }
       var canRewrite = allBraces(in.currentRegion) && // test (1)
         !testChars(in.lastOffset - 3, " =>") // test(6)
+
+      def isStartOfFunction: Boolean =
+        opStack.headOption.exists(x => x.offset > startOpening && x.offset < endOpening)
       val t = enclosed(LBRACE, {
         canRewrite &= in.isAfterLineEnd // test (2)
         val curOffset = in.offset
-        try body
+        try {
+          val bodyResolved = body
+          bodyResolved match
+            case x:(Match | Block) =>
+              canRewrite &= !isStartOfFunction // test (7)
+            case _ =>
+          bodyResolved
+        }
         finally {
           canRewrite &= in.isAfterLineEnd && in.offset != curOffset // test (3)(4)
         }
