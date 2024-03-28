@@ -1961,7 +1961,8 @@ class Namer { typer: Typer =>
       else
         // don't strip @uncheckedVariance annot for default getters
         TypeOps.simplify(tp.widenTermRefExpr,
-            if defaultTp.exists then TypeOps.SimplifyKeepUnchecked() else null) match
+            if defaultTp.exists then TypeOps.SimplifyKeepUnchecked() else null)
+        match
           case ctp: ConstantType if sym.isInlineVal => ctp
           case tp => TypeComparer.widenInferred(tp, pt, widenUnions = true)
 

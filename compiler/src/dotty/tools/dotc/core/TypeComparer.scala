@@ -2352,8 +2352,8 @@ class TypeComparer(@constructorOnly initctx: Context) extends ConstraintHandling
   }
 
   /** The greatest lower bound of two types */
-  def glb(tp1: Type, tp2: Type): Type = /*>|>*/ trace(s"glb(${tp1.show}, ${tp2.show})", subtyping, show = true) /*<|<*/ {
-    if (tp1 eq tp2) tp1
+  def glb(tp1: Type, tp2: Type): Type = // trace(s"glb(${tp1.show}, ${tp2.show})", subtyping, show = true):
+    if tp1 eq tp2 then tp1
     else if !tp1.exists || (tp1 eq WildcardType) then tp2
     else if !tp2.exists || (tp2 eq WildcardType) then tp1
     else if tp1.isAny && !tp2.isLambdaSub || tp1.isAnyKind || isBottom(tp2) then tp2
@@ -2366,12 +2366,12 @@ class TypeComparer(@constructorOnly initctx: Context) extends ConstraintHandling
           val tp2a = dropIfSuper(tp2, tp1)
           if tp2a ne tp2 then glb(tp1, tp2a)
           else tp2 match // normalize to disjunctive normal form if possible.
-            case tp2 @ OrType(tp21, tp22) =>
-              lub(tp1 & tp21, tp1 & tp22, isSoft = tp2.isSoft)
+            case tp2 @ OrType(tp2L, tp2R) =>
+              lub(tp1 & tp2L, tp1 & tp2R, isSoft = tp2.isSoft)
             case _ =>
               tp1 match
-                case tp1 @ OrType(tp11, tp12) =>
-                  lub(tp11 & tp2, tp12 & tp2, isSoft = tp1.isSoft)
+                case tp1 @ OrType(tp1L, tp1R) =>
+                  lub(tp1L & tp2, tp1R & tp2, isSoft = tp1.isSoft)
                 case tp1: ConstantType =>
                   tp2 match
                     case tp2: ConstantType =>
@@ -2386,8 +2386,10 @@ class TypeComparer(@constructorOnly initctx: Context) extends ConstraintHandling
                       NothingType
                     case _ => andType(tp1, tp2)
                 case _ => andType(tp1, tp2)
+      end mergedGlb
+
       mergedGlb(dropExpr(tp1.stripLazyRef), dropExpr(tp2.stripLazyRef))
-  }
+  end glb
 
   def widenInUnions(using Context): Boolean =
     migrateTo3 || ctx.erasedTypes
@@ -2396,14 +2398,23 @@ class TypeComparer(@constructorOnly initctx: Context) extends ConstraintHandling
    *  @param canConstrain  If true, new constraints might be added to simplify the lub.
    *  @param isSoft        If the lub is a union, this determines whether it's a soft union.
    */
-  def lub(tp1: Type, tp2: Type, canConstrain: Boolean = false, isSoft: Boolean = true): Type = /*>|>*/ trace(s"lub(${tp1.show}, ${tp2.show}, canConstrain=$canConstrain, isSoft=$isSoft)", subtyping, show = true) /*<|<*/ {
-    if (tp1 eq tp2) tp1
+  def lub(tp1: Type, tp2: Type, canConstrain: Boolean = false, isSoft: Boolean = true): Type = // trace(s"lub(${tp1.show}, ${tp2.show}, canConstrain=$canConstrain, isSoft=$isSoft)", subtyping, show = true):
+    if tp1 eq tp2 then tp1
     else if !tp1.exists || (tp2 eq WildcardType) then tp1
     else if !tp2.exists || (tp1 eq WildcardType) then tp2
     else if tp1.isAny && !tp2.isLambdaSub || tp1.isAnyKind || isBottom(tp2) then tp1
     else if tp2.isAny && !tp1.isLambdaSub || tp2.isAnyKind || isBottom(tp1) then tp2
     else
-      def mergedLub(tp1: Type, tp2: Type): Type = {
+      def mergedLub(tp1: Type, tp2: Type): Type =
+        // First, if tp1 and tp2 are the same singleton type, return one of them.
+        if tp1.isSingleton && isSubType(tp1, tp2, whenFrozen = !canConstrain) then
+          return tp2
+        if tp2.isSingleton && isSubType(tp2, tp1, whenFrozen = !canConstrain) then
+          return tp1
+
+        // Second, handle special cases when tp1 and tp2 are disjunctions of
+        // singleton types. This saves time otherwise spent in
+        // costly subtype comparisons performed in dropIfSub below.
         tp1.atoms match
           case Atoms.Range(lo1, hi1) if !widenInUnions =>
             tp2.atoms match
@@ -2413,20 +2424,24 @@ class TypeComparer(@constructorOnly initctx: Context) extends ConstraintHandling
                 if (hi1 & hi2).isEmpty then return orType(tp1, tp2, isSoft = isSoft)
               case none =>
           case none =>
-        val t1 = mergeIfSuper(tp1, tp2, canConstrain)
-        if (t1.exists) return t1
 
-        val t2 = mergeIfSuper(tp2, tp1, canConstrain)
-        if (t2.exists) return t2
-
-        def widen(tp: Type) = if (widenInUnions) tp.widen else tp.widenIfUnstable
+        // Third, try to simplify after widening as follows:
+        //  1. Drop all or-factors in tp2 that are subtypes of an or-factor
+        //     in tp1, yielding tp2Final.
+        //  2. Drop all or-factors in tp1 that are subtypes of an or-factor
+        //     in tp2Final, yielding tp1Final.
+        //  3. Combine the two final types in an OrType
+        def widen(tp: Type) =
+          if widenInUnions then tp.widen else tp.widenIfUnstable
         val tp1w = widen(tp1)
         val tp2w = widen(tp2)
-        if ((tp1 ne tp1w) || (tp2 ne tp2w)) lub(tp1w, tp2w, canConstrain = canConstrain, isSoft = isSoft)
-        else orType(tp1w, tp2w, isSoft = isSoft) // no need to check subtypes again
-      }
+        val tp2Final = dropIfSub(tp2w, tp1w, canConstrain)
+        val tp1Final = dropIfSub(tp1w, tp2Final, canConstrain)
+        recombine(tp1Final, tp2Final, orType(_, _, isSoft = isSoft))
+      end mergedLub
+
       mergedLub(dropExpr(tp1.stripLazyRef), dropExpr(tp2.stripLazyRef))
-  }
+  end lub
 
   /** Try to produce joint arguments for a lub `A[T_1, ..., T_n] | A[T_1', ..., T_n']` using
    *  the following strategies:
@@ -2488,60 +2503,48 @@ class TypeComparer(@constructorOnly initctx: Context) extends ConstraintHandling
         Nil
     }
 
-  private def recombineAnd(tp: AndType, tp1: Type, tp2: Type) =
-    if (!tp1.exists) tp2
-    else if (!tp2.exists) tp1
-    else tp.derivedAndType(tp1, tp2)
+  private def recombine(tp1: Type, tp2: Type, rebuild: (Type, Type) => Type): Type =
+    if !tp1.exists then tp2
+    else if !tp2.exists then tp1
+    else rebuild(tp1, tp2)
+
+  private def recombine(tp1: Type, tp2: Type, tp: AndOrType): Type =
+    recombine(tp1, tp2, tp.derivedAndOrType)
 
   /** If some (&-operand of) `tp` is a supertype of `sub` replace it with `NoType`.
    */
   private def dropIfSuper(tp: Type, sub: Type): Type =
-    if (isSubTypeWhenFrozen(sub, tp)) NoType
-    else tp match {
+
+    def isSuperOf(sub: Type): Boolean = sub match
+      case AndType(sub1, sub2) => isSuperOf(sub1) || isSuperOf(sub2)
+      case sub: TypeVar if sub.isInstantiated => isSuperOf(sub.inst)
+      case _ => isSubTypeWhenFrozen(sub, tp)
+
+    tp match
       case tp @ AndType(tp1, tp2) =>
-        recombineAnd(tp, dropIfSuper(tp1, sub), dropIfSuper(tp2, sub))
+        recombine(dropIfSuper(tp1, sub), dropIfSuper(tp2, sub), tp)
+      case tp: TypeVar if tp.isInstantiated =>
+        dropIfSuper(tp.inst, sub)
       case _ =>
-        tp
-    }
+        if isSuperOf(sub) then NoType else tp
+  end dropIfSuper
 
-  /** Merge `t1` into `tp2` if t1 is a subtype of some &-summand of tp2.
-   */
-  private def mergeIfSub(tp1: Type, tp2: Type): Type =
-    if (isSubTypeWhenFrozen(tp1, tp2)) tp1
-    else tp2 match {
-      case tp2 @ AndType(tp21, tp22) =>
-        val lower1 = mergeIfSub(tp1, tp21)
-        if (lower1 eq tp21) tp2
-        else if (lower1.exists) lower1 & tp22
-        else {
-          val lower2 = mergeIfSub(tp1, tp22)
-          if (lower2 eq tp22) tp2
-          else if (lower2.exists) tp21 & lower2
-          else NoType
-        }
-      case _ =>
-        NoType
-    }
+  /** If some (|-operand of) `tp` is a subtype of `sup` replace it with `NoType`. */
+  private def dropIfSub(tp: Type, sup: Type, canConstrain: Boolean): Type =
 
-  /** Merge `tp1` into `tp2` if tp1 is a supertype of some |-summand of tp2.
-   *  @param canConstrain  If true, new constraints might be added to make the merge possible.
-   */
-  private def mergeIfSuper(tp1: Type, tp2: Type, canConstrain: Boolean): Type =
-    if (isSubType(tp2, tp1, whenFrozen = !canConstrain)) tp1
-    else tp2 match {
-      case tp2 @ OrType(tp21, tp22) =>
-        val higher1 = mergeIfSuper(tp1, tp21, canConstrain)
-        if (higher1 eq tp21) tp2
-        else if (higher1.exists) lub(higher1, tp22, isSoft = tp2.isSoft)
-        else {
-          val higher2 = mergeIfSuper(tp1, tp22, canConstrain)
-          if (higher2 eq tp22) tp2
-          else if (higher2.exists) lub(tp21, higher2, isSoft = tp2.isSoft)
-          else NoType
-        }
+    def isSubOf(sup: Type): Boolean = sup match
+      case OrType(sup1, sup2) => isSubOf(sup1) || isSubOf(sup2)
+      case sup: TypeVar if sup.isInstantiated => isSubOf(sup.inst)
+      case _ => isSubType(tp, sup, whenFrozen = !canConstrain)
+
+    tp match
+      case tp @ OrType(tp1, tp2) =>
+        recombine(dropIfSub(tp1, sup, canConstrain), dropIfSub(tp2, sup, canConstrain), tp)
+      case tp: TypeVar if tp.isInstantiated =>
+        dropIfSub(tp.inst, sup, canConstrain)
       case _ =>
-        NoType
-    }
+        if isSubOf(sup) then NoType else tp
+  end dropIfSub
 
   /** There's a window of vulnerability between ElimByName and Erasure where some
    *  ExprTypes `=> T` that appear as parameters of function types are not yet converted

@@ -3606,12 +3606,11 @@ object Types extends TypeUtils {
 
     override def widenUnionWithoutNull(using Context): Type =
       if myUnionPeriod != ctx.period then
-        myUnion =
-          if isSoft then
-            TypeComparer.lub(tp1.widenUnionWithoutNull, tp2.widenUnionWithoutNull, canConstrain = true, isSoft = isSoft) match
-              case union: OrType => union.join
-              case res => res
-          else derivedOrType(tp1.widenUnionWithoutNull, tp2.widenUnionWithoutNull, soft = isSoft)
+        val union = TypeComparer.lub(
+          tp1.widenUnionWithoutNull, tp2.widenUnionWithoutNull, canConstrain = isSoft, isSoft = isSoft)
+        myUnion = union match
+          case union: OrType if isSoft => union.join
+          case _ => union
         if !isProvisional then myUnionPeriod = ctx.period
       myUnion
 
