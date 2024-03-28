@@ -644,7 +644,7 @@ trait Applications extends Compatibility {
               missingArg(n)
           }
 
-          if (formal.isRepeatedParam)
+          if formal.isRepeatedParam then
             args match {
               case arg :: Nil if isVarArg(arg) =>
                 addTyped(arg)

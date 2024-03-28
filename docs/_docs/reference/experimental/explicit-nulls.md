@@ -111,17 +111,59 @@ y == x          // ok
 (x: Any) == null            // ok
 ```
 
-## Java Interoperability
+## Java Interoperability and Flexible Types
 
-The Scala compiler can load Java classes in two ways: from source or from bytecode. In either case,
-when a Java class is loaded, we "patch" the type of its members to reflect that Java types
-remain implicitly nullable.
+When dealing with reference types from Java, it's essential to address the implicit nullability of these types.
+The most accurate way to represent them in Scala is to use nullable types, though working with lots of nullable types
+directly can be annoying.
+To streamline interactions with Java libraries, we introduce the concept of flexible types.
 
-Specifically, we patch
+The flexible type, denoted by `T?`, functions as an abstract type with unique bounds: `T | Null ... T`,
+ensuring that `T | Null <: T? <: T`.
+The subtyping rule treats a reference type coming from Java as either nullable or non-nullable depending on the context.
+This concept draws inspiration from Kotlin's
+[platform types](https://kotlinlang.org/docs/java-interop.html#null-safety-and-platform-types).
+By relaxing null checks for such types, Scala aligns its safety guarantees with those of Java.
+Notably, flexible types are non-denotable, meaning users cannot explicitly write them in the code;
+only the compiler can construct or infer these types.
 
-- the type of fields
+Consequently, a value with a flexible type can serve as both a nullable and non-nullable value.
+Additionally, both nullable and non-nullable values can be passed as parameters with flexible types during function calls.
+Invoking the member functions of a flexible type is allowed, but it can trigger a `NullPointerException`
+if the value is indeed `null` during runtime.
 
-- the argument type and return type of methods
+```scala
+// Considering class J is from Java
+class J {
+  // Translates to def f(s: String?): Unit
+  public void f(String s) {
+  }
+
+  // Translates to def g(): String?
+  public String g() {
+    return "";
+  }
+}
+
+// Use J in Scala
+def useJ(j: J) =
+  val x1: String = ""
+  val x2: String | Null = null
+  j.f(x1) // Passing String to String?
+  j.f(x2) // Passing String | Null to String?
+  j.f(null) // Passing Null to String?
+
+  // Assign String? to String
+  val y1: String = j.g()
+  // Assign String? to String | Null
+  val y2: String | Null = j.g()
+
+  // Calling member functions on flexible types
+  j.g().trim().length()
+```
+
+Upon loading a Java class, whether from source or bytecode, the Scala compiler dynamically adjusts the type of its members to reflect nullability.
+This adjustment involves adding flexible types to the reference types of fields, as well as the argument types and return types of methods
 
 We illustrate the rules with following examples:
 
@@ -138,7 +180,7 @@ We illustrate the rules with following examples:
 
   ```scala
   class C:
-    val s: String | Null
+    val s: String?
     val x: Int
   ```
 
@@ -151,15 +193,7 @@ We illustrate the rules with following examples:
   ==>
 
   ```scala
-  class C[T] { def foo(): T | Null }
-  ```
-
-  Notice this is rule is sometimes too conservative, as witnessed by
-
-  ```scala
-  class InScala:
-    val c: C[Bool] = ???  // C as above
-    val b: Bool = c.foo() // no longer typechecks, since foo now returns Bool | Null
+  class C[T] { def foo(): T? }
   ```
 
 - We can reduce the number of redundant nullable types we need to add. Consider
@@ -172,21 +206,21 @@ We illustrate the rules with following examples:
   ==>
 
   ```scala
-  class Box[T] { def get(): T | Null }
-  class BoxFactory[T] { def makeBox(): Box[T] | Null }
+  class Box[T] { def get(): T? }
+  class BoxFactory[T] { def makeBox(): Box[T]? }
   ```
 
   Suppose we have a `BoxFactory[String]`. Notice that calling `makeBox()` on it returns a
-  `Box[String] | Null`, not a `Box[String | Null] | Null`. This seems at first
+  `Box[T]?`, not a `Box[T?]?`. This seems at first
   glance unsound ("What if the box itself has `null` inside?"), but is sound because calling
-  `get()` on a `Box[String]` returns a `String | Null`.
+  `get()` on a `Box[String]` returns a `String?`.
 
   Notice that we need to patch _all_ Java-defined classes that transitively appear in the
   argument or return type of a field or method accessible from the Scala code being compiled.
   Absent crazy reflection magic, we think that all such Java classes _must_ be visible to
   the Typer in the first place, so they will be patched.
 
-- We will append `Null` to the type arguments if the generic class is defined in Scala.
+- We will patch the type arguments if the generic class is defined in Scala.
 
   ```java
   class BoxFactory<T> {
@@ -199,16 +233,16 @@ We illustrate the rules with following examples:
 
   ```scala
   class BoxFactory[T]:
-    def makeBox(): Box[T | Null] | Null
-    def makeCrazyBoxes(): java.util.List[Box[java.util.List[T] | Null]] | Null
+    def makeBox(): Box[T?]?
+    def makeCrazyBoxes(): java.util.List[Box[java.util.List[T]?]]?
   ```
 
-  In this case, since `Box` is Scala-defined, we will get `Box[T | Null] | Null`.
+  In this case, since `Box` is Scala-defined, we will get `Box[T?]?`.
   This is needed because our nullability function is only applied (modularly) to the Java
   classes, but not to the Scala ones, so we need a way to tell `Box` that it contains a
   nullable value.
 
-  The `List` is Java-defined, so we don't append `Null` to its type argument. But we
+  The `List` is Java-defined, so we don't patch its type argument. But we
   still need to nullify its inside.
 
 - We don't nullify _simple_ literal constant (`final`) fields, since they are known to be non-null
@@ -234,7 +268,7 @@ We illustrate the rules with following examples:
     val NAME_GENERATED: String | Null = getNewName()
   ```
 
-- We don't append `Null` to a field nor to a return type of a method which is annotated with a
+- We don't patch a field nor to a return type of a method which is annotated with a
   `NotNull` annotation.
 
   ```java
@@ -250,8 +284,8 @@ We illustrate the rules with following examples:
   ```scala
   class C:
     val name: String
-    def getNames(prefix: String | Null): java.util.List[String] // we still need to nullify the paramter types
-    def getBoxedName(): Box[String | Null] // we don't append `Null` to the outmost level, but we still need to nullify inside
+    def getNames(prefix: String?): java.util.List[String] // we still need to nullify the paramter types
+    def getBoxedName(): Box[String?] // we don't append `Null` to the outmost level, but we still need to nullify inside
   ```
 
   The annotation must be from the list below to be recognized as `NotNull` by the compiler.
@@ -279,6 +313,9 @@ We illustrate the rules with following examples:
     "lombok.NonNull" ::
     "io.reactivex.annotations.NonNull" :: Nil map PreNamedString)
   ```
+
+The flexible types can be disabled by using `-Yno-flexible-types` flag.
+The ordinary union type `| Null` will be used instead.
 
 ### Override check
 

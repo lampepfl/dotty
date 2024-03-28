@@ -71,6 +71,7 @@ object MiMaFilters {
     val ForwardsBreakingChanges: Map[String, Seq[ProblemFilter]] = Map(
       // Additions that require a new minor version of tasty core
       Build.previousDottyVersion -> Seq(
+        ProblemFilters.exclude[DirectMissingMethodProblem]("dotty.tools.tasty.TastyFormat.FLEXIBLEtype")
       ),
 
       // Additions since last LTS

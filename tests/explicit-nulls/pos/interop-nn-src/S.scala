@@ -1,7 +1,7 @@
 class S {
   val j = new J()
-  // Test that the `nn` extension method can be used to strip away
-  // nullability from a type.
+  
+  // Test that the `nn` extension method should work with flexible types.
   val s: String = j.foo.nn
   val a: Array[String | Null] = j.bar.nn
 

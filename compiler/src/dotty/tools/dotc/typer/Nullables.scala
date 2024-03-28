@@ -33,20 +33,24 @@ object Nullables:
     && hi.isValueType
     // We cannot check if hi is nullable, because it can cause cyclic reference.
 
+  private def nullifiedHi(lo: Type, hi: Type)(using Context): Type =
+    if needNullifyHi(lo, hi) then
+      if ctx.flexibleTypes then FlexibleType(hi) else OrNull(hi)
+    else hi
+
   /** Create a nullable type bound
    *  If lo is `Null`, `| Null` is added to hi
    */
   def createNullableTypeBounds(lo: Type, hi: Type)(using Context): TypeBounds =
-    val newHi = if needNullifyHi(lo, hi) then OrType(hi, defn.NullType, soft = false) else hi
-    TypeBounds(lo, newHi)
+    TypeBounds(lo, nullifiedHi(lo, hi))
 
   /** Create a nullable type bound tree
    *  If lo is `Null`, `| Null` is added to hi
    */
   def createNullableTypeBoundsTree(lo: Tree, hi: Tree, alias: Tree = EmptyTree)(using Context): TypeBoundsTree =
-    val hiTpe = hi.typeOpt
-    val newHi = if needNullifyHi(lo.typeOpt, hiTpe) then TypeTree(OrType(hiTpe, defn.NullType, soft = false)) else hi
-    TypeBoundsTree(lo, newHi, alias)
+    val hiTpe = nullifiedHi(lo.typeOpt, hi.typeOpt)
+    val hiTree = if(hiTpe eq hi.typeOpt) hi else TypeTree(hiTpe)
+    TypeBoundsTree(lo, hiTree, alias)
 
   /** A set of val or var references that are known to be not null, plus a set of
    *  variable references that are not known (anymore) to be not null

@@ -31,7 +31,7 @@ object ScalaSettings extends ScalaSettings
 
 // Kept as seperate type to avoid breaking backward compatibility
 abstract class ScalaSettings extends SettingGroup, AllScalaSettings:
-  val settingsByCategory: Map[SettingCategory, List[Setting[_]]] = 
+  val settingsByCategory: Map[SettingCategory, List[Setting[_]]] =
     allSettings.groupBy(_.category)
       .view.mapValues(_.toList).toMap
       .withDefaultValue(Nil)
@@ -43,7 +43,7 @@ abstract class ScalaSettings extends SettingGroup, AllScalaSettings:
   val verboseSettings: List[Setting[_]] = settingsByCategory(VerboseSetting).sortBy(_.name)
   val settingsByAliases: Map[String, Setting[_]] = allSettings.flatMap(s => s.aliases.map(_ -> s)).toMap
 
-  
+
 trait AllScalaSettings extends CommonScalaSettings, PluginSettings, VerboseSettings, WarningSettings, XSettings, YSettings:
   self: SettingGroup =>
 
@@ -416,6 +416,7 @@ private sealed trait YSettings:
   // Experimental language features
   val YnoKindPolymorphism: Setting[Boolean] = BooleanSetting(ForkSetting, "Yno-kind-polymorphism", "Disable kind polymorphism.")
   val YexplicitNulls: Setting[Boolean] = BooleanSetting(ForkSetting, "Yexplicit-nulls", "Make reference types non-nullable. Nullable types can be expressed with unions: e.g. String|Null.")
+  val YnoFlexibleTypes: Setting[Boolean] = BooleanSetting(ForkSetting, "Yno-flexible-types", "Disable turning nullable Java return types and parameter types into flexible types, which behaves like abstract types with a nullable lower bound and non-nullable upper bound.")
   val YcheckInit: Setting[Boolean] = BooleanSetting(ForkSetting, "Ysafe-init", "Ensure safe initialization of objects.")
   val YcheckInitGlobal: Setting[Boolean] = BooleanSetting(ForkSetting, "Ysafe-init-global", "Check safe initialization of global objects.")
   val YrequireTargetName: Setting[Boolean] = BooleanSetting(ForkSetting, "Yrequire-targetName", "Warn if an operator is defined without a @targetName annotation.")

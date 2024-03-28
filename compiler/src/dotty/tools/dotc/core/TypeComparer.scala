@@ -24,6 +24,7 @@ import reporting.trace
 import annotation.constructorOnly
 import cc.*
 import NameKinds.WildcardParamName
+import NullOpsDecorator.stripFlexible
 
 /** Provides methods to compare types.
  */
@@ -864,6 +865,8 @@ class TypeComparer(@constructorOnly initctx: Context) extends ConstraintHandling
             false
         }
         compareClassInfo
+      case tp2: FlexibleType =>
+        recur(tp1, tp2.lo)
       case _ =>
         fourthTry
     }
@@ -1059,6 +1062,8 @@ class TypeComparer(@constructorOnly initctx: Context) extends ConstraintHandling
       case tp1: ExprType if ctx.phaseId > gettersPhase.id =>
         // getters might have converted T to => T, need to compensate.
         recur(tp1.widenExpr, tp2)
+      case tp1: FlexibleType =>
+        recur(tp1.hi, tp2)
       case _ =>
         false
     }
@@ -2556,15 +2561,18 @@ class TypeComparer(@constructorOnly initctx: Context) extends ConstraintHandling
     case _ =>
       tp
 
-  private def andTypeGen(tp1: Type, tp2: Type, op: (Type, Type) => Type,
-      original: (Type, Type) => Type = _ & _, isErased: Boolean = ctx.erasedTypes): Type = trace(s"andTypeGen(${tp1.show}, ${tp2.show})", subtyping, show = true) {
+  private def andTypeGen(tp1orig: Type, tp2orig: Type, op: (Type, Type) => Type,
+      original: (Type, Type) => Type = _ & _, isErased: Boolean = ctx.erasedTypes): Type = trace(s"andTypeGen(${tp1orig.show}, ${tp2orig.show})", subtyping, show = true) {
+    val tp1 = tp1orig.stripFlexible
+    val tp2 = tp2orig.stripFlexible
     val t1 = distributeAnd(tp1, tp2)
-    if (t1.exists) t1
-    else {
-      val t2 = distributeAnd(tp2, tp1)
-      if (t2.exists) t2
-      else if (isErased) erasedGlb(tp1, tp2)
-      else liftIfHK(tp1, tp2, op, original, _ | _)
+    val ret =
+      if t1.exists then t1
+      else
+        val t2 = distributeAnd(tp2, tp1)
+        if t2.exists then t2
+        else if isErased then erasedGlb(tp1, tp2)
+        else liftIfHK(tp1, tp2, op, original, _ | _)
         // The ` | ` on variances is needed since variances are associated with bounds
         // not lambdas. Example:
         //
@@ -2574,7 +2582,9 @@ class TypeComparer(@constructorOnly initctx: Context) extends ConstraintHandling
         //
         // Here, `F` is treated as bivariant in `O`. That is, only bivariant implementation
         // of `F` are allowed. See neg/hk-variance2s.scala test.
-    }
+
+    if tp1orig.isInstanceOf[FlexibleType] && tp2orig.isInstanceOf[FlexibleType]
+    then FlexibleType(ret) else ret
   }
 
   /** Form a normalized conjunction of two types.

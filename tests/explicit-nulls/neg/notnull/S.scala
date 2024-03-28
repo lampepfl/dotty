@@ -1,3 +1,5 @@
+//> using options -Yno-flexible-types
+
 // Test that NotNull annotations not in the list are not working in Java files.
 
 class S {

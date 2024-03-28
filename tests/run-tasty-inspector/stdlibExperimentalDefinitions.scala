@@ -97,6 +97,9 @@ val experimentalDefinitionInLibrary = Set(
   "scala.Tuple$.Reverse", // can be stabilized in 3.5
   "scala.Tuple$.ReverseOnto", // can be stabilized in 3.5
   "scala.runtime.Tuples$.reverse", // can be stabilized in 3.5
+
+  // New feature: explicit nulls
+  "scala.Predef$.fromNullable",
 )
 
 

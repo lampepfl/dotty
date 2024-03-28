@@ -1,19 +1,19 @@
--- [E134] Type Error: tests/explicit-nulls/neg/i7883.scala:6:11 --------------------------------------------------------
-6 |      case r(hd, tl) => Some((hd, tl))  // error // error // error
+-- [E134] Type Error: tests/explicit-nulls/neg/i7883.scala:8:11 --------------------------------------------------------
+8 |      case r(hd, tl) => Some((hd, tl))  // error // error // error
   |           ^
   |           None of the overloaded alternatives of method unapplySeq in class Regex with types
   |            (m: scala.util.matching.Regex.Match): Option[List[String]]
   |            (c: Char): Option[List[Char]]
   |            (s: CharSequence): Option[List[String]]
   |           match arguments (String | Null)
--- [E006] Not Found Error: tests/explicit-nulls/neg/i7883.scala:6:30 ---------------------------------------------------
-6 |      case r(hd, tl) => Some((hd, tl))  // error // error // error
+-- [E006] Not Found Error: tests/explicit-nulls/neg/i7883.scala:8:30 ---------------------------------------------------
+8 |      case r(hd, tl) => Some((hd, tl))  // error // error // error
   |                              ^^
   |                              Not found: hd
   |
   | longer explanation available when compiling with `-explain`
--- [E006] Not Found Error: tests/explicit-nulls/neg/i7883.scala:6:34 ---------------------------------------------------
-6 |      case r(hd, tl) => Some((hd, tl))  // error // error // error
+-- [E006] Not Found Error: tests/explicit-nulls/neg/i7883.scala:8:34 ---------------------------------------------------
+8 |      case r(hd, tl) => Some((hd, tl))  // error // error // error
   |                                  ^^
   |                                  Not found: tl
   |

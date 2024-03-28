@@ -163,7 +163,7 @@ trait PatternTypeConstrainer { self: TypeComparer =>
       }
     }
 
-    def dealiasDropNonmoduleRefs(tp: Type) = tp.dealias match {
+    def dealiasDropNonmoduleRefs(tp: Type): Type = tp.dealias match {
       case tp: TermRef =>
         // we drop TermRefs that don't have a class symbol, as they can't
         // meaningfully participate in GADT reasoning and just get in the way.
@@ -172,6 +172,7 @@ trait PatternTypeConstrainer { self: TypeComparer =>
         // additional trait - argument-less enum cases desugar to vals.
         // See run/enum-Tree.scala.
         if tp.classSymbol.exists then tp else tp.info
+      case tp: FlexibleType => dealiasDropNonmoduleRefs(tp.underlying)
       case tp => tp
     }
 

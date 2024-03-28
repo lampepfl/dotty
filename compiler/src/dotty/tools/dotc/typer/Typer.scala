@@ -981,17 +981,23 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
     }
 
     if (untpd.isWildcardStarArg(tree)) {
+
+      def fromRepeated(pt: Type): Type = pt match
+        case pt: FlexibleType =>
+          pt.derivedFlexibleType(fromRepeated(pt.hi))
+        case _ =>
+          if ctx.mode.isQuotedPattern then
+            // FIXME(#8680): Quoted patterns do not support Array repeated arguments
+            pt.translateFromRepeated(toArray = false, translateWildcard = true)
+          else
+            pt.translateFromRepeated(toArray = false, translateWildcard = true)
+            | pt.translateFromRepeated(toArray = true, translateWildcard = true)
+
       def typedWildcardStarArgExpr = {
         // A sequence argument `xs: _*` can be either a `Seq[T]` or an `Array[_ <: T]`,
         // irrespective of whether the method we're calling is a Java or Scala method,
         // so the expected type is the union `Seq[T] | Array[_ <: T]`.
-        val ptArg =
-          // FIXME(#8680): Quoted patterns do not support Array repeated arguments
-          if ctx.mode.isQuotedPattern then
-            pt.translateFromRepeated(toArray = false, translateWildcard = true)
-          else
-            pt.translateFromRepeated(toArray = false, translateWildcard = true)
-            | pt.translateFromRepeated(toArray = true,  translateWildcard = true)
+        val ptArg = fromRepeated(pt)
         val expr0 = typedExpr(tree.expr, ptArg)
         val expr1 = if ctx.explicitNulls && (!ctx.mode.is(Mode.Pattern)) then
             if expr0.tpe.isNullType then
@@ -4230,10 +4236,11 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
       }
 
       // convert function literal to SAM closure
+      val pt1 = pt.stripFlexible
       tree match {
         case closure(Nil, id @ Ident(nme.ANON_FUN), _)
-        if defn.isFunctionNType(wtp) && !defn.isFunctionNType(pt) =>
-          pt match {
+        if defn.isFunctionNType(wtp) && !defn.isFunctionNType(pt1) =>
+          pt1 match {
             case SAMType(samMeth, samParent)
             if wtp <:< samMeth.toFunctionType(isJava = samParent.classSymbol.is(JavaDefined)) =>
               // was ... && isFullyDefined(pt, ForceDegree.flipBottom)

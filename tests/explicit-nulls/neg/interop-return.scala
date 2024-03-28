@@ -1,3 +1,5 @@
+//> using options -Yno-flexible-types
+
 // Test that the return type of Java methods as well as the type of Java fields is marked as nullable.
 
 class Foo {

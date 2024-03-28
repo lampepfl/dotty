@@ -272,6 +272,9 @@ class TreePickler(pickler: TastyPickler, attributes: Attributes) {
     case tpe: OrType =>
       writeByte(ORtype)
       withLength { pickleType(tpe.tp1, richTypes); pickleType(tpe.tp2, richTypes) }
+    case tpe: FlexibleType =>
+      writeByte(FLEXIBLEtype)
+      withLength { pickleType(tpe.underlying, richTypes)  }
     case tpe: ExprType =>
       writeByte(BYNAMEtype)
       pickleType(tpe.underlying)
