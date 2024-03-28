@@ -18,6 +18,7 @@ import dotty.tools.dotc.core.StdNames
 import dotty.tools.dotc.interactive.Interactive
 import dotty.tools.dotc.interactive.InteractiveDriver
 import dotty.tools.dotc.util.SourceFile
+import dotty.tools.dotc.profile.Profiler
 import dotty.tools.pc.AutoImports.AutoImportEdits
 import dotty.tools.pc.AutoImports.AutoImportsGenerator
 import dotty.tools.pc.printer.ShortenedTypePrinter
@@ -54,7 +55,10 @@ class CompletionProvider(
     val (items, isIncomplete) = driver.compilationUnits.get(uri) match
       case Some(unit) =>
 
-        val newctx = ctx.fresh.setCompilationUnit(unit).withPhase(Phases.typerPhase(using ctx))
+        val newctx = ctx.fresh
+          .setCompilationUnit(unit)
+          .setProfiler(Profiler()(using ctx))
+          .withPhase(Phases.typerPhase(using ctx))
         val tpdPath = Interactive.pathTo(newctx.compilationUnit.tpdTree, pos.span)(using newctx)
         val adjustedPath = Interactive.resolveTypedOrUntypedPath(tpdPath, pos)(using newctx)
 

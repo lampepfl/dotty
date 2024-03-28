@@ -2552,7 +2552,9 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
     if filters == List(MessageFilter.None) then sup.markUsed()
     ctx.run.nn.suppressions.addSuppression(sup)
 
-  def typedValDef(vdef: untpd.ValDef, sym: Symbol)(using Context): Tree = {
+  def typedValDef(vdef: untpd.ValDef, sym: Symbol)(using Context): Tree =
+    ctx.profiler.beforeTypedImplDef(sym)
+    try {
     val ValDef(name, tpt, _) = vdef
     checkNonRootName(vdef.name, vdef.nameSpan)
     completeAnnotations(vdef, sym)
@@ -2566,9 +2568,11 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
     val vdef1 = assignType(cpy.ValDef(vdef)(name, tpt1, rhs1), sym)
     postProcessInfo(vdef1, sym)
     vdef1.setDefTree
-  }
+  } finally ctx.profiler.afterTypedImplDef(sym)
 
-  def typedDefDef(ddef: untpd.DefDef, sym: Symbol)(using Context): Tree = {
+  def typedDefDef(ddef: untpd.DefDef, sym: Symbol)(using Context): Tree =
+    ctx.profiler.beforeTypedImplDef(sym)
+    try {
     def canBeInvalidated(sym: Symbol): Boolean =
       sym.is(Synthetic)
       && (desugar.isRetractableCaseClassMethodName(sym.name) ||
@@ -2677,7 +2681,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
     postProcessInfo(ddef2, sym)
     ddef2.setDefTree
       //todo: make sure dependent method types do not depend on implicits or by-name params
-  }
+  } finally ctx.profiler.afterTypedImplDef(sym)
 
   /** (1) Check that the signature of the class member does not return a repeated parameter type
    *  (2) If info is an erased class, set erased flag of member
@@ -2690,6 +2694,8 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
       sym.setFlag(Erased)
 
   def typedTypeDef(tdef: untpd.TypeDef, sym: Symbol)(using Context): Tree = {
+    ctx.profiler.beforeTypedImplDef(sym)
+    try {
     val TypeDef(name, rhs) = tdef
     completeAnnotations(tdef, sym)
     val rhs1 = tdef.rhs match
@@ -2700,9 +2706,12 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
     checkFullyAppliedType(rhs1)
     if sym.isOpaqueAlias then checkNoContextFunctionType(rhs1)
     assignType(cpy.TypeDef(tdef)(name, rhs1), sym)
+    } finally  ctx.profiler.beforeTypedImplDef(sym)
   }
 
-  def typedClassDef(cdef: untpd.TypeDef, cls: ClassSymbol)(using Context): Tree = {
+  def typedClassDef(cdef: untpd.TypeDef, cls: ClassSymbol)(using Context): Tree =
+    ctx.profiler.beforeTypedImplDef(cls)
+    try {
     if (!cls.info.isInstanceOf[ClassInfo]) return EmptyTree.assertingErrorsReported
 
     val TypeDef(name, impl @ Template(constr, _, self, _)) = cdef: @unchecked
@@ -2854,7 +2863,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
 
       cdef1
     }
-  }
+  } finally ctx.profiler.afterTypedImplDef(cls)
 
       // todo later: check that
       //  1. If class is non-abstract, it is instantiatable:

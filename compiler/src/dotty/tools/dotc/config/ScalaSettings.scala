@@ -412,6 +412,8 @@ private sealed trait YSettings:
       //.withPostSetHook( _ => YprofileEnabled.value = true )
   val YprofileRunGcBetweenPhases: Setting[List[String]] = PhasesSetting(ForkSetting, "Yprofile-run-gc", "Run a GC between phases - this allows heap size to be accurate at the expense of more time. Specify a list of phases, or *", "_")
       //.withPostSetHook( _ => YprofileEnabled.value = true )
+  val YprofileTrace: Setting[String]  = StringSetting("-Yprofile-trace", "file", "Capture trace of compilation in Chrome Trace format", "profile.trace")
+      //.withPostSetHook( _ => YprofileEnabled.value = true )
 
   // Experimental language features
   val YnoKindPolymorphism: Setting[Boolean] = BooleanSetting(ForkSetting, "Yno-kind-polymorphism", "Disable kind polymorphism.")
