@@ -25,28 +25,6 @@ val experimentalDefinitionInLibrary = Set(
   "scala.util.TupledFunction",
   "scala.util.TupledFunction$",
 
-  //// New feature: main annotation generalization
-  // Can be stabilized when language feature is stabilized.
-  // Needs user feedback.
-  // Should argGetter/varargGetter be simplified?
-  // Should we have better support for main annotation macros?
-  "scala.annotation.MainAnnotation",
-  "scala.annotation.MainAnnotation$",
-  "scala.annotation.MainAnnotation$.Info",
-  "scala.annotation.MainAnnotation$.Parameter",
-  "scala.annotation.MainAnnotation$.ParameterAnnotation",
-
-
-  //// New feature: prototype of new version of @main
-  // This will never be stabilized. When it is ready it should replace the old @main annotation (requires scala.annotation.MainAnnotation).
-  // Needs user feedback.
-  "scala.annotation.newMain",
-  "scala.annotation.newMain$",
-  "scala.annotation.newMain$.alias",
-  "scala.annotation.newMain.Help",
-  "scala.annotation.newMain.Help$",
-  "scala.annotation.newMain.Names",
-
   //// New feature: capture checking
   "scala.annotation.capability",
   "scala.annotation.retains",

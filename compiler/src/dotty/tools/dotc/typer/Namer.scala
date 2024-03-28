@@ -1260,7 +1260,6 @@ class Namer { typer: Typer =>
             && annot.symbol != defn.TailrecAnnot
             && annot.symbol != defn.MainAnnot
             && !annot.symbol.derivesFrom(defn.MacroAnnotationClass)
-            && !annot.symbol.derivesFrom(defn.MainAnnotationClass)
           })
 
           if forwarder.isType then

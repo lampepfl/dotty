@@ -364,9 +364,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite:
         |  val x: Map[Int, new@@]
         |}
       """.stripMargin,
-      "",
-      // to avoid newMain annotation
-      filter = str => !str.contains("newMain")
+      ""
     )
   // TODO: Should provide empty completions
   // The issue is that the tree looks the same as for `case @@` (it doesn't see `new`)
@@ -382,9 +380,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite:
         |  }
         |}
       """.stripMargin,
-      "",
-      // to avoid newMain annotation
-      filter = str => !str.contains("newMain")
+      ""
     )
 
   @Test def `super-typeapply` =

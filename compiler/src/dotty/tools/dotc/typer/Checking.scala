@@ -1508,7 +1508,7 @@ trait Checking {
       val annotCls = Annotations.annotClass(annot)
       val concreteAnnot = Annotations.ConcreteAnnotation(annot)
       val pos = annot.srcPos
-      if (annotCls == defn.MainAnnot || concreteAnnot.matches(defn.MainAnnotationClass)) {
+      if (annotCls == defn.MainAnnot) {
         if (!sym.isRealMethod)
           report.error(em"main annotation cannot be applied to $sym", pos)
         if (!sym.owner.is(Module) || !sym.owner.isStatic)

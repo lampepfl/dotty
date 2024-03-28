@@ -4,6 +4,8 @@ title: "MainAnnotation"
 nightlyOf: https://docs.scala-lang.org/scala3/reference/experimental/main-annotation.html
 ---
 
+> This feature was removed in https://github.com/scala/scala3/pull/19937. It was subsumed by macro annotations. See SIP-63 https://github.com/scala/improvement-proposals/pull/80.
+
 `MainAnnotation` provides a generic way to define main annotations such as `@main`.
 
 When a users annotates a method with an annotation that extends `MainAnnotation` a class with a `main` method will be generated. The main method will contain the code needed to parse the command line arguments and run the application.
@@ -93,6 +95,6 @@ import scala.util.CommandLineParser.FromString[T]
     val result = program()
     println("result: " + result)
     println("executed program")
-    
+
 end myMain
 ```
