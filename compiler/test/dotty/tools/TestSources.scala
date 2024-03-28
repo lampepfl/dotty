@@ -64,6 +64,14 @@ object TestSources {
     if Properties.usingScalaLibraryTasty then loadList(patmatExhaustivityScala2LibraryTastyBlacklistFile)
     else Nil
 
+  // neg best effort tests lists
+
+  def negBestEffortPicklingBlacklistFile: String = "compiler/test/dotc/neg-best-effort-pickling.blacklist"
+  def negBestEffortUnpicklingBlacklistFile: String = "compiler/test/dotc/neg-best-effort-unpickling.blacklist"
+
+  def negBestEffortPicklingBlacklisted: List[String] = loadList(negBestEffortPicklingBlacklistFile)
+  def negBestEffortUnpicklingBlacklisted: List[String] = loadList(negBestEffortUnpicklingBlacklistFile)
+
   // load lists
 
   private def loadList(path: String): List[String] = {

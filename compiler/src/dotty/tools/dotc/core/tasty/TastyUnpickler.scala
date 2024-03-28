@@ -2,9 +2,12 @@ package dotty.tools.dotc
 package core
 package tasty
 
+import java.util.UUID
 import scala.language.unsafeNulls
 
 import dotty.tools.tasty.{TastyFormat, TastyVersion, TastyBuffer, TastyReader, TastyHeaderUnpickler, UnpicklerConfig}
+import dotty.tools.tasty.besteffort.{BestEffortTastyHeader, BestEffortTastyHeaderUnpickler}
+
 import TastyFormat.NameTags.*, TastyFormat.nameTagToString
 import TastyBuffer.NameRef
 
@@ -13,6 +16,18 @@ import Names.{TermName, termName, EmptyTermName}
 import NameKinds.*
 import dotty.tools.tasty.TastyHeader
 import dotty.tools.tasty.TastyBuffer.Addr
+
+case class CommonTastyHeader(
+  uuid: UUID,
+  majorVersion: Int,
+  minorVersion: Int,
+  experimentalVersion: Int,
+  toolingVersion: String
+):
+  def this(h: TastyHeader) =
+    this(h.uuid, h.majorVersion, h.minorVersion, h.experimentalVersion, h.toolingVersion)
+  def this(h: BestEffortTastyHeader) =
+    this(h.uuid, h.majorVersion, h.minorVersion, h.experimentalVersion, h.toolingVersion)
 
 object TastyUnpickler {
 
@@ -63,10 +78,11 @@ object TastyUnpickler {
 
 import TastyUnpickler.*
 
-class TastyUnpickler(protected val reader: TastyReader) {
+class TastyUnpickler(protected val reader: TastyReader, isBestEffortTasty: Boolean) {
   import reader.*
 
-  def this(bytes: Array[Byte]) = this(new TastyReader(bytes))
+  def this(bytes: Array[Byte]) = this(new TastyReader(bytes), false)
+  def this(bytes: Array[Byte], isBestEffortTasty: Boolean) = this(new TastyReader(bytes), isBestEffortTasty)
 
   private val sectionReader = new mutable.HashMap[String, TastyReader]
   val nameAtRef: NameTable = new NameTable
@@ -123,8 +139,11 @@ class TastyUnpickler(protected val reader: TastyReader) {
     result
   }
 
-  val header: TastyHeader =
-    new TastyHeaderUnpickler(scala3CompilerConfig, reader).readFullHeader()
+  val header: CommonTastyHeader =
+    if isBestEffortTasty then
+      new CommonTastyHeader(new BestEffortTastyHeaderUnpickler(scala3CompilerConfig, reader).readFullHeader())
+    else
+      new CommonTastyHeader(new TastyHeaderUnpickler(reader).readFullHeader())
 
   def readNames(): Unit =
     until(readEnd()) { nameAtRef.add(readNameContents()) }

@@ -6,6 +6,7 @@ package tasty
 import scala.language.unsafeNulls
 
 import dotty.tools.tasty.{TastyBuffer, TastyFormat, TastyHash}
+import dotty.tools.tasty.besteffort.BestEffortTastyFormat
 import TastyFormat.*
 import TastyBuffer.*
 
@@ -16,7 +17,7 @@ import Decorators.*
 object TastyPickler:
   private val versionString = s"Scala ${config.Properties.simpleVersionString}"
 
-class TastyPickler(val rootCls: ClassSymbol) {
+class TastyPickler(val rootCls: ClassSymbol, isBestEffortTasty: Boolean) {
 
   private val sections = new mutable.ArrayBuffer[(NameRef, TastyBuffer)]
 
@@ -42,10 +43,12 @@ class TastyPickler(val rootCls: ClassSymbol) {
     val uuidHi: Long = otherSectionHashes.fold(0L)(_ ^ _)
 
     val headerBuffer = {
-      val buf = new TastyBuffer(header.length + TastyPickler.versionString.length + 32)
-      for (ch <- header) buf.writeByte(ch.toByte)
+      val fileHeader = if isBestEffortTasty then BestEffortTastyFormat.bestEffortHeader else header
+      val buf = new TastyBuffer(fileHeader.length + TastyPickler.versionString.length + 32)
+      for (ch <- fileHeader) buf.writeByte(ch.toByte)
       buf.writeNat(MajorVersion)
       buf.writeNat(MinorVersion)
+      if isBestEffortTasty then buf.writeNat(BestEffortTastyFormat.PatchVersion)
       buf.writeNat(ExperimentalVersion)
       buf.writeUtf8(TastyPickler.versionString)
       buf.writeUncompressedLong(uuidLow)

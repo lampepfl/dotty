@@ -21,7 +21,7 @@ object TastyUtils:
 
   private def normalTasty(tastyURI: URI): String =
     val tastyBytes = Files.readAllBytes(Paths.get(tastyURI))
-    new TastyPrinter(tastyBytes.nn).showContents()
+    new TastyPrinter(tastyBytes.nn, isBestEffortTasty = false, testPickler = false).showContents()
 
   private def htmlTasty(
       tastyURI: URI,

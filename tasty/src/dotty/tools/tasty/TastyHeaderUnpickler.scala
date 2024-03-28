@@ -103,7 +103,7 @@ class TastyHeaderUnpickler(config: UnpicklerConfig, reader: TastyReader) {
       val fileVersion = TastyVersion(fileMajor, fileMinor, 0)
       val toolVersion = TastyVersion(toolMajor, toolMinor, toolExperimental)
       val signature = signatureString(fileVersion, toolVersion, what = "Backward", tool = None)
-      val fix = recompileFix(toolVersion.minStable)
+      val fix = recompileFix(toolVersion.minStable, config)
       throw new UnpickleException(signature + fix + tastyAddendum)
     }
     else {
@@ -117,43 +117,7 @@ class TastyHeaderUnpickler(config: UnpicklerConfig, reader: TastyReader) {
         new String(bytes, start.index, length)
       }
 
-      val validVersion = TastyFormat.isVersionCompatible(
-        fileMajor            = fileMajor,
-        fileMinor            = fileMinor,
-        fileExperimental     = fileExperimental,
-        compilerMajor        = toolMajor,
-        compilerMinor        = toolMinor,
-        compilerExperimental = toolExperimental
-      )
-
-      check(validVersion, {
-        // failure means that the TASTy file cannot be read, therefore it is either:
-        // - backwards incompatible major, in which case the library should be recompiled by the minimum stable minor
-        //   version supported by this compiler
-        // - any experimental in an older minor, in which case the library should be recompiled by the stable
-        //   compiler in the same minor.
-        // - older experimental in the same minor, in which case the compiler is also experimental, and the library
-        //   should be recompiled by the current compiler
-        // - forward incompatible, in which case the compiler must be upgraded to the same version as the file.
-        val fileVersion = TastyVersion(fileMajor, fileMinor, fileExperimental)
-        val toolVersion = TastyVersion(toolMajor, toolMinor, toolExperimental)
-
-        val compat = Compatibility.failReason(file = fileVersion, read = toolVersion)
-
-        val what = if (compat < 0) "Backward" else "Forward"
-        val signature = signatureString(fileVersion, toolVersion, what, tool = Some(toolingVersion))
-        val fix = (
-          if (compat < 0) {
-            val newCompiler =
-              if (compat == Compatibility.BackwardIncompatibleMajor) toolVersion.minStable
-              else if (compat == Compatibility.BackwardIncompatibleExperimental) fileVersion.nextStable
-              else toolVersion // recompile the experimental library with the current experimental compiler
-            recompileFix(newCompiler)
-          }
-          else upgradeFix(fileVersion)
-        )
-        signature + fix + tastyAddendum
-      })
+      checkValidVersion(fileMajor, fileMinor, fileExperimental, toolingVersion, config)
 
       val uuid = new UUID(readUncompressedLong(), readUncompressedLong())
       new TastyHeader(uuid, fileMajor, fileMinor, fileExperimental, toolingVersion) {}
@@ -161,9 +125,54 @@ class TastyHeaderUnpickler(config: UnpicklerConfig, reader: TastyReader) {
   }
 
   def isAtEnd: Boolean = reader.isAtEnd
+}
+
+object TastyHeaderUnpickler {
 
   private def check(cond: Boolean, msg: => String): Unit = {
     if (!cond) throw new UnpickleException(msg)
+  }
+
+  private def checkValidVersion(fileMajor: Int, fileMinor: Int, fileExperimental: Int, toolingVersion: String, config: UnpicklerConfig) = {
+    val toolMajor: Int = config.majorVersion
+    val toolMinor: Int = config.minorVersion
+    val toolExperimental: Int = config.experimentalVersion
+    val validVersion = TastyFormat.isVersionCompatible(
+      fileMajor            = fileMajor,
+      fileMinor            = fileMinor,
+      fileExperimental     = fileExperimental,
+      compilerMajor        = toolMajor,
+      compilerMinor        = toolMinor,
+      compilerExperimental = toolExperimental
+    )
+    check(validVersion, {
+      // failure means that the TASTy file cannot be read, therefore it is either:
+      // - backwards incompatible major, in which case the library should be recompiled by the minimum stable minor
+      //   version supported by this compiler
+      // - any experimental in an older minor, in which case the library should be recompiled by the stable
+      //   compiler in the same minor.
+      // - older experimental in the same minor, in which case the compiler is also experimental, and the library
+      //   should be recompiled by the current compiler
+      // - forward incompatible, in which case the compiler must be upgraded to the same version as the file.
+      val fileVersion = TastyVersion(fileMajor, fileMinor, fileExperimental)
+      val toolVersion = TastyVersion(toolMajor, toolMinor, toolExperimental)
+
+      val compat = Compatibility.failReason(file = fileVersion, read = toolVersion)
+
+      val what = if (compat < 0) "Backward" else "Forward"
+      val signature = signatureString(fileVersion, toolVersion, what, tool = Some(toolingVersion))
+      val fix = (
+        if (compat < 0) {
+          val newCompiler =
+            if (compat == Compatibility.BackwardIncompatibleMajor) toolVersion.minStable
+            else if (compat == Compatibility.BackwardIncompatibleExperimental) fileVersion.nextStable
+            else toolVersion // recompile the experimental library with the current experimental compiler
+          recompileFix(newCompiler, config)
+        }
+        else upgradeFix(fileVersion, config)
+      )
+      signature + fix + tastyAddendum
+    })
   }
 
   private def signatureString(
@@ -174,13 +183,13 @@ class TastyHeaderUnpickler(config: UnpicklerConfig, reader: TastyReader) {
       |""".stripMargin
   }
 
-  private def recompileFix(producerVersion: TastyVersion) = {
+  private def recompileFix(producerVersion: TastyVersion, config: UnpicklerConfig) = {
     val addendum = config.recompileAdditionalInfo
     val newTool = config.upgradedProducerTool(producerVersion)
     s"""  The source of this file should be recompiled by $newTool.$addendum""".stripMargin
   }
 
-  private def upgradeFix(fileVersion: TastyVersion) = {
+  private def upgradeFix(fileVersion: TastyVersion, config: UnpicklerConfig) = {
     val addendum = config.upgradeAdditionalInfo(fileVersion)
     val newTool = config.upgradedReaderTool(fileVersion)
     s"""  To read this ${fileVersion.kind} file, use $newTool.$addendum""".stripMargin
@@ -189,9 +198,6 @@ class TastyHeaderUnpickler(config: UnpicklerConfig, reader: TastyReader) {
   private def tastyAddendum: String = """
   |  Please refer to the documentation for information on TASTy versioning:
   |  https://docs.scala-lang.org/scala3/reference/language-versions/binary-compatibility.html""".stripMargin
-}
-
-object TastyHeaderUnpickler {
 
   private object Compatibility {
     final val BackwardIncompatibleMajor = -3

@@ -1,0 +1,19 @@
+export-in-extension.scala
+i12456.scala
+i8623.scala
+i1642.scala
+i16696.scala
+constructor-proxy-values.scala
+i9328.scala
+i15414.scala
+i6796.scala
+i14013.scala
+toplevel-cyclic
+curried-dependent-ift.scala
+i17121.scala
+illegal-match-types.scala
+i13780-1.scala
+
+# semantic db generation fails in the first compilation
+i1642.scala
+i15158.scala

@@ -81,6 +81,22 @@ object report:
     if ctx.settings.YdebugError.value then Thread.dumpStack()
     if ctx.settings.YdebugTypeError.value then ex.printStackTrace()
 
+  def bestEffortError(ex: Throwable, msg: String)(using Context): Unit =
+    val stackTrace =
+      Option(ex.getStackTrace()).map { st =>
+        if st.nn.isEmpty then ""
+        else s"Stack trace: \n ${st.nn.mkString("\n ")}".stripMargin
+      }.getOrElse("")
+    // Build tools and dotty's test framework may check precisely for
+    // "Unsuccessful best-effort compilation." error text.
+    val fullMsg =
+      em"""Unsuccessful best-effort compilation.
+          |${msg}
+          |Cause:
+          | ${ex.toString.replace("\n", "\n ")}
+          |${stackTrace}"""
+    ctx.reporter.report(new Error(fullMsg, NoSourcePosition))
+
   def errorOrMigrationWarning(msg: Message, pos: SrcPos, migrationVersion: MigrationVersion)(using Context): Unit =
     if sourceVersion.isAtLeast(migrationVersion.errorFrom) then
       if !sourceVersion.isMigrating then error(msg, pos)

@@ -305,9 +305,13 @@ class Run(comp: Compiler, ictx: Context) extends ImplicitRunInfo with Constraint
       val profiler = ctx.profiler
       var phasesWereAdjusted = false
 
+      var forceReachPhaseMaybe =
+        if (ctx.isBestEffort && phases.exists(_.phaseName == "typer")) Some("typer")
+        else None
+
       for phase <- allPhases do
         doEnterPhase(phase)
-        val phaseWillRun = phase.isRunnable
+        val phaseWillRun = phase.isRunnable || forceReachPhaseMaybe.nonEmpty
         if phaseWillRun then
           Stats.trackTime(s"phase time ms/$phase") {
             val start = System.currentTimeMillis
@@ -320,6 +324,10 @@ class Run(comp: Compiler, ictx: Context) extends ImplicitRunInfo with Constraint
                 def printCtx(unit: CompilationUnit) = phase.printingContext(
                   ctx.fresh.setPhase(phase.next).setCompilationUnit(unit))
                 lastPrintedTree = printTree(lastPrintedTree)(using printCtx(unit))
+
+            if forceReachPhaseMaybe.contains(phase.phaseName) then
+              forceReachPhaseMaybe = None
+
             report.informTime(s"$phase ", start)
             Stats.record(s"total trees at end of $phase", ast.Trees.ntrees)
             for (unit <- units)

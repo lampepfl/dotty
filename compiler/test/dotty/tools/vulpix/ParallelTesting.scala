@@ -158,6 +158,12 @@ trait ParallelTesting extends RunnerOrchestration { self =>
     }
   }
 
+  private sealed trait FromTastyCompilationMode
+  private case object NotFromTasty extends FromTastyCompilationMode
+  private case object FromTasty extends FromTastyCompilationMode
+  private case object FromBestEffortTasty extends FromTastyCompilationMode
+  private case class WithBestEffortTasty(bestEffortDir: JFile) extends FromTastyCompilationMode
+
   /** A group of files that may all be compiled together, with the same flags
    *  and output directory
    */
@@ -166,7 +172,7 @@ trait ParallelTesting extends RunnerOrchestration { self =>
     files: Array[JFile],
     flags: TestFlags,
     outDir: JFile,
-    fromTasty: Boolean = false,
+    fromTasty: FromTastyCompilationMode = NotFromTasty,
     decompilation: Boolean = false
   ) extends TestSource {
     def sourceFiles: Array[JFile] = files.filter(isSourceFile)
@@ -225,9 +231,11 @@ trait ParallelTesting extends RunnerOrchestration { self =>
     private final def compileTestSource(testSource: TestSource): Try[List[TestReporter]] =
       Try(testSource match {
         case testSource @ JointCompilationSource(name, files, flags, outDir, fromTasty, decompilation) =>
-          val reporter =
-            if (fromTasty) compileFromTasty(flags, outDir)
-            else compile(testSource.sourceFiles, flags, outDir)
+          val reporter = fromTasty match
+            case NotFromTasty => compile(testSource.sourceFiles, flags, outDir)
+            case FromTasty => compileFromTasty(flags, outDir)
+            case FromBestEffortTasty => compileFromBestEffortTasty(flags, outDir)
+            case WithBestEffortTasty(bestEffortDir) => compileWithBestEffortTasty(testSource.sourceFiles, bestEffortDir, flags, outDir)
           List(reporter)
 
         case testSource @ SeparateCompilationSource(_, dir, flags, outDir) =>
@@ -665,6 +673,31 @@ trait ParallelTesting extends RunnerOrchestration { self =>
 
       reporter
 
+    protected def compileFromBestEffortTasty(flags0: TestFlags, targetDir: JFile): TestReporter = {
+      val classes = flattenFiles(targetDir).filter(isBestEffortTastyFile).map(_.toString)
+      val flags = flags0 and "-from-tasty" and "-Ywith-best-effort-tasty"
+      val reporter = mkReporter
+      val driver = new Driver
+
+      driver.process(flags.all ++ classes, reporter = reporter)
+
+      reporter
+    }
+
+    protected def compileWithBestEffortTasty(files0: Array[JFile], bestEffortDir: JFile, flags0: TestFlags, targetDir: JFile): TestReporter = {
+      val flags = flags0
+        .and("-Ywith-best-effort-tasty")
+        .and("-d", targetDir.getPath)
+      val reporter = mkReporter
+      val driver = new Driver
+
+      val args = Array("-classpath", flags.defaultClassPath + JFile.pathSeparator + bestEffortDir.toString) ++ flags.options
+
+      driver.process(args ++ files0.map(_.toString), reporter = reporter)
+
+      reporter
+    }
+
     protected def compileFromTasty(flags0: TestFlags, targetDir: JFile): TestReporter = {
       val tastyOutput = new JFile(targetDir.getPath + "_from-tasty")
       tastyOutput.mkdir()
@@ -988,6 +1021,22 @@ trait ParallelTesting extends RunnerOrchestration { self =>
     override def maybeFailureMessage(testSource: TestSource, reporters: Seq[TestReporter]): Option[String] = None
   }
 
+  private final class NoBestEffortErrorsTest(testSources: List[TestSource], times: Int, threadLimit: Option[Int], suppressAllOutput: Boolean)(implicit summaryReport: SummaryReporting)
+  extends Test(testSources, times, threadLimit, suppressAllOutput) {
+    override def suppressErrors = true
+    override def maybeFailureMessage(testSource: TestSource, reporters: Seq[TestReporter]): Option[String] =
+      val unsucceffulBestEffortErrorMsg = "Unsuccessful best-effort compilation."
+      val failedBestEffortCompilation: Seq[TestReporter] =
+        reporters.collect{
+          case testReporter if testReporter.errors.exists(_.msg.message.startsWith(unsucceffulBestEffortErrorMsg)) =>
+            testReporter
+        }
+      if !failedBestEffortCompilation.isEmpty then
+        Some(failedBestEffortCompilation.flatMap(_.consoleOutput.split("\n")).mkString("\n"))
+      else
+        None
+  }
+
 
   /** The `CompilationTest` is the main interface to `ParallelTesting`, it
    *  can be instantiated via one of the following methods:
@@ -1127,12 +1176,28 @@ trait ParallelTesting extends RunnerOrchestration { self =>
     def checkWarnings()(implicit summaryReport: SummaryReporting): this.type =
       checkPass(new WarnTest(targets, times, threadLimit, shouldFail || shouldSuppressOutput), "Warn")
 
+    /** Creates a "neg" test run, which makes sure that each test manages successful
+     *  best-effort compilation, without any errors related to pickling/unpickling
+     *  of betasty files.
+     */
+    def checkNoBestEffortError()(implicit summaryReport: SummaryReporting): this.type = {
+      val test = new NoBestEffortErrorsTest(targets, times, threadLimit, shouldFail || shouldSuppressOutput).executeTestSuite()
+
+      cleanup()
+
+      if (test.didFail) {
+        fail("Best-effort test should not have shown a \"Unsuccessful best-effort compilation\" error, but did")
+      }
+
+      this
+    }
+
     /** Creates a "neg" test run, which makes sure that each test generates the
      *  correct number of errors at the correct positions. It also makes sure
      *  that none of these tests crashes the compiler.
      */
     def checkExpectedErrors()(implicit summaryReport: SummaryReporting): this.type =
-      val test = new NegTest(targets, times, threadLimit, shouldFail || shouldSuppressOutput).executeTestSuite()
+      val test = new NegTest(targets, times, threadLimit, shouldSuppressOutput).executeTestSuite()
 
       cleanup()
 
@@ -1504,7 +1569,7 @@ trait ParallelTesting extends RunnerOrchestration { self =>
        flags: TestFlags,
        outDir: JFile,
        fromTasty: Boolean = false,
-    ) extends JointCompilationSource(name, Array(file), flags, outDir, fromTasty) {
+    ) extends JointCompilationSource(name, Array(file), flags, outDir, if (fromTasty) FromTasty else NotFromTasty) {
 
       override def buildInstructions(errors: Int, warnings: Int): String = {
         val runOrPos = if (file.getPath.startsWith(s"tests${JFile.separator}run${JFile.separator}")) "run" else "pos"
@@ -1538,6 +1603,147 @@ trait ParallelTesting extends RunnerOrchestration { self =>
     )
   }
 
+  /** A two step compilation test for best effort compilation pickling and unpickling.
+   *
+   *  First, erroring neg test files are compiled with the `-Ybest-effort` option.
+   *  If successful, then the produced Best Effort TASTy is re-compiled with
+   *  '-Ywith-best-effort-tasty' to test the TastyReader for Best Effort TASTy.
+   */
+  def compileBestEffortTastyInDir(f: String, flags: TestFlags, picklingFilter: FileFilter, unpicklingFilter: FileFilter)(
+      implicit testGroup: TestGroup): BestEffortCompilationTest = {
+    val bestEffortFlag = "-Ybest-effort"
+    val semanticDbFlag = "-Xsemanticdb"
+    assert(!flags.options.contains(bestEffortFlag), "Best effort compilation flag should not be added manually")
+
+    val outDir = defaultOutputDir + testGroup + JFile.separator
+    val sourceDir = new JFile(f)
+    checkRequirements(f, sourceDir, outDir)
+
+    val (dirsStep1, filteredPicklingFiles) = compilationTargets(sourceDir, picklingFilter)
+    val (dirsStep2, filteredUnpicklingFiles) = compilationTargets(sourceDir, unpicklingFilter)
+
+    class BestEffortCompilation(
+      name: String,
+      file: JFile,
+      flags: TestFlags,
+      outputDir: JFile
+    ) extends JointCompilationSource(name, Array(file), flags.and(bestEffortFlag).and(semanticDbFlag), outputDir) {
+      override def buildInstructions(errors: Int, warnings: Int): String = {
+        s"""|
+            |Test '$title' compiled with a compiler crash,
+            |the test can be reproduced by running:
+            |
+            |  sbt "scalac $bestEffortFlag $semanticDbFlag $file"
+            |
+            |These tests can be disabled by adding `${file.getName}` to `compiler${JFile.separator}test${JFile.separator}dotc${JFile.separator}neg-best-effort-pickling.blacklist`
+            |""".stripMargin
+      }
+    }
+
+    class CompilationFromBestEffortTasty(
+       name: String,
+       file: JFile,
+       flags: TestFlags,
+       bestEffortDir: JFile,
+    ) extends JointCompilationSource(name, Array(file), flags, bestEffortDir, fromTasty = FromBestEffortTasty) {
+
+      override def buildInstructions(errors: Int, warnings: Int): String = {
+        def beTastyFiles(file: JFile): Array[JFile] =
+          file.listFiles.flatMap { innerFile =>
+            if (innerFile.isDirectory) beTastyFiles(innerFile)
+            else if (isBestEffortTastyFile(innerFile)) Array(innerFile)
+            else Array.empty[JFile]
+          }
+        val beTastyFilesString = beTastyFiles(bestEffortDir).mkString(" ")
+        s"""|
+            |Test '$title' compiled with a compiler crash,
+            |the test can be reproduced by running:
+            |
+            |  sbt "scalac -Ybest-effort $file"
+            |  sbt "scalac --from-tasty -Ywith-best-effort-tasty $beTastyFilesString"
+            |
+            |These tests can be disabled by adding `${file.getName}` to `compiler${JFile.separator}test${JFile.separator}dotc${JFile.separator}neg-best-effort-unpickling.blacklist`
+            |
+            |""".stripMargin
+      }
+    }
+
+    val (bestEffortTargets, targetAndBestEffortDirs) =
+      filteredPicklingFiles.map { f =>
+        val outputDir = createOutputDirsForFile(f, sourceDir, outDir)
+        val bestEffortDir = new JFile(outputDir, s"META-INF${JFile.separator}best-effort")
+        (
+          BestEffortCompilation(testGroup.name, f, flags, outputDir),
+          (f, bestEffortDir)
+        )
+      }.unzip
+    val (_, bestEffortDirs) = targetAndBestEffortDirs.unzip
+    val fileToBestEffortDirMap = targetAndBestEffortDirs.toMap
+
+    val picklingSet = filteredPicklingFiles.toSet
+    val fromTastyTargets =
+      filteredUnpicklingFiles.filter(picklingSet.contains(_)).map { f =>
+        val bestEffortDir = fileToBestEffortDirMap(f)
+        new CompilationFromBestEffortTasty(testGroup.name, f, flags, bestEffortDir)
+      }
+
+    new BestEffortCompilationTest(
+      new CompilationTest(bestEffortTargets).keepOutput,
+      new CompilationTest(fromTastyTargets).keepOutput,
+      bestEffortDirs,
+      shouldDelete = true
+    )
+  }
+
+  /** A two step integration test for best effort compilation.
+   *
+   *  Directories found in the directory `f` represent separate tests and must contain
+   *  the 'err' and 'main' directories. First the (erroring) contents of the 'err'
+   *  directory are compiled with the `Ybest-effort` option.
+   *  Then, are the contents of 'main' are compiled with the previous best effort directory
+   *  on the classpath using the option `-Ywith-best-effort-tasty`.
+   */
+  def compileBestEffortIntegration(f: String, flags: TestFlags)(implicit testGroup: TestGroup) = {
+    val bestEffortFlag = "-Ybest-effort"
+    val semanticDbFlag = "-Xsemanticdb"
+    val withBetastyFlag = "-Ywith-best-effort-tasty"
+    val sourceDir = new JFile(f)
+    val dirs = sourceDir.listFiles.toList
+    assert(dirs.forall(_.isDirectory), s"All files in $f have to be directories.")
+
+    val (step1Targets, step2Targets, bestEffortDirs) = dirs.map { dir =>
+      val step1SourceDir = new JFile(dir, "err")
+      val step2SourceDir = new JFile(dir, "main")
+
+      val step1SourceFiles = step1SourceDir.listFiles
+      val step2SourceFiles = step2SourceDir.listFiles
+
+      val outDir = defaultOutputDir + testGroup + JFile.separator + dir.getName().toString + JFile.separator
+
+      val step1OutDir = createOutputDirsForDir(step1SourceDir, step1SourceDir, outDir)
+      val step2OutDir = createOutputDirsForDir(step2SourceDir, step2SourceDir, outDir)
+
+      val step1Compilation = JointCompilationSource(
+        testGroup.name, step1SourceFiles, flags.and(bestEffortFlag).and(semanticDbFlag), step1OutDir, fromTasty = NotFromTasty
+      )
+
+      val bestEffortDir = new JFile(step1OutDir, s"META-INF${JFile.separator}best-effort")
+
+      val step2Compilation = JointCompilationSource(
+        testGroup.name, step2SourceFiles, flags.and(withBetastyFlag).and(semanticDbFlag), step2OutDir, fromTasty = WithBestEffortTasty(bestEffortDir)
+      )
+      (step1Compilation, step2Compilation, bestEffortDir)
+    }.unzip3
+
+    BestEffortCompilationTest(
+      new CompilationTest(step1Targets).keepOutput,
+      new CompilationTest(step2Targets).keepOutput,
+      bestEffortDirs,
+      true
+    )
+  }
+
+
   class TastyCompilationTest(step1: CompilationTest, step2: CompilationTest, shouldDelete: Boolean)(implicit testGroup: TestGroup) {
 
     def keepOutput: TastyCompilationTest =
@@ -1559,6 +1765,35 @@ trait ParallelTesting extends RunnerOrchestration { self =>
 
       if (shouldDelete)
         CompilationTest.aggregateTests(step1, step2).delete()
+
+      this
+    }
+  }
+
+  class BestEffortCompilationTest(step1: CompilationTest, step2: CompilationTest, bestEffortDirs: List[JFile], shouldDelete: Boolean)(implicit testGroup: TestGroup) {
+
+    def checkNoCrash()(implicit summaryReport: SummaryReporting): this.type = {
+      step1.checkNoBestEffortError() // Compile all files to generate the class files with best effort tasty
+      step2.checkNoBestEffortError() // Compile with best effort tasty
+
+      if (shouldDelete) {
+        CompilationTest.aggregateTests(step1, step2).delete()
+        def delete(file: JFile): Unit = {
+          if (file.isDirectory) file.listFiles.foreach(delete)
+          try Files.delete(file.toPath)
+          catch {
+            case _: NoSuchFileException => // already deleted, everything's fine
+          }
+        }
+        bestEffortDirs.foreach(t => delete(t))
+      }
+
+      this
+    }
+
+    def noCrashWithCompilingDependencies()(implicit summaryReport: SummaryReporting): this.type = {
+      step1.checkNoBestEffortError() // Compile all files to generate the class files with best effort tasty
+      step2.checkCompile() // Compile with best effort tasty
 
       this
     }
@@ -1600,5 +1835,8 @@ object ParallelTesting {
 
   def isTastyFile(f: JFile): Boolean =
     f.getName.endsWith(".tasty")
+
+  def isBestEffortTastyFile(f: JFile): Boolean =
+    f.getName.endsWith(".betasty")
 
 }

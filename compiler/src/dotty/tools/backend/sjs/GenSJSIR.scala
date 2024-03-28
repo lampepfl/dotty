@@ -12,7 +12,7 @@ class GenSJSIR extends Phase {
   override def description: String = GenSJSIR.description
 
   override def isRunnable(using Context): Boolean =
-    super.isRunnable && ctx.settings.scalajs.value
+    super.isRunnable && ctx.settings.scalajs.value && !ctx.usedBestEffortTasty
 
   def run(using Context): Unit =
     new JSCodeGen().run()

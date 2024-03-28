@@ -22,34 +22,37 @@ import dotty.tools.dotc.core.Names.TermName
 object TastyPrinter:
 
   def showContents(bytes: Array[Byte], noColor: Boolean): String =
-    showContents(bytes, noColor, testPickler = false)
+    showContents(bytes, noColor, isBestEffortTasty = false, testPickler = false)
 
-  def showContents(bytes: Array[Byte], noColor: Boolean, testPickler: Boolean = false): String =
+  def showContents(bytes: Array[Byte], noColor: Boolean, isBestEffortTasty: Boolean, testPickler: Boolean = false): String =
     val printer =
-      if noColor then new TastyPrinter(bytes, testPickler)
-      else new TastyAnsiiPrinter(bytes, testPickler)
+      if noColor then new TastyPrinter(bytes, isBestEffortTasty, testPickler)
+      else new TastyAnsiiPrinter(bytes, isBestEffortTasty, testPickler)
     printer.showContents()
 
   def main(args: Array[String]): Unit = {
     // TODO: Decouple CliCommand from Context and use CliCommand.distill?
+    val betastyOpt = "-Ywith-best-effort-tasty"
     val lineWidth = 80
     val line = "-" * lineWidth
     val noColor = args.contains("-color:never")
+    val allowBetasty = args.contains(betastyOpt)
     var printLastLine = false
-    def printTasty(fileName: String, bytes: Array[Byte]): Unit =
+    def printTasty(fileName: String, bytes: Array[Byte], isBestEffortTasty: Boolean): Unit =
       println(line)
       println(fileName)
       println(line)
-      println(showContents(bytes, noColor))
+      println(showContents(bytes, noColor, isBestEffortTasty, testPickler = false))
       println()
       printLastLine = true
     for arg <- args do
       if arg == "-color:never" then () // skip
+      else if arg == betastyOpt then () // skip
       else if arg.startsWith("-") then println(s"bad option '$arg' was ignored")
-      else if arg.endsWith(".tasty") then
+      else if arg.endsWith(".tasty") || (allowBetasty && arg.endsWith(".betasty")) then
         val path = Paths.get(arg)
         if Files.exists(path) then
-          printTasty(arg, Files.readAllBytes(path).nn)
+          printTasty(arg, Files.readAllBytes(path).nn, arg.endsWith(".betasty"))
         else
           println("File not found: " + arg)
           System.exit(1)
@@ -57,7 +60,7 @@ object TastyPrinter:
         val jar = JarArchive.open(Path(arg), create = false)
         try
           for file <- jar.iterator() if file.name.endsWith(".tasty") do
-            printTasty(s"$arg ${file.path}", file.toByteArray)
+            printTasty(s"$arg ${file.path}", file.toByteArray, false)
         finally jar.close()
       else
         println(s"Not a '.tasty' or '.jar' file: $arg")
@@ -67,11 +70,11 @@ object TastyPrinter:
       println(line)
   }
 
-class TastyPrinter(bytes: Array[Byte], val testPickler: Boolean) {
+class TastyPrinter(bytes: Array[Byte], isBestEffortTasty: Boolean, val testPickler: Boolean) {
 
-  def this(bytes: Array[Byte]) = this(bytes, testPickler = false)
+  def this(bytes: Array[Byte]) = this(bytes, isBestEffortTasty = false, testPickler = false)
 
-  class TastyPrinterUnpickler extends TastyUnpickler(bytes) {
+  class TastyPrinterUnpickler extends TastyUnpickler(bytes, isBestEffortTasty) {
     var namesStart: Addr = uninitialized
     var namesEnd: Addr = uninitialized
     override def readNames() = {
@@ -129,7 +132,7 @@ class TastyPrinter(bytes: Array[Byte], val testPickler: Boolean) {
     })
 
   class TreeSectionUnpickler(sb: StringBuilder) extends PrinterSectionUnpickler[Unit](ASTsSection) {
-    import dotty.tools.tasty.TastyFormat.*
+    import dotty.tools.tasty.besteffort.BestEffortTastyFormat.* // superset on TastyFormat
     def unpickle0(reader: TastyReader)(using refs: NameRefs): Unit = {
       import reader.*
       var indent = 0

@@ -719,7 +719,8 @@ object Denotations {
         ctx.runId >= validFor.runId
         || ctx.settings.YtestPickler.value // mixing test pickler with debug printing can travel back in time
         || ctx.mode.is(Mode.Printing)  // no use to be picky when printing error messages
-        || symbol.isOneOf(ValidForeverFlags),
+        || symbol.isOneOf(ValidForeverFlags)
+        || ctx.tolerateErrorsForBestEffort,
         s"denotation $this invalid in run ${ctx.runId}. ValidFor: $validFor")
       var d: SingleDenotation = this
       while ({

@@ -117,7 +117,7 @@ class CommentPicklingTest {
       implicit val ctx: Context = setup(args, initCtx).map(_._2).getOrElse(initCtx)
       ctx.initialize()
       val trees = files.flatMap { f =>
-        val unpickler = new DottyUnpickler(AbstractFile.getFile(f.jpath), f.toByteArray())
+        val unpickler = new DottyUnpickler(AbstractFile.getFile(f.jpath), f.toByteArray(), isBestEffortTasty = false)
         unpickler.enter(roots = Set.empty)
         unpickler.rootTrees(using ctx)
       }

@@ -4322,6 +4322,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
      *  tree that went unreported. A scenario where this happens is i1802.scala.
      */
     def ensureReported(tp: Type) = tp match {
+      case err: PreviousErrorType if ctx.usedBestEffortTasty => // do nothing if error was already reported in previous compilation
       case err: ErrorType if !ctx.reporter.errorsReported => report.error(err.msg, tree.srcPos)
       case _ =>
     }

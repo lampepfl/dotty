@@ -720,12 +720,16 @@ object SymDenotations {
      *  TODO: Find a more robust way to characterize self symbols, maybe by
      *       spending a Flag on them?
      */
-    final def isSelfSym(using Context): Boolean = owner.infoOrCompleter match {
-      case ClassInfo(_, _, _, _, selfInfo) =>
-        selfInfo == symbol ||
-          selfInfo.isInstanceOf[Type] && name == nme.WILDCARD
-      case _ => false
-    }
+    final def isSelfSym(using Context): Boolean =
+      if !ctx.isBestEffort || exists then
+        owner.infoOrCompleter match {
+          case ClassInfo(_, _, _, _, selfInfo) =>
+            selfInfo == symbol ||
+              selfInfo.isInstanceOf[Type] && name == nme.WILDCARD
+          case _ => false
+        }
+      else false
+
 
     /** Is this definition contained in `boundary`?
      *  Same as `ownersIterator contains boundary` but more efficient.
@@ -2003,7 +2007,7 @@ object SymDenotations {
         case p :: parents1 =>
           p.classSymbol match {
             case pcls: ClassSymbol => builder.addAll(pcls.baseClasses)
-            case _ => assert(isRefinementClass || p.isError || ctx.mode.is(Mode.Interactive), s"$this has non-class parent: $p")
+            case _ => assert(isRefinementClass || p.isError || ctx.mode.is(Mode.Interactive) || ctx.tolerateErrorsForBestEffort, s"$this has non-class parent: $p")
           }
           traverse(parents1)
         case nil =>
