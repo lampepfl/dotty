@@ -117,6 +117,9 @@ object Feature:
   def fewerBracesEnabled(using Context) =
     sourceVersion.isAtLeast(`3.3`) || enabled(fewerBraces)
 
+  def indentAfterOperatorEnabled(using Context) =
+    enabled(fewerBraces)
+
   /** If current source migrates to `version`, issue given warning message
    *  and return `true`, otherwise return `false`.
    */

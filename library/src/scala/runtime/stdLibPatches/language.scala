@@ -51,7 +51,7 @@ object language:
     /** Experimental support for using indentation for arguments
      */
     @compileTimeOnly("`fewerBraces` can only be used at compile time in import statements")
-    @deprecated("`fewerBraces` is now standard, no language import is needed", since = "3.3")
+    //@deprecated("`fewerBraces` is now standard, no language import is needed", since = "3.3")
     object fewerBraces
 
     /** Experimental support for typechecked exception capabilities

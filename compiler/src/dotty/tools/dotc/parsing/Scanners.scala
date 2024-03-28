@@ -87,10 +87,6 @@ object Scanners {
     /** Is current token first one after a newline? */
     def isAfterLineEnd: Boolean = lineOffset >= 0
 
-    def isOperator =
-      token == BACKQUOTED_IDENT
-      || token == IDENTIFIER && isOperatorPart(name(name.length - 1))
-
     def isArrow =
       token == ARROW || token == CTXARROW
   }
@@ -163,9 +159,9 @@ object Scanners {
       strVal = litBuf.toString
       litBuf.clear()
 
-    @inline def isNumberSeparator(c: Char): Boolean = c == '_'
+    inline def isNumberSeparator(c: Char): Boolean = c == '_'
 
-    @inline def removeNumberSeparators(s: String): String = if (s.indexOf('_') == -1) s else s.replace("_", "")
+    inline def removeNumberSeparators(s: String): String = if (s.indexOf('_') == -1) s else s.replace("_", "")
 
     // disallow trailing numeric separator char, but continue lexing
     def checkNoTrailingSeparator(): Unit =
@@ -197,7 +193,6 @@ object Scanners {
       ((if (Config.defaultIndent) !noindentSyntax else ctx.settings.indent.value)
        || rewriteNoIndent)
       && allowIndent
-
     if (rewrite) {
       val s = ctx.settings
       val rewriteTargets = List(s.newSyntax, s.oldSyntax, s.indent, s.noindent)
@@ -212,6 +207,7 @@ object Scanners {
 
     def featureEnabled(name: TermName) = Feature.enabled(name)(using languageImportContext)
     def erasedEnabled = featureEnabled(Feature.erasedDefinitions)
+    def indentAfterOperatorEnabled = featureEnabled(Feature.fewerBraces)
 
     private var postfixOpsEnabledCache = false
     private var postfixOpsEnabledCtx: Context = NoContext
@@ -391,9 +387,10 @@ object Scanners {
     def nextToken(): Unit =
       val lastToken = token
       val lastName = name
+      val lastLineOffset = lineOffset
       adjustSepRegions(lastToken)
       getNextToken(lastToken)
-      if isAfterLineEnd then handleNewLine(lastToken)
+      if isAfterLineEnd then handleNewLine(lastToken, lastName, lastLineOffset)
       postProcessToken(lastToken, lastName)
       profile.recordNewToken()
       printState()
@@ -410,6 +407,10 @@ object Scanners {
       this.token = token
     }
 
+    def isOperator(token: Int, name: SimpleName): Boolean =
+      token == BACKQUOTED_IDENT
+      || token == IDENTIFIER && isOperatorPart(name(name.length - 1))
+
     /** A leading symbolic or backquoted identifier is treated as an infix operator if
       *   - it does not follow a blank line, and
       *   - it is followed by at least one whitespace character and a
@@ -420,7 +421,7 @@ object Scanners {
       */
     def isLeadingInfixOperator(nextWidth: IndentWidth = indentWidth(offset), inConditional: Boolean = true) =
       allowLeadingInfixOperators
-      && isOperator
+      && isOperator(token, name)
       && (isWhitespace(ch) || ch == LF)
       && !pastBlankLine
       && {
@@ -438,15 +439,17 @@ object Scanners {
         // leading infix operator.
         def assumeStartsExpr(lexeme: TokenData) =
           (canStartExprTokens.contains(lexeme.token) || lexeme.token == COLONeol)
-          && (!lexeme.isOperator || nme.raw.isUnary(lexeme.name))
+          && (!isOperator(lexeme.token, lexeme.name) || nme.raw.isUnary(lexeme.name))
         val lookahead = LookaheadScanner()
         lookahead.allowLeadingInfixOperators = false
           // force a NEWLINE a after current token if it is on its own line
         lookahead.nextToken()
         assumeStartsExpr(lookahead)
         || lookahead.token == NEWLINE
-           && assumeStartsExpr(lookahead.next)
            && indentWidth(offset) <= indentWidth(lookahead.next.offset)
+           && (assumeStartsExpr(lookahead.next)
+              || indentAfterOperatorEnabled
+                  && indentWidth(offset) < indentWidth(lookahead.next.offset))
       }
       && {
         currentRegion match
@@ -551,7 +554,7 @@ object Scanners {
      *  I.e. `a <= b` iff `b.startsWith(a)`. If indentation is significant it is considered an error
      *  if the current indentation width and the indentation of the current token are incomparable.
      */
-    def handleNewLine(lastToken: Token) =
+    def handleNewLine(lastToken: Token, lastName: SimpleName, lastLineOffset: Offset) =
       var indentIsSignificant = false
       var newlineIsSeparating = false
       var lastWidth = IndentWidth.Zero
@@ -580,7 +583,11 @@ object Scanners {
        */
       inline def isContinuing =
         lastWidth < nextWidth
-        && (openParensTokens.contains(token) || lastToken == RETURN)
+        && (  openParensTokens.contains(token)
+           || lastToken == RETURN
+           || indentAfterOperatorEnabled
+              && isOperator(lastToken, lastName) && lastLineOffset >= 0
+           )
         && !pastBlankLine
         && !migrateTo3
         && !noindentSyntax
@@ -635,7 +642,12 @@ object Scanners {
 
         else if lastWidth < nextWidth
              || lastWidth == nextWidth && (lastToken == MATCH || lastToken == CATCH) && token == CASE then
-          if canStartIndentTokens.contains(lastToken) then
+          if canStartIndentTokens.contains(lastToken)
+              || indentAfterOperatorEnabled
+                  && isOperator(lastToken, lastName)
+                  && lastLineOffset >= 0
+                  && canStartStatTokens3.contains(token)
+          then
             currentRegion = Indented(nextWidth, lastToken, currentRegion)
             insert(INDENT, offset)
           else if lastToken == SELFARROW then
@@ -1092,7 +1104,7 @@ object Scanners {
       next
 
     class LookaheadScanner(val allowIndent: Boolean = false) extends Scanner(source, offset, allowIndent = allowIndent) {
-      override protected def initialCharBufferSize = 8
+      override protected def initialCharBufferSize = 16
       override def languageImportContext = Scanner.this.languageImportContext
     }
 
