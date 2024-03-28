@@ -4381,6 +4381,7 @@ object Parsers {
 
     /** RefineStatSeq    ::=  RefineStat {semi RefineStat}
      *  RefineStat       ::=  ‘val’ VarDef
+     *                     |  ‘var’ VarDef
      *                     |  ‘def’ DefDef
      *                     |  ‘type’ {nl} TypeDef
      *  (in reality we admit class defs and vars and filter them out afterwards in `checkLegal`)
@@ -4393,10 +4394,7 @@ object Parsers {
           syntaxError(msg, tree.span)
           Nil
         tree match
-          case tree: ValDef if tree.mods.is(Mutable) =>
-            fail(em"""refinement cannot be a mutable var.
-                     |You can use an explicit getter ${tree.name} and setter ${tree.name}_= instead""")
-          case tree: MemberDef if !(tree.mods.flags & ModifierFlags).isEmpty =>
+          case tree: MemberDef if !(tree.mods.flags & (ModifierFlags &~ Mutable)).isEmpty =>
             fail(em"refinement cannot be ${(tree.mods.flags & ModifierFlags).flagStrings().mkString("`", "`, `", "`")}")
           case tree: DefDef if tree.termParamss.nestedExists(!_.rhs.isEmpty) =>
             fail(em"refinement cannot have default arguments")

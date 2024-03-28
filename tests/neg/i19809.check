@@ -1,0 +1,10 @@
+-- [E120] Naming Error: tests/neg/i19809.scala:3:6 ---------------------------------------------------------------------
+3 |  def x_=(x: Int): Unit // error
+  |      ^
+  |      Double definition:
+  |      def x_=(x$1: Int): Unit in trait <refinement> at line 2 and
+  |      def x_=(x: Int): Unit in trait <refinement> at line 3
+  |      have the same type after erasure.
+  |
+  |      Consider adding a @targetName annotation to one of the conflicting definitions
+  |      for disambiguation.

@@ -431,6 +431,7 @@ EndMarkerTag      ::=  id | ‘if’ | ‘while’ | ‘for’ | ‘match’ | �
 ### Definitions
 ```ebnf
 RefineDcl         ::=  ‘val’ ValDcl
+                    |  ‘var’ ValDcl
                     |  ‘def’ DefDcl
                     |  ‘type’ {nl} TypeDef
 ValDcl            ::=  ids ‘:’ Type
