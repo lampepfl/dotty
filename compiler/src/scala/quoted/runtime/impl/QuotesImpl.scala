@@ -2684,6 +2684,7 @@ class QuotesImpl private (using val ctx: Context) extends Quotes, QuoteUnpickler
         def isAnonymousFunction: Boolean = self.denot.isAnonymousFunction
         def isAbstractType: Boolean = self.denot.isAbstractType
         def isClassConstructor: Boolean = self.denot.isClassConstructor
+        def isSuperAccessor = self.name.is(dotc.core.NameKinds.SuperAccessorName)
         def isType: Boolean = self.isType
         def isTerm: Boolean = self.isTerm
         def isPackageDef: Boolean = self.is(dotc.core.Flags.Package)

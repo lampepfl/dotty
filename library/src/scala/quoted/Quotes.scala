@@ -3998,6 +3998,10 @@ trait Quotes { self: runtime.QuoteUnpickler & runtime.QuoteMatching =>
         /** Is this the constructor of a class? */
         def isClassConstructor: Boolean
 
+        /** Is this the super accessor? */
+        @experimental // TODO when stable, remove `dotty.tools.scaladoc.tasty.ClassLikeSupport.isSuperBridgeMethod` and use this method
+        def isSuperAccessor: Boolean
+
         /** Is this the definition of a type? */
         def isType: Boolean
 

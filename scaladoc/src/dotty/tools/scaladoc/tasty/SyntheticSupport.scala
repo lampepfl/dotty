@@ -10,6 +10,7 @@ object SyntheticsSupport:
       import reflect._
       s.flags.is(Flags.Synthetic) || s.flags.is(Flags.FieldAccessor) || s.isDefaultHelperMethod
 
+    // TODO remove and use `SymbolMethods.isSuperAccessor`
     def isSuperBridgeMethod: Boolean = s.name.contains("$super$")
 
     def isDefaultHelperMethod: Boolean = ".*\\$default\\$\\d+$".r.matches(s.name)
