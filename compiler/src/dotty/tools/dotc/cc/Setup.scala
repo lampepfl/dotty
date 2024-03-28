@@ -269,12 +269,6 @@ class Setup extends PreRecheck, SymTransformer, SetupAPI:
           CapturingType(fntpe, cs, boxed = false)
         else fntpe
 
-      /** Map references to capability classes C to C^ */
-      private def expandCapabilityClass(tp: Type): Type =
-        if tp.isCapabilityClassRef
-        then CapturingType(tp, defn.expandedUniversalSet, boxed = false)
-        else tp
-
       private def recur(t: Type): Type = normalizeCaptures(mapOver(t))
 
       def apply(t: Type) =
@@ -297,7 +291,8 @@ class Setup extends PreRecheck, SymTransformer, SetupAPI:
           case t: TypeVar =>
             this(t.underlying)
           case t =>
-            if t.isCapabilityClassRef
+            // Map references to capability classes C to C^
+            if t.hasUniversalCapability
             then CapturingType(t, defn.expandedUniversalSet, boxed = false)
             else recur(t)
     end expandAliases

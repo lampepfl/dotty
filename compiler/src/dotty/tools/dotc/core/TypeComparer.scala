@@ -893,13 +893,20 @@ class TypeComparer(@constructorOnly initctx: Context) extends ConstraintHandling
       canWidenAbstract && acc(true, tp)
 
     def tryBaseType(cls2: Symbol) =
-      val base = nonExprBaseType(tp1, cls2)
+      var base = nonExprBaseType(tp1, cls2)
       if base.exists && (base ne tp1)
           && (!caseLambda.exists
               || widenAbstractOKFor(tp2)
               || tp1.widen.underlyingClassRef(refinementOK = true).exists)
       then
         def checkBase =
+          // Strip existing capturing set from base type
+          base = base.stripCapturing
+          // Pass capture set of tp1 to base type
+          tp1 match
+            case tp1 @ CapturingType(_, refs1) =>
+              base = CapturingType(base, refs1, tp1.isBoxed)
+            case _ =>
           isSubType(base, tp2, if tp1.isRef(cls2) then approx else approx.addLow)
           && recordGadtUsageIf { MatchType.thatReducesUsingGadt(tp1) }
         if tp1.widenDealias.isInstanceOf[AndType] || base.isInstanceOf[OrType] then
