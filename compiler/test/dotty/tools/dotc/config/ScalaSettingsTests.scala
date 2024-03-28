@@ -95,6 +95,20 @@ class ScalaSettingsTests:
     val sut  = reporting.WConf.fromSettings(conf).getOrElse(???)
     assertEquals(Action.Silent, sut.action(depr))
 
+  @Test def `Treat parameterless -W as help`: Unit = 
+    val sets = config.ScalaSettings
+    val args = List("-W")
+    val sumy = ArgsSummary(sets.defaultState, args, errors = Nil, warnings = Nil)
+    val proc = sets.processArguments(sumy, processAll = true, skipped = Nil)
+    assertTrue(sets.W.valueIn(sumy.sstate).contains("help"))
 
+  @Test def `Enable default warns with -W default`: Unit = 
+    val sets = config.ScalaSettings
+    val args = List("-W", "default")
+    val sumy = ArgsSummary(sets.defaultState, args, errors = Nil, warnings = Nil)
+    val proc = sets.processArguments(sumy, processAll = true, skipped = Nil)
+    assertTrue(sets.Wunused.valueIn(sumy.sstate).contains("linted"))
+    assertTrue(sets.WNonUnitStatement.valueIn(sumy.sstate))
+    assertTrue(sets.WvalueDiscard.valueIn(sumy.sstate))
 
 end ScalaSettingsTests

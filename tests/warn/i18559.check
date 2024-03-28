@@ -1,0 +1,56 @@
+-- [E176] Potential Issue Warning: tests/warn/i18559.scala:63:4 --------------------------------------------------------
+63 |    improved  // warn
+   |    ^^^^^^^^
+   |    unused value of type (improved : => scala.concurrent.Future[Int])
+-- [E175] Potential Issue Warning: tests/warn/i18559.scala:51:35 -------------------------------------------------------
+51 |  firstThing().map(_ => secondThing()) // warn
+   |                        ^^^^^^^^^^^^^
+   |                        discarded non-Unit value of type Either[Failed, Unit]
+-- [E175] Potential Issue Warning: tests/warn/i18559.scala:54:35 -------------------------------------------------------
+54 |  firstThing().map(_ => secondThing()) // warn 
+   |                        ^^^^^^^^^^^^^
+   |                        discarded non-Unit value of type Either[Failed, Unit]
+-- Warning: tests/warn/i18559.scala:4:6 --------------------------------------------------------------------------------
+4 |  var e3 = 2 // warn
+  |      ^^
+  |      unused local definition
+-- Warning: tests/warn/i18559.scala:8:28 -------------------------------------------------------------------------------
+8 |  import collection.mutable.Set // warn
+  |                            ^^^
+  |                            unused import
+-- Warning: tests/warn/i18559.scala:9:33 -------------------------------------------------------------------------------
+9 |  import collection.mutable.{Map => MutMap} // warn
+  |                             ^^^^^^^^^^^^^
+  |                             unused import
+-- Warning: tests/warn/i18559.scala:10:28 ------------------------------------------------------------------------------
+10 |  import collection.mutable._ // warn
+   |                            ^
+   |                            unused import
+-- Warning: tests/warn/i18559.scala:13:28 ------------------------------------------------------------------------------
+13 |  import collection.mutable._ // warn
+   |                            ^
+   |                            unused import
+-- [E030] Match case Unreachable Warning: tests/warn/i18559.scala:31:10 ------------------------------------------------
+31 |  case Sum(a@S(_),Z) => Z // warn
+   |       ^^^^^^^^^^^^^
+   |       Unreachable case
+-- [E030] Match case Unreachable Warning: tests/warn/i18559.scala:32:10 ------------------------------------------------
+32 |  case Sum(a@S(_),Z) => a // warn unreachable
+   |       ^^^^^^^^^^^^^
+   |       Unreachable case
+-- [E030] Match case Unreachable Warning: tests/warn/i18559.scala:33:10 ------------------------------------------------
+33 |  case Sum(a@S(b@S(_)), Z) => a // warn
+   |       ^^^^^^^^^^^^^^^^^^^
+   |       Unreachable case
+-- [E030] Match case Unreachable Warning: tests/warn/i18559.scala:34:10 ------------------------------------------------
+34 |  case Sum(a@S(b@S(_)), Z) => a // warn
+   |       ^^^^^^^^^^^^^^^^^^^
+   |       Unreachable case
+-- [E030] Match case Unreachable Warning: tests/warn/i18559.scala:35:10 ------------------------------------------------
+35 |  case Sum(a@S(b@(S(_))), Z) => Sum(a,b) // warn unreachable
+   |       ^^^^^^^^^^^^^^^^^^^^^
+   |       Unreachable case
+-- [E121] Pattern Match Warning: tests/warn/i18559.scala:37:7 ----------------------------------------------------------
+37 |  case _ => Z // warn unreachable
+   |       ^
+   |       Unreachable case except for null (if this is intentional, consider writing case null => instead).
