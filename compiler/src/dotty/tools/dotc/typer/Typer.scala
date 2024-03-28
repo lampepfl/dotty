@@ -3873,22 +3873,9 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
         end implicitArgs
 
         val args = implicitArgs(wtp.paramInfos, 0, pt)
-
-        def propagatedFailure(args: List[Tree]): Type = args match {
-          case arg :: args1 =>
-            arg.tpe match {
-              case ambi: AmbiguousImplicits =>
-                propagatedFailure(args1) match {
-                  case NoType | (_: AmbiguousImplicits) => ambi
-                  case failed => failed
-                }
-              case failed: SearchFailureType => failed
-              case _ => propagatedFailure(args1)
-            }
-          case Nil => NoType
-        }
-
-        val propFail = propagatedFailure(args)
+        val firstAmbiguous = args.tpes.find(_.isInstanceOf[AmbiguousImplicits])
+        def firstError = args.tpes.find(_.isError)
+        val propFail = firstAmbiguous.orElse(firstError).getOrElse(NoType)
 
         def issueErrors(): Tree = {
           def paramSymWithMethodTree(paramName: TermName) =
@@ -3921,9 +3908,12 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
           // need to be reset.
           ctx.typerState.resetTo(saved)
 
-          // If method has default params, fall back to regular application
-          // where all inferred implicits are passed as named args.
-          if hasDefaultParams && !propFail.isInstanceOf[AmbiguousImplicits] then
+          // If method has default params and there are no "Ambiguous implicits"
+          // error, fall back to regular application where all inferred
+          // implicits are passed as named args.
+          // If there are "Ambiguous implicits" errors, these take precedence
+          // over the default params (see issue #19414 and related tests).
+          if hasDefaultParams && firstAmbiguous.isEmpty then
             val namedArgs = wtp.paramNames.lazyZip(args).flatMap { (pname, arg) =>
               if (arg.tpe.isError) Nil else untpd.NamedArg(pname, untpd.TypedSplice(arg)) :: Nil
             }

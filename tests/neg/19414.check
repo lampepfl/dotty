@@ -1,0 +1,4 @@
+-- [E172] Type Error: tests/neg/19414.scala:27:34 ----------------------------------------------------------------------
+27 |  summon[BodySerializer[JsObject]] // error: Ambiguous given instances
+   |                                  ^
+   |Ambiguous given instances: both given instance given_Writer_JsValue and given instance given_Writer_JsObject match type Writer[B] of parameter x of method summon in object Predef

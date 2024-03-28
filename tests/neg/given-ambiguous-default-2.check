@@ -1,0 +1,4 @@
+-- [E172] Type Error: tests/neg/given-ambiguous-default-2.scala:19:23 --------------------------------------------------
+19 |def f: Unit = summon[C] // error: Ambiguous given instances
+   |                       ^
+   |Ambiguous given instances: both given instance a1 and given instance a2 match type A of parameter x of method summon in object Predef
