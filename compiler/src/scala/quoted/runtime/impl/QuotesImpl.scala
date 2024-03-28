@@ -396,17 +396,22 @@ class QuotesImpl private (using val ctx: Context) extends Quotes, QuoteUnpickler
     end TermTypeTest
 
     object Term extends TermModule:
-      def betaReduce(tree: Term): Option[Term] =
-        tree match
-          case tpd.Block(Nil, expr) =>
-            for e <- betaReduce(expr) yield tpd.cpy.Block(tree)(Nil, e)
-          case tpd.Inlined(_, Nil, expr) =>
-            betaReduce(expr)
-          case _ =>
-            val tree1 = dotc.transform.BetaReduce(tree)
-            if tree1 eq tree then None
-            else Some(tree1.withSpan(tree.span))
-
+       def betaReduce(tree: Term): Option[Term] =
+        val tree1 = new dotty.tools.dotc.ast.tpd.TreeMap {
+          override def transform(tree: Tree)(using Context): Tree = tree match {
+            case tpd.Block(Nil, _) |  tpd.Inlined(_, Nil, _) =>
+              super.transform(tree)
+            case tpd.Apply(sel @ tpd.Select(expr, nme), args) =>
+              val tree1 = cpy.Apply(tree)(cpy.Select(sel)(transform(expr), nme), args)
+              dotc.transform.BetaReduce(tree1).withSpan(tree.span)
+            case tpd.Apply(ta @ tpd.TypeApply(sel @ tpd.Select(expr: Apply, nme), tpts), args) =>
+              val tree1 = cpy.Apply(tree)(cpy.TypeApply(ta)(cpy.Select(sel)(transform(expr), nme), tpts), args)
+              dotc.transform.BetaReduce(tree1).withSpan(tree.span)
+            case _ =>
+              dotc.transform.BetaReduce(tree).withSpan(tree.span)
+          }
+        }.transform(tree)
+        if tree1 == tree then None else Some(tree1)
     end Term
 
     given TermMethods: TermMethods with

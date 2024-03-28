@@ -10,12 +10,45 @@ abstract class Expr[+T] private[scala] ()
 object Expr {
 
   /** `e.betaReduce` returns an expression that is functionally equivalent to `e`,
-   *   however if `e` is of the form `((y1, ..., yn) => e2)(e1, ..., en)`
-   *   then it optimizes this the top most call by returning the result of beta-reducing the application.
-   *   Otherwise returns `expr`.
+   *  however if `e` is of the form `((y1, ..., yn) => e2)(e1, ..., en)`
+   *  then it optimizes the top most call by returning the result of beta-reducing the application.
+   *  Similarly, all outermost curried function applications will be beta-reduced, if possible.
+   *  Otherwise returns `expr`.
    *
-   *   To retain semantics the argument `ei` is bound as `val yi = ei` and by-name arguments to `def yi = ei`.
-   *   Some bindings may be elided as an early optimization.
+   *  To retain semantics the argument `ei` is bound as `val yi = ei` and by-name arguments to `def yi = ei`.
+   *  Some bindings may be elided as an early optimization.
+   *
+   *  Example:
+   *  ```scala sc:nocompile
+   *  ((a: Int, b: Int) => a + b).apply(x, y)
+   *  ```
+   *  will be reduced to
+   *  ```scala sc:nocompile
+   *  val a = x
+   *  val b = y
+   *  a + b
+   *  ```
+   *
+   *  Generally:
+   *  ```scala sc:nocompile
+   *  ([X1, Y1, ...] => (x1, y1, ...) => ... => [Xn, Yn, ...] => (xn, yn, ...) => f[X1, Y1, ..., Xn, Yn, ...](x1, y1, ..., xn, yn, ...))).apply[Tx1, Ty1, ...](myX1, myY1, ...)....apply[Txn, Tyn, ...](myXn, myYn, ...)
+   *  ```
+   *  will be reduced to
+   *  ```scala sc:nocompile
+   *  type X1 = Tx1
+   *  type Y1 = Ty1
+   *  ...
+   *  val x1 = myX1
+   *  val y1 = myY1
+   *  ...
+   *  type Xn = Txn
+   *  type Yn = Tyn
+   *  ...
+   *  val xn = myXn
+   *  val yn = myYn
+   *  ...
+   *  f[X1, Y1, ..., Xn, Yn, ...](x1, y1, ..., xn, yn, ...)
+   *  ```
    */
   def betaReduce[T](expr: Expr[T])(using Quotes): Expr[T] =
     import quotes.reflect.*
