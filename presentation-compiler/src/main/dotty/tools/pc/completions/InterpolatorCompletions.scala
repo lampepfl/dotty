@@ -12,9 +12,7 @@ import dotty.tools.dotc.core.Contexts.Context
 import dotty.tools.dotc.core.Flags
 import dotty.tools.dotc.core.Flags.*
 import dotty.tools.dotc.core.Symbols.Symbol
-import dotty.tools.dotc.util.Spans
 import dotty.tools.dotc.core.Types.Type
-import dotty.tools.dotc.util.SourcePosition
 import dotty.tools.pc.CompilerSearchVisitor
 import dotty.tools.pc.IndexedContext
 import dotty.tools.pc.utils.MtagsEnrichments.*
@@ -162,7 +160,7 @@ object InterpolatorCompletions:
               CompletionValue.Interpolator(
                 denot.symbol,
                 label,
-                Some(newText(name, suffix.toEditOpt, identOrSelect)),
+                Some(newText(name, suffix.toSuffixOpt, identOrSelect)),
                 Nil,
                 Some(completionPos.originalCursorPosition.withStart(identOrSelect.span.start).toLsp),
                 // Needed for VS Code which will not show the completion otherwise
@@ -293,7 +291,7 @@ object InterpolatorCompletions:
             CompletionValue.Interpolator(
               denot.symbol,
               label,
-              Some(newText(name, suffix.toEditOpt)),
+              Some(newText(name, suffix.toSuffixOpt)),
               additionalEdits(),
               Some(nameRange),
               None,

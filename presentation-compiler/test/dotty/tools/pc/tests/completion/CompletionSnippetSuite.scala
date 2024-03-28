@@ -172,7 +172,6 @@ class CompletionSnippetSuite extends BaseCompletionSuite:
          |ArrayDequeOps[$0]
          |ArrayDeque
          |ArrayDeque
-         |ArrayDequeOps
          |""".stripMargin
     )
 
@@ -311,6 +310,7 @@ class CompletionSnippetSuite extends BaseCompletionSuite:
           |""".stripMargin,
       """|Try
          |Try($0)
+         |new Try
          |""".stripMargin
     )
 
@@ -322,9 +322,11 @@ class CompletionSnippetSuite extends BaseCompletionSuite:
           |""".stripMargin,
       // Note: the class and trait items in here are invalid. So
       // they are filtered out.
-      """|Try
-         |Try($0)
-         |""".stripMargin
+      """|Try -  scala.util
+         |Try($0) - [T](r: => T): Try[T]
+         |new Try - [T]: Try[T]
+         |""".stripMargin,
+      includeDetail = true
     )
 
   @Test def `symbol` =
@@ -365,18 +367,33 @@ class CompletionSnippetSuite extends BaseCompletionSuite:
     checkSnippet(
       s"""|package example
           |
-          |object Widget{}
+          |object TestObject {}
           |object Main {
-          |  Wi@@
+          |  TestObjec@@
           |}
           |""".stripMargin,
-      """|Widget -  example
-         |Window -  java.awt
-         |WindowPeer -  java.awt.peer
-         |WithFilter -  scala.collection
+      """|TestObject -  example
          |""".stripMargin,
       includeDetail = true,
-      topLines = Some(4)
+    )
+
+  @Test def `dont-enter-empty-paramlist` =
+    checkSnippet(
+      s"""|package example
+          |
+          |object Main {
+          |  ListMa@@
+          |}
+          |""".stripMargin,
+      """|ListMap -  scala.collection.immutable
+         |ListMap -  scala.collection.mutable
+         |ListMap($0) - [K, V](elems: (K, V)*): ListMap[K, V]
+         |new ListMap - [K, V]: ListMap[K, V]
+         |ListMapBuilder - [K, V]: ListMapBuilder[K, V]
+         |new ListMap - [K, V]: ListMap[K, V]
+         |ConcurrentSkipListMap -  java.util.concurrent
+         |""".stripMargin,
+      includeDetail = true,
     )
 
   // https://github.com/scalameta/metals/issues/4004

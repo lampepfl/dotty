@@ -2,7 +2,6 @@ package dotty.tools.pc.completions
 
 import scala.util.Try
 
-import dotty.tools.dotc.ast.NavigateAST
 import dotty.tools.dotc.ast.Trees.ValDef
 import dotty.tools.dotc.ast.tpd.*
 import dotty.tools.dotc.ast.untpd

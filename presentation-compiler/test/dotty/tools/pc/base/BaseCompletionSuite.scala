@@ -207,7 +207,8 @@ abstract class BaseCompletionSuite extends BasePCSuite:
       includeDetail: Boolean = true,
       filename: String = "A.scala",
       filter: String => Boolean = _ => true,
-      enablePackageWrap: Boolean = true
+      enablePackageWrap: Boolean = true,
+      includeCompletionKind: Boolean = false,
   ): Unit =
     val out = new StringBuilder()
     val withPkg =
@@ -221,13 +222,14 @@ abstract class BaseCompletionSuite extends BasePCSuite:
     filteredItems.foreach { item =>
       val label = TestCompletions.getFullyQualifiedLabel(item)
       val commitCharacter =
-        if (includeCommitCharacter)
+        if includeCommitCharacter then
           Option(item.getCommitCharacters)
             .getOrElse(Collections.emptyList())
             .asScala
             .mkString(" (commit: '", " ", "')")
         else ""
       val documentation = doc(item.getDocumentation)
+      val completionKind = Option.when(includeCompletionKind)(s" (${item.getKind.toString})").getOrElse("")
       if (includeDocs && documentation.nonEmpty) {
         out.append("> ").append(documentation).append("\n")
       }
@@ -244,6 +246,7 @@ abstract class BaseCompletionSuite extends BasePCSuite:
             ""
         })
         .append(commitCharacter)
+        .append(completionKind)
         .append("\n")
     }
     val completionSources = filteredItems

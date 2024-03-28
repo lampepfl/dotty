@@ -151,8 +151,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite:
       """|value: Int
          |val
          |var
-         |varargs(): varargs
-         |varargs - scala.annotation
+         |varargs(): varargs - scala.annotation
          |""".stripMargin
     )
 
@@ -169,8 +168,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite:
         |""".stripMargin,
       """|val
          |var
-         |varargs(): varargs
-         |varargs - scala.annotation
+         |varargs(): varargs - scala.annotation
          |""".stripMargin
     )
 
@@ -203,8 +201,7 @@ class CompletionKeywordSuite extends BaseCompletionSuite:
         |}
         |""".stripMargin,
       """|value: Int
-         |varargs(): varargs
-         |varargs - scala.annotation""".stripMargin
+         |varargs(): varargs - scala.annotation""".stripMargin
     )
 
   @Test def `val-trailing-space` =

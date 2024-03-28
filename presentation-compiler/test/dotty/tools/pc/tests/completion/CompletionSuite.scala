@@ -30,9 +30,8 @@ class CompletionSuite extends BaseCompletionSuite:
         |List[A](elems: A*): List[A]
         |List - java.awt
         |List - java.util
-        |ListMap[K, V](elems: (K, V)*): ListMap[K, V]
         |""".stripMargin,
-      topLines = Some(5)
+      topLines = Some(4)
     )
 
   @Test def member =
@@ -181,6 +180,22 @@ class CompletionSuite extends BaseCompletionSuite:
         |}""".stripMargin,
       """|TrieMap scala.collection.concurrent
          |TrieMap[K, V](elems: (K, V)*): TrieMap[K, V]
+         |new TrieMap[K, V]: TrieMap[K, V]
+         |new TrieMap[K, V](hashf: Hashing[K], ef: Equiv[K]): TrieMap[K, V]
+         |""".stripMargin
+    )
+
+  @Test def `no-companion-apply-in-new`=
+    check(
+      """
+        |import scala.collection.concurrent._
+        |object A {
+        |  new TrieMap@@
+        |}""".stripMargin,
+      // TrieMap should be filtered if it doesn't contain any types that can be constructed in `new` keyword context.
+      """|TrieMap[K, V]: TrieMap[K, V]
+         |TrieMap[K, V](hashf: Hashing[K], ef: Equiv[K]): TrieMap[K, V]
+         |TrieMap scala.collection.concurrent
          |""".stripMargin
     )
 
@@ -216,16 +231,13 @@ class CompletionSuite extends BaseCompletionSuite:
       """
         |import JavaCon@@
         |""".stripMargin,
-      """|AsJavaConverters - scala.collection.convert
-         |JavaConverters - scala.collection
+      """|JavaConverters - scala.collection
          |JavaConversions - scala.concurrent
          |AsJavaConsumer - scala.jdk.FunctionWrappers
+         |AsJavaConverters - scala.collection.convert
          |FromJavaConsumer - scala.jdk.FunctionWrappers
          |AsJavaBiConsumer - scala.jdk.FunctionWrappers
          |AsJavaIntConsumer - scala.jdk.FunctionWrappers
-         |AsJavaLongConsumer - scala.jdk.FunctionWrappers
-         |FromJavaBiConsumer - scala.jdk.FunctionWrappers
-         |FromJavaIntConsumer - scala.jdk.FunctionWrappers
          |""".stripMargin
     )
 
@@ -473,8 +485,7 @@ class CompletionSuite extends BaseCompletionSuite:
         |
         |}
       """.stripMargin,
-      """|DelayedLazyVal scala.concurrent
-         |DelayedLazyVal[T](f: () => T, body: => Unit)(exec: ExecutionContext): DelayedLazyVal[T]""".stripMargin
+      "DelayedLazyVal[T](f: () => T, body: => Unit)(implicit exec: ExecutionContext): DelayedLazyVal[T]"
     )
 
   @Test def local2 =
@@ -1154,8 +1165,7 @@ class CompletionSuite extends BaseCompletionSuite:
          |def main =
          |  Testin@@
          |""".stripMargin,
-      """|Testing a
-         |Testing(): Testing
+      """|Testing(): Testing
          |""".stripMargin
     )
 
@@ -1168,8 +1178,7 @@ class CompletionSuite extends BaseCompletionSuite:
          |def main =
          |  Testin@@
          |""".stripMargin,
-      """|Testing a
-         |Testing(a: Int, b: String): Testing
+      """|Testing(a: Int, b: String): Testing
          |""".stripMargin
     )
 
@@ -1314,9 +1323,20 @@ class CompletionSuite extends BaseCompletionSuite:
           |""".stripMargin,
       """|AClass[A <: Int] test.O
          |AClass test.O
-         |AbstractTypeClassManifest - scala.reflect.ClassManifestFactory
          """.stripMargin
     )
+
+  val extensionResult =
+    """|Foo test
+       |Found - scala.collection.Searching
+       |Font - java.awt
+       |Form - java.text.Normalizer
+       |Format - java.text
+       |FontPeer - java.awt.peer
+       |FormView - javax.swing.text.html
+       |Formatter - java.util
+       |Formatter - java.util.logging
+       |FocusEvent - java.awt.event""".stripMargin
 
   @Test def `extension-definition-scope` =
     check(
@@ -1324,18 +1344,7 @@ class CompletionSuite extends BaseCompletionSuite:
          |object T:
          |  extension (x: Fo@@)
          |""".stripMargin,
-      """|Foo test
-         |Font - java.awt
-         |Form - java.text.Normalizer
-         |Format - java.text
-         |FontPeer - java.awt.peer
-         |FormView - javax.swing.text.html
-         |Formatter - java.util
-         |Formatter - java.util.logging
-         |FocusEvent - java.awt.event
-         |FontMetrics - java.awt
-         |Found - scala.collection.Searching
-         |""".stripMargin
+      extensionResult
     )
 
   @Test def `extension-definition-symbol-search` =
@@ -1354,18 +1363,7 @@ class CompletionSuite extends BaseCompletionSuite:
          |object T:
          |  extension [A <: Fo@@]
          |""".stripMargin,
-      """|Foo test
-         |Font - java.awt
-         |Form - java.text.Normalizer
-         |Format - java.text
-         |FontPeer - java.awt.peer
-         |FormView - javax.swing.text.html
-         |Formatter - java.util
-         |Formatter - java.util.logging
-         |FocusEvent - java.awt.event
-         |FontMetrics - java.awt
-         |Found - scala.collection.Searching
-         |""".stripMargin
+      extensionResult
     )
 
   @Test def `extension-definition-type-parameter-symbol-search` =
@@ -1384,18 +1382,7 @@ class CompletionSuite extends BaseCompletionSuite:
          |object T:
          |  extension (using Fo@@)
          |""".stripMargin,
-      """|Foo test
-         |Font - java.awt
-         |Form - java.text.Normalizer
-         |Format - java.text
-         |FontPeer - java.awt.peer
-         |FormView - javax.swing.text.html
-         |Formatter - java.util
-         |Formatter - java.util.logging
-         |FocusEvent - java.awt.event
-         |FontMetrics - java.awt
-         |Found - scala.collection.Searching
-         |""".stripMargin
+      extensionResult
     )
 
 
@@ -1405,18 +1392,7 @@ class CompletionSuite extends BaseCompletionSuite:
          |object T:
          |  extension (x: Int)(using Fo@@)
          |""".stripMargin,
-      """|Foo test
-         |Font - java.awt
-         |Form - java.text.Normalizer
-         |Format - java.text
-         |FontPeer - java.awt.peer
-         |FormView - javax.swing.text.html
-         |Formatter - java.util
-         |Formatter - java.util.logging
-         |FocusEvent - java.awt.event
-         |FontMetrics - java.awt
-         |Found - scala.collection.Searching
-         |""".stripMargin
+      extensionResult
     )
 
   @Test def `extension-definition-mix-2` =
@@ -1425,18 +1401,7 @@ class CompletionSuite extends BaseCompletionSuite:
          |object T:
          |  extension (using Fo@@)(x: Int)(using Foo)
          |""".stripMargin,
-      """|Foo test
-         |Font - java.awt
-         |Form - java.text.Normalizer
-         |Format - java.text
-         |FontPeer - java.awt.peer
-         |FormView - javax.swing.text.html
-         |Formatter - java.util
-         |Formatter - java.util.logging
-         |FocusEvent - java.awt.event
-         |FontMetrics - java.awt
-         |Found - scala.collection.Searching
-         |""".stripMargin
+      extensionResult
     )
 
   @Test def `extension-definition-mix-3` =
@@ -1445,18 +1410,7 @@ class CompletionSuite extends BaseCompletionSuite:
          |object T:
          |  extension (using Foo)(x: Int)(using Fo@@)
          |""".stripMargin,
-      """|Foo test
-         |Font - java.awt
-         |Form - java.text.Normalizer
-         |Format - java.text
-         |FontPeer - java.awt.peer
-         |FormView - javax.swing.text.html
-         |Formatter - java.util
-         |Formatter - java.util.logging
-         |FocusEvent - java.awt.event
-         |FontMetrics - java.awt
-         |Found - scala.collection.Searching
-         |""".stripMargin
+      extensionResult
     )
 
   @Test def `extension-definition-mix-4` =
@@ -1465,18 +1419,7 @@ class CompletionSuite extends BaseCompletionSuite:
          |object T:
          |  extension [A](x: Fo@@)
          |""".stripMargin,
-      """|Foo test
-         |Font - java.awt
-         |Form - java.text.Normalizer
-         |Format - java.text
-         |FontPeer - java.awt.peer
-         |FormView - javax.swing.text.html
-         |Formatter - java.util
-         |Formatter - java.util.logging
-         |FocusEvent - java.awt.event
-         |FontMetrics - java.awt
-         |Found - scala.collection.Searching
-         |""".stripMargin
+      extensionResult
     )
 
   @Test def `extension-definition-mix-5` =
@@ -1485,18 +1428,7 @@ class CompletionSuite extends BaseCompletionSuite:
          |object T:
          |  extension [A](using Fo@@)(x: Int)
          |""".stripMargin,
-      """|Foo test
-         |Font - java.awt
-         |Form - java.text.Normalizer
-         |Format - java.text
-         |FontPeer - java.awt.peer
-         |FormView - javax.swing.text.html
-         |Formatter - java.util
-         |Formatter - java.util.logging
-         |FocusEvent - java.awt.event
-         |FontMetrics - java.awt
-         |Found - scala.collection.Searching
-         |""".stripMargin
+      extensionResult
     )
 
   @Test def `extension-definition-mix-6` =
@@ -1505,18 +1437,7 @@ class CompletionSuite extends BaseCompletionSuite:
          |object T:
          |  extension [A](using Foo)(x: Fo@@)
          |""".stripMargin,
-      """|Foo test
-         |Font - java.awt
-         |Form - java.text.Normalizer
-         |Format - java.text
-         |FontPeer - java.awt.peer
-         |FormView - javax.swing.text.html
-         |Formatter - java.util
-         |Formatter - java.util.logging
-         |FocusEvent - java.awt.event
-         |FontMetrics - java.awt
-         |Found - scala.collection.Searching
-         |""".stripMargin
+      extensionResult
     )
 
   @Test def `extension-definition-mix-7` =
@@ -1525,18 +1446,7 @@ class CompletionSuite extends BaseCompletionSuite:
          |object T:
          |  extension [A](using Foo)(x: Fo@@)(using Foo)
          |""".stripMargin,
-      """|Foo test
-         |Font - java.awt
-         |Form - java.text.Normalizer
-         |Format - java.text
-         |FontPeer - java.awt.peer
-         |FormView - javax.swing.text.html
-         |Formatter - java.util
-         |Formatter - java.util.logging
-         |FocusEvent - java.awt.event
-         |FontMetrics - java.awt
-         |Found - scala.collection.Searching
-         |""".stripMargin
+      extensionResult
     )
 
   @Test def `extension-definition-select` =
@@ -1569,7 +1479,6 @@ class CompletionSuite extends BaseCompletionSuite:
          |  extension [T](x: Test.TestSel@@)
          |""".stripMargin,
       """|TestSelect[T] test.Test
-         |TestSelect test.Test
          |""".stripMargin
     )
 
@@ -1665,11 +1574,11 @@ class CompletionSuite extends BaseCompletionSuite:
     check(
       """import scala.collection.{AbstractMap, @@}
         |""".stripMargin,
-      """GenIterable scala.collection
-        |GenMap scala.collection
-        |GenSeq scala.collection
-        |GenSet scala.collection
-        |GenTraversable scala.collection
+      """+: scala.collection
+        |:+ scala.collection
+        |AbstractIndexedSeqView scala.collection
+        |AbstractIterable scala.collection
+        |AbstractIterator scala.collection
         |""".stripMargin,
       topLines = Some(5)
     )
@@ -1729,7 +1638,10 @@ class CompletionSuite extends BaseCompletionSuite:
          |  List@@
          |""".stripMargin,
       """|List[A](elems: A*): List[A]
-         |ListMap[K, V](elems: (K, V)*): ListMap[K, V]
+         |ListMap[K, V](elems: (K, V)*): ListMap[K, V] - scala.collection.immutable
+         |new ListMap[K, V]: ListMap[K, V] - scala.collection.immutable
+         |new ListSet[A]: ListSet[A] - scala.collection.immutable
+         |new ListMap[K, V]: ListMap[K, V] - scala.collection.mutable
          |""".stripMargin,
       filter = _.contains("[")
     )

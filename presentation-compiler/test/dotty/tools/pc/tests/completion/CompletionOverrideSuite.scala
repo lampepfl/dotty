@@ -926,8 +926,8 @@ class CompletionOverrideSuite extends BaseCompletionSuite:
          |}
          |""".stripMargin,
       """|def hello1: Int
-         |override val hello2: Int
          |override def equals(x$0: Any): Boolean
+         |override def hashCode(): Int
          |""".stripMargin,
       includeDetail = false,
       topLines = Some(3)
