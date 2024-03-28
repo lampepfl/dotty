@@ -1,5 +1,7 @@
 package tests.methodsAndConstructors
 
+import scala.language.experimental.clauseInterleaving
+
 class A
 class B extends A
 class C
@@ -59,8 +61,6 @@ class Methods:
 
  def withImplicitParam2(v: String)(implicit ab: Double, a: Int, b: String): String
  = ???
-
- import scala.language.experimental.clauseInterleaving
 
  def clauseInterleaving[T](x: T)[U](y: U)(using (T, U)): (T, U)
  = ???

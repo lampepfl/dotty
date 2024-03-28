@@ -1738,6 +1738,9 @@ object Build {
       SourceLinksIntegrationTest / test:= ((SourceLinksIntegrationTest / test) dependsOn generateScalaDocumentation.toTask("")).value,
     ).
     settings(
+      scalacOptions += "-experimental" // workaround use of experimental .info in Scaladoc2AnchorCreator
+    ).
+    settings(
       Compile / resourceGenerators ++= Seq(
         generateStaticAssetsTask.taskValue,
         bundleCSS.taskValue

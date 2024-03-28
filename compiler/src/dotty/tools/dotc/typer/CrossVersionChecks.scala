@@ -131,12 +131,14 @@ class CrossVersionChecks extends MiniPhase:
   }
 
   override def transformOther(tree: Tree)(using Context): Tree =
-    tree.foreachSubTree { // Find references in type trees and imports
-      case tree: Ident => transformIdent(tree)
-      case tree: Select => transformSelect(tree)
-      case tree: TypeTree => transformTypeTree(tree)
-      case _ =>
-    }
+    val inPackage = ctx.owner.is(Package) || ctx.owner.isPackageObject
+    if !(inPackage && tree.isInstanceOf[ImportOrExport] && Feature.isExperimentalEnabledByImport) then
+      tree.foreachSubTree { // Find references in type trees and imports
+        case tree: Ident => transformIdent(tree)
+        case tree: Select => transformSelect(tree)
+        case tree: TypeTree => transformTypeTree(tree)
+        case _ =>
+      }
     tree
 
 end CrossVersionChecks

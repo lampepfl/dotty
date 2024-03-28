@@ -1,3 +1,5 @@
+//> using options -experimental
+
 object Test:
   def map2(xs: List[Int])(f: Int => Int): List[Int] = xs.map(f)
   val f1 = map2

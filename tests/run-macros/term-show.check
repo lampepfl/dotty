@@ -10,7 +10,7 @@
   }
   ()
 }
-@scala.annotation.internal.SourceFile("tests/run-macros/term-show/Test_2.scala") trait A() extends java.lang.Object {
+@scala.annotation.internal.SourceFile("tests/run-macros/term-show/Test_2.scala") @scala.annotation.experimental trait A() extends java.lang.Object {
   def imp(x: scala.Int)(implicit str: scala.Predef.String): scala.Int
   def use(`x₂`: scala.Int)(using `str₂`: scala.Predef.String): scala.Int
   def era(`x₃`: scala.Int)(erased `str₃`: scala.Predef.String): scala.Int

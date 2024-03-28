@@ -1,3 +1,4 @@
+//> using options -experimental
 import foo.*
 
 @main def Test: Unit =

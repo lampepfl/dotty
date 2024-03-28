@@ -18,7 +18,7 @@ def handle[E <: Exception, R](op: (erased CanThrow[E]) -> R)(handler: E -> R): R
   try op(x)
   catch case ex: E => handler(ex)
 
-val _ = handle { (erased x) =>
+val bar = handle { (erased x) =>
     if true then
       raise(new Exception)(using x)
       22

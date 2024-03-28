@@ -513,8 +513,8 @@ class PostTyper extends MacroTransform with InfoTransformer { thisPhase =>
       }
 
     override def transformStats[T](trees: List[Tree], exprOwner: Symbol, wrapResult: List[Tree] => Context ?=> T)(using Context): T =
-      try super.transformStats(trees, exprOwner, wrapResult)
-      finally Checking.checkExperimentalImports(trees)
+      Checking.checkExperimentalImports(trees)
+      super.transformStats(trees, exprOwner, wrapResult)
 
     /** Transforms the rhs tree into a its default tree if it is in an `erased` val/def.
      *  Performed to shrink the tree that is known to be erased later.
@@ -549,7 +549,7 @@ class PostTyper extends MacroTransform with InfoTransformer { thisPhase =>
         !sym.is(Package) && !sym.name.isPackageObjectName &&
         (sym.owner.is(Package) || (sym.owner.isPackageObject && !sym.isConstructor))
       if !sym.hasAnnotation(defn.ExperimentalAnnot)
-        && (ctx.settings.experimental.value && isTopLevelDefinitionInSource(sym))
+        && (Feature.isExperimentalEnabledBySetting && isTopLevelDefinitionInSource(sym))
         || (sym.is(Module) && sym.companionClass.hasAnnotation(defn.ExperimentalAnnot))
       then
         sym.addAnnotation(Annotation(defn.ExperimentalAnnot, sym.span))

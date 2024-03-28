@@ -27,7 +27,6 @@ class SnippetCompiler(
   object SnippetDriver extends Driver:
     val currentCtx =
       val rootCtx = initCtx.fresh.addMode(Mode.ReadPositions).addMode(Mode.Interactive)
-      rootCtx.setSetting(rootCtx.settings.YnoExperimental, true)
       rootCtx.setSetting(rootCtx.settings.experimental, true)
       rootCtx.setSetting(rootCtx.settings.YretainTrees, true)
       rootCtx.setSetting(rootCtx.settings.YcookComments, true)

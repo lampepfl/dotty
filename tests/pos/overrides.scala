@@ -1,7 +1,9 @@
+//> using options -experimental
+
 class A[T] {
 
   def f(x: T)(y: T = x) = y
-  
+
   import scala.language.experimental.clauseInterleaving
 
   def b[U <: T](x: Int)[V >: T](y: String) = false
