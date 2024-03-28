@@ -1624,11 +1624,11 @@ object SymDenotations {
 
     // ----- copies and transforms  ----------------------------------------
 
-    protected def newLikeThis(s: Symbol, i: Type, pre: Type, isRefinedMethod: Boolean): SingleDenotation =
+    protected def newLikeThis(s: Symbol, i: Type, pre: Type, isRefinedMethod: Boolean)(using Context): SingleDenotation =
       if isRefinedMethod then
-        new JointRefDenotation(s, i, validFor, pre, isRefinedMethod)
+        new JointRefDenotation(s, i, currentStablePeriod, pre, isRefinedMethod)
       else
-        new UniqueRefDenotation(s, i, validFor, pre)
+        new UniqueRefDenotation(s, i, currentStablePeriod, pre)
 
     /** Copy this denotation, overriding selective fields */
     final def copySymDenotation(

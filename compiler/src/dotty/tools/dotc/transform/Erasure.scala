@@ -13,6 +13,7 @@ import core.Types.*
 import core.Names.*
 import core.StdNames.*
 import core.NameOps.*
+import core.Periods.currentStablePeriod
 import core.NameKinds.{AdaptedClosureName, BodyRetainerName, DirectMethName}
 import core.Scopes.newScopeWith
 import core.Decorators.*
@@ -132,7 +133,7 @@ class Erasure extends Phase with DenotTransformer {
       }
     case ref: JointRefDenotation =>
       new UniqueRefDenotation(
-        ref.symbol, transformInfo(ref.symbol, ref.symbol.info), ref.validFor, ref.prefix)
+        ref.symbol, transformInfo(ref.symbol, ref.symbol.info), currentStablePeriod, ref.prefix)
     case _ =>
       ref.derivedSingleDenotation(ref.symbol, transformInfo(ref.symbol, ref.symbol.info))
   }

@@ -1,0 +1,17 @@
+scala> object A { val f: ( => Int) => Int = i => i ; f(1) }
+// defined object A
+
+scala> A.f(1)
+val res0: Int = 1
+
+scala> A.f(1)
+val res1: Int = 1
+
+scala> object B { val f: ( => Int) => Int = i => i ; f(1) }
+// defined object B
+
+scala> B.f(1)
+val res2: Int = 1
+
+scala> B.f(1)
+val res3: Int = 1

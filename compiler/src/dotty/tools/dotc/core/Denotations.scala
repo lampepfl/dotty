@@ -580,7 +580,7 @@ object Denotations {
 
   /** A non-overloaded denotation */
   abstract class SingleDenotation(symbol: Symbol, initInfo: Type, isType: Boolean) extends Denotation(symbol, initInfo, isType) {
-    protected def newLikeThis(symbol: Symbol, info: Type, pre: Type, isRefinedMethod: Boolean): SingleDenotation
+    protected def newLikeThis(symbol: Symbol, info: Type, pre: Type, isRefinedMethod: Boolean)(using Context): SingleDenotation
 
     final def name(using Context): Name = symbol.name
 
@@ -1162,11 +1162,11 @@ object Denotations {
     prefix: Type) extends NonSymSingleDenotation(symbol, initInfo, prefix) {
     validFor = initValidFor
     override def hasUniqueSym: Boolean = true
-    protected def newLikeThis(s: Symbol, i: Type, pre: Type, isRefinedMethod: Boolean): SingleDenotation =
+    protected def newLikeThis(s: Symbol, i: Type, pre: Type, isRefinedMethod: Boolean)(using Context): SingleDenotation =
       if isRefinedMethod then
-        new JointRefDenotation(s, i, validFor, pre, isRefinedMethod)
+        new JointRefDenotation(s, i, currentStablePeriod, pre, isRefinedMethod)
       else
-        new UniqueRefDenotation(s, i, validFor, pre)
+        new UniqueRefDenotation(s, i, currentStablePeriod, pre)
   }
 
   class JointRefDenotation(
@@ -1177,15 +1177,15 @@ object Denotations {
     override val isRefinedMethod: Boolean) extends NonSymSingleDenotation(symbol, initInfo, prefix) {
     validFor = initValidFor
     override def hasUniqueSym: Boolean = false
-    protected def newLikeThis(s: Symbol, i: Type, pre: Type, isRefinedMethod: Boolean): SingleDenotation =
-      new JointRefDenotation(s, i, validFor, pre, isRefinedMethod)
+    protected def newLikeThis(s: Symbol, i: Type, pre: Type, isRefinedMethod: Boolean)(using Context): SingleDenotation =
+      new JointRefDenotation(s, i, currentStablePeriod, pre, isRefinedMethod)
   }
 
   class ErrorDenotation(using Context) extends NonSymSingleDenotation(NoSymbol, NoType, NoType) {
     override def exists: Boolean = false
     override def hasUniqueSym: Boolean = false
     validFor = Period.allInRun(ctx.runId)
-    protected def newLikeThis(s: Symbol, i: Type, pre: Type, isRefinedMethod: Boolean): SingleDenotation =
+    protected def newLikeThis(s: Symbol, i: Type, pre: Type, isRefinedMethod: Boolean)(using Context): SingleDenotation =
       this
   }
 

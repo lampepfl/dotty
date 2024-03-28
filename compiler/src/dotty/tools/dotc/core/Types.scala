@@ -905,7 +905,7 @@ object Types extends TypeUtils {
       def goSuper(tp: SuperType) = go(tp.underlying) match {
         case d: JointRefDenotation =>
           typr.println(i"redirecting super.$name from $tp to ${d.symbol.showLocated}")
-          new UniqueRefDenotation(d.symbol, tp.memberInfo(d.symbol), d.validFor, pre)
+          new UniqueRefDenotation(d.symbol, tp.memberInfo(d.symbol), currentStablePeriod, pre)
         case d => d
       }
 
