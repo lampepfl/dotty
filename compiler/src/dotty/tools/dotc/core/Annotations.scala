@@ -62,7 +62,7 @@ object Annotations {
             if tm.isRange(x) then x
             else
               val tp1 = tm(tree.tpe)
-              foldOver(if tp1 frozen_=:= tree.tpe then x else tp1, tree)
+              foldOver(if tp1 == tree.tpe then x else tp1, tree)
         val diff = findDiff(NoType, args)
         if tm.isRange(diff) then EmptyAnnotation
         else if diff.exists then derivedAnnotation(tm.mapOver(tree))
