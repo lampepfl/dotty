@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" >& /dev/null && pwd)/.."
+. $ROOT/bin/commonQ
+
+java -cp $cp dotty.tools.MainGenericRunner -usejavacp "$@"

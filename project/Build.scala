@@ -205,6 +205,8 @@ object Build {
 
   val repl = taskKey[Unit]("spawns a repl with the correct classpath")
 
+  val buildQuick = taskKey[Unit]("builds the compiler and enables bin/scalaQ, bin/scalacQ, bin/scaladocQ")
+
   // Compiles the documentation and static site
   val genDocs = inputKey[Unit]("run scaladoc to generate static documentation site")
 
@@ -2123,6 +2125,10 @@ object Build {
         // default.
         addCommandAlias("publishLocal", "scala3-bootstrapped/publishLocal"),
         repl := (`scala3-compiler-bootstrapped` / repl).value,
+        buildQuick := {
+          val cp = (LocalProject("scaladoc") / Compile / fullClasspath).value.map(_.data.getAbsolutePath).mkString(":")
+          IO.write(baseDirectory.value / "bin" / ".cp", cp)
+        },
         (Compile / console) := (Compile / console).dependsOn(Def.task {
           import _root_.scala.io.AnsiColor._
           val msg = "`console` uses the reference Scala version. Use `repl` instead."

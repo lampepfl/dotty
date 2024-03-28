@@ -1,0 +1,6 @@
+cp=$(cat $ROOT/bin/.cp) 2> /dev/null
+
+if [[ "$cp" == "" ]]; then
+  echo "run 'sbt buildQuick' first"
+  exit 1
+fi
