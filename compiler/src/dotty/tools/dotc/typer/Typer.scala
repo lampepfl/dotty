@@ -2915,7 +2915,7 @@ class Typer(@constructorOnly nestingLevel: Int = 0) extends Namer
     else typd(imp.expr, AnySelectionProto)
 
   def typedImport(imp: untpd.Import)(using Context): Tree =
-    val sym = retrieveSym(imp)
+    val sym = imp.removeAttachment(SymOfTree).getOrElse(NoSymbol)
     val expr1 = typedImportQualifier(imp, typedExpr(_, _)(using ctx.withOwner(sym)))
     checkLegalImportPath(expr1)
     val selectors1 = typedSelectors(imp.selectors)
