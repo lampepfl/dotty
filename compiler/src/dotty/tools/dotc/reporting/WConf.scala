@@ -5,7 +5,9 @@ package reporting
 import scala.language.unsafeNulls
 
 import dotty.tools.dotc.core.Contexts.*
-import dotty.tools.dotc.util.SourcePosition
+import dotty.tools.dotc.util.{NoSourcePosition, SourcePosition}
+import dotty.tools.dotc.interfaces.SourceFile
+import dotty.tools.dotc.reporting.MessageFilter.SourcePattern
 
 import java.util.regex.PatternSyntaxException
 import scala.annotation.internal.sharable
@@ -21,11 +23,19 @@ enum MessageFilter:
       val noHighlight = message.msg.message.replaceAll("\\e\\[[\\d;]*[^\\d;]","")
       pattern.findFirstIn(noHighlight).nonEmpty
     case MessageID(errorId) => message.msg.errorId == errorId
+    case SourcePattern(pattern) =>
+      val source = message.position.orElse(NoSourcePosition).source()
+      val path = source.jfile()
+        .map(_.toPath.toAbsolutePath.toUri.normalize().getRawPath)
+        .orElse(source.path())
+      pattern.findFirstIn(path).nonEmpty
+
     case None => false
 
   case Any, Deprecated, Feature, Unchecked, None
   case MessagePattern(pattern: Regex)
   case MessageID(errorId: ErrorMessageID)
+  case SourcePattern(pattern: Regex)
 
 enum Action:
   case Error, Warning, Verbose, Info, Silent
@@ -84,6 +94,9 @@ object WConf:
         case "feature"     => Right(Feature)
         case "unchecked"   => Right(Unchecked)
         case _             => Left(s"unknown category: $conf")
+
+      case "src" => regex(conf).map(SourcePattern.apply)
+
       case _ => Left(s"unknown filter: $filter")
     case _ => Left(s"unknown filter: $s")
 

@@ -7,6 +7,11 @@ import dotty.tools.dotc.config.ScalaSettingCategories._
 import org.junit.Test
 import org.junit.Assert._
 import core.Decorators.toMessage
+import dotty.tools.io.{Path, PlainFile}
+
+import java.net.URI
+import java.nio.file.Files
+import scala.util.Using
 
 class ScalaSettingsTests:
 
@@ -96,5 +101,100 @@ class ScalaSettingsTests:
     assertEquals(Action.Silent, sut.action(depr))
 
 
+  private def wconfSrcFilterTest(argsStr: String,
+                                 warning: reporting.Diagnostic.Warning): Either[List[String], reporting.Action] =
+    import reporting.Diagnostic
+    val settings = new ScalaSettings
+    val args = ArgsSummary(settings.defaultState, List(argsStr), errors = Nil, warnings = Nil)
+    val proc = settings.processArguments(args, processAll = true, skipped = Nil)
+    val wconfStr = settings.Wconf.valueIn(proc.sstate)
+    val wconf = reporting.WConf.fromSettings(wconfStr)
+    wconf.map(_.action(warning))
+
+  @Test def `WConf src filter silences warnings from a matching path for virtual file`: Unit =
+    val result = wconfSrcFilterTest(
+      argsStr = "-Wconf:src=path/.*:s",
+      warning = reporting.Diagnostic.Warning(
+        "A warning".toMessage,
+        util.SourcePosition(
+          source = util.SourceFile.virtual(new URI("file:///some/path/file.scala"), ""),
+          span = util.Spans.Span(1L)
+        )
+      )
+    )
+    assertEquals(result, Right(reporting.Action.Silent))
+
+  @Test def `WConf src filter doesn't silence warnings from a non-matching path`: Unit =
+    val result = wconfSrcFilterTest(
+      argsStr = "-Wconf:src=another/.*:s",
+      warning = reporting.Diagnostic.Warning(
+        "A warning".toMessage,
+        util.SourcePosition(
+          source = util.SourceFile.virtual(new URI("file:///some/path/file.scala"), ""),
+          span = util.Spans.Span(1L)
+        )
+      )
+    )
+    assertEquals(result, Right(reporting.Action.Warning))
+
+  @Test def `WConf src filter silences warnings from a matching path for real file`: Unit =
+    val result = Using.resource(Files.createTempFile("myfile", ".scala").nn) { file =>
+      wconfSrcFilterTest(
+        argsStr = "-Wconf:src=myfile.*?\\.scala:s",
+        warning = reporting.Diagnostic.Warning(
+          "A warning".toMessage,
+          util.SourcePosition(
+            source = util.SourceFile(new PlainFile(Path(file)), "UTF-8"),
+            span = util.Spans.Span(1L)
+          )
+        )
+      )
+    }(Files.deleteIfExists(_))
+    assertEquals(result, Right(reporting.Action.Silent))
+
+  @Test def `WConf src filter doesn't silence warnings from a non-matching path for real file`: Unit =
+    val result = Using.resource(Files.createTempFile("myfile", ".scala").nn) { file =>
+      wconfSrcFilterTest(
+        argsStr = "-Wconf:src=another.*?\\.scala:s",
+        warning = reporting.Diagnostic.Warning(
+          "A warning".toMessage,
+          util.SourcePosition(
+            source = util.SourceFile(new PlainFile(Path(file)), "UTF-8"),
+            span = util.Spans.Span(1L)
+          )
+        )
+      )
+    }(Files.deleteIfExists(_))
+    assertEquals(result, Right(reporting.Action.Warning))
+
+  @Test def `WConf src filter reports an error on an invalid regex`: Unit =
+    val result = wconfSrcFilterTest(
+      argsStr = """-Wconf:src=\:s""",
+      warning = reporting.Diagnostic.Warning(
+        "A warning".toMessage,
+        util.SourcePosition(
+          source = util.SourceFile.virtual(new URI("file:///some/path/file.scala"), ""),
+          span = util.Spans.Span(1L)
+        )
+      ),
+    )
+    assertTrue(
+      result.left.exists(errors =>
+        errors.sizeIs == 1 && errors.headOption.exists(_.startsWith("invalid pattern"))
+      )
+    )
+
+  @Test def `WConf src filter can be mixed with other filters with rightmost taking precedence`: Unit =
+    val result = wconfSrcFilterTest(
+      argsStr = "-Wconf:src=.*:s,cat=deprecation:e",
+      warning = reporting.Diagnostic.DeprecationWarning(
+        "A warning".toMessage,
+        util.SourcePosition(
+          source = util.SourceFile.virtual(new URI("file:///some/path/file.scala"), ""),
+          span = util.Spans.Span(1L)
+        )
+      )
+    )
+    assertEquals(result, Right(reporting.Action.Error))
 
 end ScalaSettingsTests

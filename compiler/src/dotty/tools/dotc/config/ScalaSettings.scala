@@ -247,6 +247,9 @@ private sealed trait WarningSettings:
          |  - Message name: name=PureExpressionInStatementPosition
          |    The message name is printed with the warning in verbose warning mode.
          |
+         |  - Source location: src=regex
+         |    The regex is evaluated against the full source path.
+         |
          |In verbose warning mode the compiler prints matching filters for warnings.
          |Verbose mode can be enabled globally using `-Wconf:any:verbose`, or locally
          |using the @nowarn annotation (example: `@nowarn("v") def test = try 1`).
@@ -266,6 +269,7 @@ private sealed trait WarningSettings:
          |Examples:
          |  - change every warning into an error: -Wconf:any:error
          |  - silence deprecations: -Wconf:cat=deprecation:s
+         |  - silence warnings in src_managed directory: -Wconf:src=src_managed/.*:s
          |
          |Note: on the command-line you might need to quote configurations containing `*` or `&`
          |to prevent the shell from expanding patterns.""".stripMargin,
