@@ -1,10 +1,9 @@
 -- Error: tests/neg/use-experimental-def.scala:7:15 --------------------------------------------------------------------
 7 |def bar: Int = foo // error
   |               ^^^
+  |               method foo is marked @experimental
+  |
   |               Experimental definition may only be used under experimental mode:
   |                 1. in a definition marked as @experimental, or
   |                 2. compiling with the -experimental compiler flag, or
   |                 3. with a nightly or snapshot version of the compiler.
-  |
-  |               method foo is marked @experimental
-  |                         

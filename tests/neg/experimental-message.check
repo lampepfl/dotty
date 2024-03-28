@@ -1,0 +1,9 @@
+-- Error: tests/neg/experimental-message.scala:8:10 --------------------------------------------------------------------
+8 |def g() = f() // error
+  |          ^
+  |          method f is marked @experimental: not yet stable
+  |
+  |          Experimental definition may only be used under experimental mode:
+  |            1. in a definition marked as @experimental, or
+  |            2. compiling with the -experimental compiler flag, or
+  |            3. with a nightly or snapshot version of the compiler.
