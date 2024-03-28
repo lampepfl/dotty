@@ -1,0 +1,35 @@
+
+-- Error: tests/neg-macros/annot-codegen/Test_2.scala:7:4 --------------------------------------------------------------
+7 |    new Bar("", two, 1, 1.0) // error: body needs to be replaced
+  |    ^^^^^^^^^^^^^^^^^^^^^^^^
+  |    Replace the underline code by:
+  |    data.generated[Bar]()
+-- Error: tests/neg-macros/annot-codegen/Test_2.scala:9:6 --------------------------------------------------------------
+9 |  def withThree(three: Int): Bar // error: body needs to be data.generate[Bar]()
+  |  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |  Replace the underline code by:
+  |  def withThree(three: scala.Int): Bar = data.generated[Bar]()
+-- Error: tests/neg-macros/annot-codegen/Test_2.scala:1:80 -------------------------------------------------------------
+1 |@data class Bar(val one: String, val two: Int, val three: Int, val four: Double): // error: additional methods needed
+  |                                                                                ^
+  |                                                     @data requires the following additional method(s):
+  |
+  |                                                     def withFour(four: scala.Double): Bar = data.generated[Bar]()
+-- Error: tests/neg-macros/annot-codegen/Test_2.scala:12:32 ------------------------------------------------------------
+12 |  def withOne(one: T): Baz[T] = ??? // error
+   |                                ^^^
+   |                                Replace the underline code by:
+   |                                data.generated[Baz[Baz.this.T]]()
+-- Error: tests/neg-macros/annot-codegen/Test_2.scala:13:6 -------------------------------------------------------------
+13 |  def withTwo(two: Int): Baz[T] // error
+   |  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |  Replace the underline code by:
+   |  def withTwo(two: scala.Int): Baz[Baz.this.T] = data.generated[Baz[Baz.this.T]]()
+-- Error: tests/neg-macros/annot-codegen/Test_2.scala:14:38 ------------------------------------------------------------
+14 |  def withThree(three: Int): Baz[T] = data.generated[Baz[T]]() // error // FIXME: should be supported
+   |                                      ^^^^^^^^^^^^^^^^^^^^^^^^
+   |                                      constructor Baz in class Baz does not take parameters
+-- Error: tests/neg-macros/annot-codegen/Test_2.scala:15:36 ------------------------------------------------------------
+15 |  def withFour(four: Int): Baz[T] = data.generated[Nothing]() // error // FIXME: wrong error
+   |                                    ^^^^^^^^^^^^^^^^^^^^^^^^^
+   |                                    constructor Baz in class Baz does not take parameters
